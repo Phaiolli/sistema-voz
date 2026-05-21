@@ -1,22 +1,57 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, ArrowRight, Check, X } from "lucide-react";
 import { VozLockup } from "@/components/voz/wordmark";
-import { sampleQuestions } from "@/lib/fixtures";
+import { createBrowserClient } from "@/lib/supabase";
 import type { Question } from "@/lib/types";
-
-const queue: Question[] = sampleQuestions
-  .filter((q) => q.status === "pending" || q.status === "next")
-  .map((q) => ({ ...q, eventId: "evt_incluir_2025" }));
 
 export function PresentationMode() {
   const router = useRouter();
-  const [idx, setIdx] = useState(() => Math.max(0, queue.findIndex((q) => q.status === "next")));
+  const searchParams = useSearchParams();
+  const eventId = searchParams.get("eventId") ?? "";
+
+  const [queue, setQueue] = useState<Question[]>([]);
+  const [idx, setIdx] = useState(0);
   const [answered, setAnswered] = useState<Set<string>>(new Set());
   const [controlsVisible, setControlsVisible] = useState(true);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (!eventId) return;
+    fetch(`/api/v1/events/${eventId}/questions`)
+      .then((r) => r.json())
+      .then((data: { questions?: Question[] }) => {
+        const filtered = (data.questions ?? []).filter(
+          (q) => q.status === "next" || q.status === "pending"
+        );
+        setQueue(filtered);
+        const nextIdx = filtered.findIndex((q) => q.status === "next");
+        setIdx(Math.max(0, nextIdx));
+      })
+      .catch(() => {});
+  }, [eventId]);
+
+  useEffect(() => {
+    if (!eventId) return;
+    const supabase = createBrowserClient();
+    const channel = supabase
+      .channel(`event:${eventId}:questions`)
+      .on("broadcast", { event: "question:updated" }, ({ payload }) => {
+        setQueue((prev) => {
+          const updated = payload as Question;
+          if (updated.status === "next" || updated.status === "pending") {
+            const exists = prev.some((q) => q.id === updated.id);
+            if (exists) return prev.map((q) => (q.id === updated.id ? updated : q));
+            return [...prev, updated];
+          }
+          return prev.filter((q) => q.id !== updated.id);
+        });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [eventId]);
 
   const activeQueue = queue.filter((q) => !answered.has(q.id));
   const total = activeQueue.length;
@@ -29,7 +64,6 @@ export function PresentationMode() {
   }, []);
 
   useEffect(() => {
-    // Controls start visible — start the initial hide timer
     hideTimer.current = setTimeout(() => setControlsVisible(false), 3000);
     return () => { if (hideTimer.current) clearTimeout(hideTimer.current); };
   }, []);
@@ -41,6 +75,11 @@ export function PresentationMode() {
 
   const markAnswered = useCallback(() => {
     if (!current) return;
+    fetch(`/api/v1/questions/${current.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "markAnswered" }),
+    }).catch(() => {});
     setAnswered((s) => new Set([...s, current.id]));
     setIdx((i) => Math.min(activeQueue.length - 2, i));
     showControls();
@@ -58,7 +97,22 @@ export function PresentationMode() {
     return () => document.removeEventListener("keydown", handler);
   }, [go, markAnswered, router, showControls]);
 
-  const kbd: React.CSSProperties = { fontFamily: '"JetBrains Mono", monospace', fontSize: 11, padding: "1px 5px", border: "1px solid hsl(var(--border))", borderRadius: 4, color: "rgba(255,255,255,.7)", background: "rgba(255,255,255,.1)" };
+  const kbd: React.CSSProperties = {
+    fontFamily: '"JetBrains Mono", monospace', fontSize: 11, padding: "1px 5px",
+    border: "1px solid hsl(var(--border))", borderRadius: 4,
+    color: "rgba(255,255,255,.7)", background: "rgba(255,255,255,.1)",
+  };
+
+  if (!eventId) {
+    return (
+      <div className="theme-incluir" style={{ width: "100vw", height: "100dvh", background: "hsl(var(--background))", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 20 }}>
+        <p style={{ fontSize: 18, color: "hsl(var(--muted-foreground))" }}>ID do evento não encontrado. Volte ao painel.</p>
+        <button onClick={() => router.push("/mediador")} style={{ height: 44, padding: "0 20px", borderRadius: 8, border: "1px solid hsl(var(--border))", background: "transparent", color: "#fff", cursor: "pointer", fontSize: 15 }}>
+          Voltar ao painel
+        </button>
+      </div>
+    );
+  }
 
   if (!current) {
     return (
@@ -81,9 +135,8 @@ export function PresentationMode() {
       className="theme-incluir"
       style={{ width: "100vw", height: "100dvh", background: "hsl(var(--background))", color: "#fff", position: "relative", overflow: "hidden", display: "flex", flexDirection: "column" }}
     >
-      {/* Top bar */}
       <div style={{ padding: "32px 48px", display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0 }}>
-        <VozLockup eventName="INCLUIR 2025" size={20} inverse />
+        <VozLockup eventName="" size={20} inverse />
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 12, color: "hsl(var(--muted-foreground))", letterSpacing: "0.1em" }}>PERGUNTA</span>
           <span style={{ fontFamily: '"Archivo Black", sans-serif', fontSize: 22, color: "hsl(var(--accent))", letterSpacing: "-0.01em", fontVariantNumeric: "tabular-nums" }}>
@@ -95,7 +148,6 @@ export function PresentationMode() {
         </div>
       </div>
 
-      {/* Question content */}
       <div
         key={current.id}
         style={{ flex: 1, display: "flex", alignItems: "center", padding: "0 80px", animation: "fade-up 280ms cubic-bezier(.2,.7,.3,1)" }}
@@ -123,7 +175,6 @@ export function PresentationMode() {
         </div>
       </div>
 
-      {/* Floating controls */}
       <div
         style={{ position: "absolute", right: 32, bottom: 32, display: "flex", gap: 12, opacity: controlsVisible ? 1 : 0.12, transition: "opacity .25s" }}
         aria-hidden={!controlsVisible}
@@ -134,7 +185,6 @@ export function PresentationMode() {
         <PresentBtn onClick={() => router.push("/mediador")} aria-label="Sair do modo apresentação"><X size={24} /></PresentBtn>
       </div>
 
-      {/* Keyboard shortcuts */}
       <div
         style={{ position: "absolute", left: 48, bottom: 36, display: "flex", gap: 16, fontSize: 12, color: "rgba(255,255,255,.6)", opacity: controlsVisible ? 1 : 0.12, transition: "opacity .25s" }}
         aria-hidden="true"

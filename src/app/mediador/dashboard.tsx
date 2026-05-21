@@ -5,43 +5,81 @@ import { useRouter } from "next/navigation";
 import { Mic, QrCode, ArrowLeft, ArrowRight, Check, EyeOff, RotateCcw } from "lucide-react";
 import { VozLockup } from "@/components/voz/wordmark";
 import { StatusBadge } from "@/components/voz/status-badge";
-import { sampleQuestions } from "@/lib/fixtures";
 import { createBrowserClient } from "@/lib/supabase";
+import { signOut } from "next-auth/react";
 import type { Question, QuestionStatus } from "@/lib/types";
 import { QRModal } from "./qr-modal";
 import { toast } from "sonner";
 
 type Tab = "unread" | "all" | "hidden";
 
-const EVENT_ID = "evt_incluir_2025";
+interface Assignment {
+  eventId: string;
+  event: { id: string; name: string };
+  assignedAt: string;
+}
+
+interface AssignmentsResponse {
+  events?: { id: string; name: string }[];
+  assignments?: Assignment[];
+}
 
 export function MediatorDashboard() {
   const router = useRouter();
-  const [questions, setQuestions] = useState<Question[]>(
-    sampleQuestions.map((q) => ({ ...q, eventId: EVENT_ID }))
-  );
+  const [questions, setQuestions] = useState<Question[]>([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<Tab>("unread");
-  const [selectedId, setSelectedId] = useState<string>(
-    sampleQuestions.find((q) => q.status === "next")?.id ?? sampleQuestions[0]?.id ?? ""
-  );
+  const [selectedId, setSelectedId] = useState<string>("");
   const [qrOpen, setQrOpen] = useState(false);
+  const [eventId, setEventId] = useState<string | null>(null);
+  const [eventName, setEventName] = useState<string>("");
+  const [noEvent, setNoEvent] = useState(false);
 
-  // Load questions from API on mount
   useEffect(() => {
-    fetch(`/api/v1/events/${EVENT_ID}/questions`)
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.questions?.length) setQuestions(data.questions);
+    fetch("/api/v1/me/assignments")
+      .then((r) => {
+        if (!r.ok) throw new Error("Falha");
+        return r.json();
       })
-      .catch(() => { /* keep sample data on error */ })
+      .then((data: AssignmentsResponse) => {
+        let id: string | null = null;
+        let name = "";
+        if (data.events && data.events.length > 0) {
+          id = data.events[0].id;
+          name = data.events[0].name;
+        } else if (data.assignments && data.assignments.length > 0) {
+          id = data.assignments[0].event.id;
+          name = data.assignments[0].event.name;
+        }
+        if (!id) {
+          setNoEvent(true);
+          setLoading(false);
+          return;
+        }
+        setEventId(id);
+        setEventName(name);
+        return fetch(`/api/v1/events/${id}/questions`);
+      })
+      .then((r) => {
+        if (!r) return null;
+        if (!r.ok) throw new Error("Falha ao carregar perguntas");
+        return r.json();
+      })
+      .then((data: { questions?: Question[] } | null) => {
+        if (data?.questions?.length) {
+          setQuestions(data.questions);
+          const nextQ = data.questions.find((q) => q.status === "next");
+          setSelectedId(nextQ?.id ?? data.questions[0]?.id ?? "");
+        }
+      })
+      .catch(() => toast.error("Erro ao carregar dados do evento."))
       .finally(() => setLoading(false));
   }, []);
 
-  // Supabase Realtime — subscribe to question events
   useEffect(() => {
+    if (!eventId) return;
     const supabase = createBrowserClient();
-    const channel = supabase.channel(`event:${EVENT_ID}:questions`)
+    const channel = supabase.channel(`event:${eventId}:questions`)
       .on("broadcast", { event: "question:new" }, ({ payload }) => {
         setQuestions((qs) => [payload as Question, ...qs]);
         toast("Nova pergunta recebida.");
@@ -51,15 +89,15 @@ export function MediatorDashboard() {
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, []);
+  }, [eventId]);
 
   const counts = {
     unread: questions.filter((q) => q.status === "pending" || q.status === "next").length,
     all: questions.filter((q) => q.status !== "hidden").length,
     hidden: questions.filter((q) => q.status === "hidden").length,
   };
+
   const newBadge = useMemo(() => {
-    // eslint-disable-next-line react-hooks/purity -- intentional: fresh timestamp per questions update
     const cutoff = new Date(Date.now() - 5 * 60000);
     return questions.filter(
       (q) => q.status === "pending" && new Date(q.createdAt) > cutoff
@@ -74,7 +112,6 @@ export function MediatorDashboard() {
   const answeredSection = tab === "unread" ? questions.filter((q) => q.status === "answered") : [];
   const selected = questions.find((q) => q.id === selectedId) ?? listed[0] ?? null;
 
-  // Optimistic update + API call
   const applyAction = useCallback(async (id: string, action: "setNext" | "markAnswered" | "hide" | "restore") => {
     const patchMap: Record<string, Partial<Question>> = {
       setNext: { status: "next" as QuestionStatus },
@@ -111,11 +148,11 @@ export function MediatorDashboard() {
       if (e.key === "k" || e.key === "ArrowUp") { e.preventDefault(); navigate(-1); }
       if (e.key === "r" && selected) { e.preventDefault(); applyAction(selected.id, "markAnswered"); }
       if (e.key === "n" && selected) { e.preventDefault(); applyAction(selected.id, "setNext"); }
-      if (e.key === "p") { e.preventDefault(); router.push("/mediador/apresentar"); }
+      if (e.key === "p" && eventId) { e.preventDefault(); router.push(`/mediador/apresentar?eventId=${eventId}`); }
     };
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
-  }, [navigate, selected, applyAction, router]);
+  }, [navigate, selected, applyAction, router, eventId]);
 
   const kbd: React.CSSProperties = {
     fontFamily: '"JetBrains Mono", monospace', fontSize: 11,
@@ -123,11 +160,33 @@ export function MediatorDashboard() {
     borderRadius: 4, background: "hsl(var(--muted))",
   };
 
+  if (loading) {
+    return (
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100dvh", background: "hsl(var(--background))", color: "hsl(var(--muted-foreground))", fontSize: 15 }}>
+        Carregando evento…
+      </div>
+    );
+  }
+
+  if (noEvent) {
+    return (
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100dvh", background: "hsl(var(--background))", color: "hsl(var(--foreground))", gap: 16, textAlign: "center", padding: 24 }}>
+        <p style={{ fontFamily: '"Archivo", sans-serif', fontWeight: 600, fontSize: 20, margin: 0 }}>Nenhum evento atribuído.</p>
+        <p style={{ fontSize: 15, color: "hsl(var(--muted-foreground))", margin: 0 }}>Entre em contato com o administrador.</p>
+        <button
+          onClick={() => signOut()}
+          style={{ marginTop: 8, height: 40, padding: "0 20px", borderRadius: 8, border: "1px solid hsl(var(--border))", background: "transparent", fontSize: 14, cursor: "pointer", color: "hsl(var(--foreground))" }}
+        >
+          Sair
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100dvh", background: "hsl(var(--background))", color: "hsl(var(--foreground))" }}>
-      {/* Header */}
       <header style={{ height: 56, borderBottom: "1px solid hsl(var(--border))", display: "flex", alignItems: "center", padding: "0 20px", gap: 16, flexShrink: 0 }}>
-        <VozLockup eventName="INCLUIR 2025" size={18} />
+        <VozLockup eventName={eventName} size={18} />
         <div style={{ width: 1, height: 24, background: "hsl(var(--border))" }} aria-hidden />
         <div style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 500 }}>
           <span style={{ width: 8, height: 8, borderRadius: "50%", background: "hsl(var(--success))", boxShadow: "0 0 0 4px hsl(var(--success) / .2)" }} aria-hidden />
@@ -144,14 +203,12 @@ export function MediatorDashboard() {
         <button onClick={() => setQrOpen(true)} style={outlineBtnStyle}>
           <QrCode size={14} aria-hidden /> QR do evento
         </button>
-        <button onClick={() => router.push("/mediador/apresentar")} style={primaryBtnStyle}>
+        <button onClick={() => eventId && router.push(`/mediador/apresentar?eventId=${eventId}`)} style={primaryBtnStyle}>
           <Mic size={14} aria-hidden /> Modo apresentação
         </button>
       </header>
 
-      {/* Body */}
       <div style={{ flex: 1, display: "grid", gridTemplateColumns: "440px 1fr", overflow: "hidden" }}>
-        {/* List */}
         <nav aria-label="Lista de perguntas" style={{ borderRight: "1px solid hsl(var(--border))", display: "flex", flexDirection: "column", overflow: "hidden" }}>
           <div style={{ padding: "12px 16px", borderBottom: "1px solid hsl(var(--border))", display: "flex", gap: 4 }} role="tablist">
             {([["unread", "Não lidas", counts.unread], ["all", "Todas", counts.all], ["hidden", "Ocultas", counts.hidden]] as const).map(([t, label, count]) => (
@@ -162,9 +219,6 @@ export function MediatorDashboard() {
           </div>
 
           <div role="tabpanel" style={{ flex: 1, overflowY: "auto", padding: 8, display: "flex", flexDirection: "column", gap: 4 }}>
-            {loading && listed.length === 0 && (
-              <div style={{ padding: 32, textAlign: "center", color: "hsl(var(--muted-foreground))" }}>Carregando…</div>
-            )}
             {!loading && listed.length === 0 && (
               <div style={{ padding: 40, textAlign: "center", color: "hsl(var(--muted-foreground))" }}>
                 <p style={{ fontFamily: '"Archivo", sans-serif', fontWeight: 600, fontSize: 16, color: "hsl(var(--foreground))", marginBottom: 6 }}>Sem perguntas aqui</p>
@@ -181,7 +235,6 @@ export function MediatorDashboard() {
           </div>
         </nav>
 
-        {/* Detail */}
         <main>
           {selected ? (
             <QuestionDetail
@@ -191,7 +244,7 @@ export function MediatorDashboard() {
               onMarkAnswered={() => applyAction(selected.id, "markAnswered")}
               onHide={() => applyAction(selected.id, "hide")}
               onRestore={() => applyAction(selected.id, "restore")}
-              onPresent={() => { applyAction(selected.id, "setNext"); router.push("/mediador/apresentar"); }}
+              onPresent={() => { applyAction(selected.id, "setNext"); if (eventId) router.push(`/mediador/apresentar?eventId=${eventId}`); }}
             />
           ) : (
             <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "hsl(var(--muted-foreground))" }}>
@@ -201,7 +254,6 @@ export function MediatorDashboard() {
         </main>
       </div>
 
-      {/* Footer */}
       <footer style={{ height: 34, borderTop: "1px solid hsl(var(--border))", display: "flex", alignItems: "center", padding: "0 20px", gap: 16, fontSize: 12, color: "hsl(var(--muted-foreground))", flexShrink: 0 }}>
         <span>Atalhos: <kbd style={kbd}>J</kbd>/<kbd style={kbd}>K</kbd> navegar · <kbd style={kbd}>R</kbd> respondida · <kbd style={kbd}>N</kbd> próxima · <kbd style={kbd}>P</kbd> apresentar</span>
       </footer>

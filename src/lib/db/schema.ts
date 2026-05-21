@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, boolean, integer, jsonb, pgEnum } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, boolean, integer, jsonb, pgEnum, uniqueIndex } from "drizzle-orm/pg-core";
 
 export const eventStatusEnum = pgEnum("event_status", ["draft", "active", "ended"]);
 export const questionStatusEnum = pgEnum("question_status", ["pending", "next", "answered", "hidden"]);
@@ -50,7 +50,9 @@ export const mediatorAssignments = pgTable("mediator_assignments", {
   eventId: text("event_id").notNull().references(() => events.id),
   userId: text("user_id").notNull().references(() => users.id),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-});
+}, (t) => [
+  uniqueIndex("mediator_assignments_event_user_idx").on(t.eventId, t.userId),
+]);
 
 export const participants = pgTable("participants", {
   id: text("id").primaryKey(),

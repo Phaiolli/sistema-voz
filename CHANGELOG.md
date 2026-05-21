@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — Admin + Mediador MVP (#19–#33)
+- Full REST API for event management: `GET/POST /api/v1/events`, `GET/PATCH/DELETE /api/v1/events/[id]`
+- Full REST API for user management: `GET/POST /api/v1/users`, `GET/PATCH/DELETE /api/v1/users/[id]`
+- Mediator assignment API: `GET/POST /api/v1/events/[id]/mediators`, `DELETE /api/v1/events/[id]/mediators/[userId]`
+- `GET /api/v1/me/assignments` — returns all events for admin, assigned events for mediador
+- `src/middleware.ts` — route-level protection for `/admin/*` (admin only) and `/mediador/*` (admin + mediador)
+- Admin UI: events list, new event form, event editor with mediators tab and settings tab
+- Admin UI: users management page with inline create/edit/delete
+- Mediador dashboard wired to real API — loads assigned event dynamically, no hardcoded IDs
+- Presentation mode wired to real event via `?eventId=` query param
+- Zod schemas for all new API inputs (`createEventSchema`, `patchEventSchema`, `createUserSchema`, `patchUserSchema`, `assignMediatorSchema`)
+- UNIQUE constraint on `mediator_assignments(event_id, user_id)` via Drizzle schema
+- ADR-005: Access management MVP — manual credential sharing pattern
+- ADR-006: Mediator event ownership via `mediator_assignments` table
+- Vitest test suite for all new API routes — 133 tests, ≥80% branch coverage
+
 ### Added
 - Dark mode as default theme for `/admin` and `/mediador` routes (closes #15, #16, #17, #18)
 - `AdminThemeProvider` — scoped Client Component that applies `.dark` class to a wrapper div, persists preference in `localStorage` with key `theme-admin`

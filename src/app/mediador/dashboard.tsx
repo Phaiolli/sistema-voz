@@ -15,12 +15,12 @@ type Tab = "unread" | "all" | "hidden";
 
 interface Assignment {
   eventId: string;
-  event: { id: string; name: string };
+  event: { id: string; slug: string; name: string };
   assignedAt: string;
 }
 
 interface AssignmentsResponse {
-  events?: { id: string; name: string }[];
+  events?: { id: string; slug: string; name: string }[];
   assignments?: Assignment[];
 }
 
@@ -33,6 +33,7 @@ export function MediatorDashboard() {
   const [qrOpen, setQrOpen] = useState(false);
   const [eventId, setEventId] = useState<string | null>(null);
   const [eventName, setEventName] = useState<string>("");
+  const [eventSlug, setEventSlug] = useState<string>("");
   const [noEvent, setNoEvent] = useState(false);
 
   useEffect(() => {
@@ -44,12 +45,15 @@ export function MediatorDashboard() {
       .then((data: AssignmentsResponse) => {
         let id: string | null = null;
         let name = "";
+        let slug = "";
         if (data.events && data.events.length > 0) {
           id = data.events[0].id;
           name = data.events[0].name;
+          slug = data.events[0].slug;
         } else if (data.assignments && data.assignments.length > 0) {
           id = data.assignments[0].event.id;
           name = data.assignments[0].event.name;
+          slug = data.assignments[0].event.slug;
         }
         if (!id) {
           setNoEvent(true);
@@ -58,6 +62,7 @@ export function MediatorDashboard() {
         }
         setEventId(id);
         setEventName(name);
+        setEventSlug(slug);
         return fetch(`/api/v1/events/${id}/questions`);
       })
       .then((r) => {
@@ -258,7 +263,7 @@ export function MediatorDashboard() {
         <span>Atalhos: <kbd style={kbd}>J</kbd>/<kbd style={kbd}>K</kbd> navegar · <kbd style={kbd}>R</kbd> respondida · <kbd style={kbd}>N</kbd> próxima · <kbd style={kbd}>P</kbd> apresentar</span>
       </footer>
 
-      {qrOpen && <QRModal onClose={() => setQrOpen(false)} />}
+      {qrOpen && <QRModal slug={eventSlug} onClose={() => setQrOpen(false)} />}
       <style>{`@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }`}</style>
     </div>
   );

@@ -138,9 +138,20 @@ export function MediatorDashboard() {
     return idx >= 0 ? idx : 0;
   }, [listed, selectedId]);
 
-  const prevQ = currentIdx > 0 ? listed[currentIdx - 1] : null;
+  // Window: 2 previous + current + 3 next
+  const prevQuestions = useMemo(
+    () => listed.slice(Math.max(0, currentIdx - 2), currentIdx),
+    [listed, currentIdx]
+  );
   const currentQ = listed[currentIdx] ?? null;
-  const nextQ = currentIdx < listed.length - 1 ? listed[currentIdx + 1] : null;
+  const nextQuestions = useMemo(
+    () => listed.slice(currentIdx + 1, currentIdx + 4),
+    [listed, currentIdx]
+  );
+
+  // Immediate neighbours for navigation / advance
+  const prevQ = prevQuestions[prevQuestions.length - 1] ?? null;
+  const nextQ = nextQuestions[0] ?? null;
 
   const [loadedAt] = useState(() => Date.now());
   const newBadge = useMemo(() => {
@@ -301,8 +312,8 @@ export function MediatorDashboard() {
         </div>
       </div>
 
-      {/* Main: single column — prev / current / next */}
-      <main style={{ flex: 1, overflowY: "auto", padding: "16px", display: "flex", flexDirection: "column", gap: 8, maxWidth: 800, width: "100%", margin: "0 auto", boxSizing: "border-box" }}>
+      {/* Main: single column — up to 2 prev + current + up to 3 next */}
+      <main style={{ flex: 1, overflowY: "auto", padding: "12px 16px", display: "flex", flexDirection: "column", gap: 6, maxWidth: 800, width: "100%", margin: "0 auto", boxSizing: "border-box" }}>
         {listed.length === 0 && (
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", flex: 1, flexDirection: "column", gap: 8, color: "hsl(var(--muted-foreground))" }}>
             <p style={{ fontFamily: '"Archivo", sans-serif', fontWeight: 600, fontSize: 16, color: "hsl(var(--foreground))", margin: 0 }}>Sem perguntas aqui</p>
@@ -310,14 +321,15 @@ export function MediatorDashboard() {
           </div>
         )}
 
-        {prevQ && (
+        {prevQuestions.map((q) => (
           <QuestionSlot
-            q={prevQ}
+            key={q.id}
+            q={q}
             role="prev"
             projectedId={projectedId}
-            onClick={() => setSelectedId(prevQ.id)}
+            onClick={() => setSelectedId(q.id)}
           />
-        )}
+        ))}
 
         {currentQ && (
           <QuestionSlot
@@ -335,14 +347,15 @@ export function MediatorDashboard() {
           />
         )}
 
-        {nextQ && (
+        {nextQuestions.map((q) => (
           <QuestionSlot
-            q={nextQ}
+            key={q.id}
+            q={q}
             role="next"
             projectedId={projectedId}
-            onClick={() => setSelectedId(nextQ.id)}
+            onClick={() => setSelectedId(q.id)}
           />
-        )}
+        ))}
       </main>
 
       {/* Footer */}
@@ -386,6 +399,19 @@ function QuestionSlot({ q, role, projectedId, onClick, onPrev, onNext, onProject
     overflow: "hidden",
   };
 
+  // Border accent colour per role
+  const accentColor = isCurrent
+    ? "hsl(var(--foreground))"
+    : role === "prev"
+      ? "hsl(var(--muted-foreground) / .35)"
+      : "hsl(142 71% 45% / .6)"; // green for next
+
+  // Label chip config
+  const labelText = role === "prev" ? "Pergunta anterior" : role === "next" ? "Próxima pergunta" : null;
+  const labelColor = role === "prev"
+    ? { bg: "hsl(var(--muted))", text: "hsl(var(--muted-foreground))" }
+    : { bg: "hsl(142 71% 45% / .15)", text: "hsl(142 71% 55%)" };
+
   return (
     <article
       onClick={!isCurrent ? onClick : undefined}
@@ -393,10 +419,11 @@ function QuestionSlot({ q, role, projectedId, onClick, onPrev, onNext, onProject
       tabIndex={!isCurrent ? 0 : undefined}
       aria-label={!isCurrent ? `Ir para pergunta de ${q.authorName}` : undefined}
       style={{
-        borderRadius: 14,
-        border: `1px solid ${isCurrent ? (isProjected ? "hsl(var(--primary) / .5)" : "hsl(var(--border))") : "hsl(var(--border) / .4)"}`,
+        borderRadius: 10,
+        border: `1px solid hsl(var(--border) / ${isCurrent ? ".8" : ".3"})`,
+        borderLeft: `3px solid ${accentColor}`,
         background: isCurrent ? "hsl(var(--card))" : "transparent",
-        opacity: isCurrent ? 1 : 0.55,
+        opacity: isCurrent ? 1 : role === "prev" ? 0.5 : 0.65,
         cursor: isCurrent ? "default" : "pointer",
         position: "relative",
         overflow: "hidden",
@@ -405,11 +432,24 @@ function QuestionSlot({ q, role, projectedId, onClick, onPrev, onNext, onProject
     >
       {/* Active projection indicator bar */}
       {isProjected && (
-        <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 3, background: "hsl(var(--primary))" }} aria-hidden />
+        <div style={{ position: "absolute", top: 0, left: 3, right: 0, height: 2, background: "hsl(var(--primary))" }} aria-hidden />
+      )}
+
+      {/* Position label chip */}
+      {labelText && (
+        <div style={{ padding: "6px 12px 0 12px" }}>
+          <span style={{
+            display: "inline-block", padding: "1px 7px", borderRadius: 4,
+            background: labelColor.bg, color: labelColor.text,
+            fontSize: 10, fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase",
+          }}>
+            {labelText}
+          </span>
+        </div>
       )}
 
       {/* Card header */}
-      <div style={{ padding: isCurrent ? "16px 16px 0" : "10px 14px 0", display: "flex", alignItems: "center", gap: 8, flexWrap: "nowrap" }}>
+      <div style={{ padding: isCurrent ? "12px 16px 0" : "4px 12px 0", display: "flex", alignItems: "center", gap: 8, flexWrap: "nowrap" }}>
         <span style={{ fontSize: isCurrent ? 14 : 13, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 180 }}>{q.authorName}</span>
         {isCurrent && <StatusBadge status={q.status} />}
         <span style={{ fontSize: 12, color: "hsl(var(--muted-foreground))", marginLeft: "auto", flexShrink: 0 }}>{formatRelative(q.createdAt)}</span>
@@ -425,11 +465,11 @@ function QuestionSlot({ q, role, projectedId, onClick, onPrev, onNext, onProject
       </div>
 
       {/* Question text */}
-      <div style={{ padding: isCurrent ? "12px 16px" : "6px 14px 10px" }}>
+      <div style={{ padding: isCurrent ? "10px 16px" : "4px 12px 10px" }}>
         <p style={{
           fontFamily: '"Archivo", sans-serif',
           fontWeight: isCurrent ? 500 : 400,
-          fontSize: isCurrent ? 22 : 14,
+          fontSize: isCurrent ? 22 : 13,
           lineHeight: 1.35,
           margin: 0,
           color: q.status === "answered" || q.status === "hidden" ? "hsl(var(--muted-foreground))" : "hsl(var(--foreground))",

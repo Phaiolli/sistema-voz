@@ -6,6 +6,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { ArrowLeft, Save, Download, Plus, X, Upload } from "lucide-react";
 import { VozWordmark } from "@/components/voz/wordmark";
+import { HeaderControls } from "@/components/voz/header-controls";
 import { toast } from "sonner";
 import type { Event, UserRole, EventPageSpeaker, EventPageScheduleItem } from "@/lib/types";
 
@@ -319,37 +320,42 @@ export function EventEditor({ eventId, isNew }: { eventId: string | null; isNew:
         </Link>
         <VozWordmark size={20} />
         <div style={{ flex: 1 }} />
-        <span style={{ fontSize: 13, color: "hsl(var(--muted-foreground))" }}>
-          {isNew ? "Novo evento" : eventName || "…"}
-        </span>
-        {!isNew && (
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            style={{ display: "inline-flex", alignItems: "center", gap: 6, height: 36, padding: "0 14px", borderRadius: 8, border: "none", background: "hsl(var(--primary))", color: "hsl(var(--primary-foreground))", fontSize: 13, fontWeight: 600, cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.7 : 1 }}
-          >
-            <Save size={14} aria-hidden /> {saving ? "Salvando…" : "Salvar"}
-          </button>
-        )}
+        <HeaderControls />
       </header>
 
-      <div style={{ borderBottom: "1px solid hsl(var(--border))", padding: "0 24px", display: "flex", gap: 2, overflowX: "auto" }} role="tablist">
-        {TABS.map((t) => (
-          <button
-            key={t.id}
-            role="tab"
-            aria-selected={tab === t.id}
-            onClick={() => setTab(t.id)}
-            style={{
-              padding: "12px 16px", border: "none", cursor: "pointer", fontSize: 14, fontWeight: 500, whiteSpace: "nowrap",
-              background: "transparent",
-              color: tab === t.id ? "hsl(var(--foreground))" : "hsl(var(--muted-foreground))",
-              borderBottom: tab === t.id ? "2px solid hsl(var(--primary))" : "2px solid transparent",
-            }}
-          >
-            {t.label}
-          </button>
-        ))}
+      <div style={{ borderBottom: "1px solid hsl(var(--border))", padding: "0 24px", display: "flex", alignItems: "center", gap: 8 }}>
+        <div style={{ display: "flex", gap: 2, flex: 1, overflowX: "auto" }} role="tablist">
+          {TABS.map((t) => (
+            <button
+              key={t.id}
+              role="tab"
+              aria-selected={tab === t.id}
+              onClick={() => setTab(t.id)}
+              style={{
+                padding: "12px 16px", border: "none", cursor: "pointer", fontSize: 14, fontWeight: 500, whiteSpace: "nowrap",
+                background: "transparent",
+                color: tab === t.id ? "hsl(var(--foreground))" : "hsl(var(--muted-foreground))",
+                borderBottom: tab === t.id ? "2px solid hsl(var(--primary))" : "2px solid transparent",
+              }}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0, paddingLeft: 8, borderLeft: "1px solid hsl(var(--border))" }}>
+          <span style={{ fontSize: 13, color: "hsl(var(--muted-foreground))", maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {isNew ? "Novo evento" : eventName || "…"}
+          </span>
+          {!isNew && (
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              style={{ display: "inline-flex", alignItems: "center", gap: 6, height: 32, padding: "0 12px", borderRadius: 8, border: "none", background: "hsl(var(--primary))", color: "hsl(var(--primary-foreground))", fontSize: 13, fontWeight: 600, cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.7 : 1 }}
+            >
+              <Save size={13} aria-hidden /> {saving ? "Salvando…" : "Salvar"}
+            </button>
+          )}
+        </div>
       </div>
 
       <main style={{ maxWidth: 960, margin: "0 auto", padding: "32px 24px" }} role="tabpanel">

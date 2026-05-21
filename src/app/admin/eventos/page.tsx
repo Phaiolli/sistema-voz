@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Plus, Mic, QrCode, Download, Edit } from "lucide-react";
 import { VozWordmark } from "@/components/voz/wordmark";
+import { HeaderControls } from "@/components/voz/header-controls";
 import { toast } from "sonner";
 import type { Event } from "@/lib/types";
 
@@ -43,6 +44,8 @@ export default function AdminEventosPage() {
         >
           <Plus size={14} aria-hidden /> Novo evento
         </Link>
+        <div style={{ width: 1, height: 24, background: "hsl(var(--border))" }} aria-hidden />
+        <HeaderControls />
       </header>
 
       <main style={{ maxWidth: 960, margin: "0 auto", padding: "32px 24px" }}>

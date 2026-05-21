@@ -198,22 +198,27 @@ export function MediatorDashboard() {
     const patchMap: Record<string, Partial<Question>> = {
       markAnswered: { status: "answered" as QuestionStatus, answeredAt: new Date().toISOString() },
       hide: { status: "hidden" as QuestionStatus, hiddenAt: new Date().toISOString() },
-      restore: { status: "pending" as QuestionStatus },
+      restore: { status: "pending" as QuestionStatus, answeredAt: undefined },
     };
+    // Save previous state for rollback
+    const prev = questions.find((q) => q.id === id);
     setQuestions((qs) => qs.map((q) => q.id === id ? { ...q, ...patchMap[action] } : q));
     if (projectedId === id && action === "hide") {
       unprojectQuestion();
     }
     try {
-      await fetch(`/api/v1/questions/${id}`, {
+      const res = await fetch(`/api/v1/questions/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action }),
       });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
     } catch {
-      toast.error("Erro ao salvar. Atualize a página.");
+      // Revert optimistic update on failure
+      if (prev) setQuestions((qs) => qs.map((q) => q.id === id ? prev : q));
+      toast.error("Erro ao salvar. Tente novamente.");
     }
-  }, [projectedId, unprojectQuestion]);
+  }, [questions, projectedId, unprojectQuestion]);
 
   const hideAndAdvance = useCallback(async (id: string) => {
     if (nextQ) setSelectedId(nextQ.id);

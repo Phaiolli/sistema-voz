@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import { ExternalLink, QrCode, ArrowLeft, ArrowRight, EyeOff, RotateCcw, Trash2, MonitorPlay, MonitorOff } from "lucide-react";
 import { VozLockup } from "@/components/voz/wordmark";
-import { StatusBadge } from "@/components/voz/status-badge";
 import { HeaderControls } from "@/components/voz/header-controls";
 import { createBrowserClient } from "@/lib/supabase";
 import { signOut } from "next-auth/react";
@@ -464,7 +463,6 @@ function QuestionSlot({ q, role, projectedId, onClick, onPrev, onNext, onProject
       {/* Card header */}
       <div style={{ padding: isCurrent ? "12px 16px 0" : "4px 12px 0", display: "flex", alignItems: "center", gap: 8, flexWrap: "nowrap" }}>
         <span style={{ fontSize: isCurrent ? 14 : 13, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 180 }}>{q.authorName}</span>
-        {isCurrent && <StatusBadge status={q.status} />}
         <span style={{ fontSize: 12, color: "hsl(var(--muted-foreground))", marginLeft: "auto", flexShrink: 0 }}>{formatRelative(q.createdAt)}</span>
         {isCurrent && (
           <>

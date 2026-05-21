@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { Calendar, MapPin, Mic } from "lucide-react";
+import { Calendar, MapPin, Mic, Lock } from "lucide-react";
 import { eventIncluir, speakersIncluir, agendaIncluir } from "@/lib/fixtures";
 import { VozWordmark } from "@/components/voz/wordmark";
 import type { Event } from "@/lib/types";
@@ -24,6 +24,14 @@ export default async function EventPage({ params }: { params: Promise<{ slug: st
 
       <header style={{ position: "sticky", top: 0, zIndex: 10, height: 52, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 16px", background: "linear-gradient(180deg, hsl(var(--background)) 60%, hsl(var(--background) / 0))", backdropFilter: "blur(8px)" }}>
         <VozWordmark size={20} inverse />
+        <Link
+          href="/entrar"
+          aria-label="Acesso administrativo"
+          className="admin-link"
+          style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: 8, borderRadius: 8, color: "#fff" }}
+        >
+          <Lock size={15} aria-hidden />
+        </Link>
       </header>
 
       <main id="conteudo-principal">

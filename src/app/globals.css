@@ -130,3 +130,12 @@
   letter-spacing: -0.02em;
   line-height: 1;
 }
+
+.admin-link {
+  opacity: 0.25;
+  transition: opacity 0.2s ease;
+}
+.admin-link:hover,
+.admin-link:focus-visible {
+  opacity: 0.65;
+}

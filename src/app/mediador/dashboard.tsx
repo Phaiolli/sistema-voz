@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import type { RealtimeChannel } from "@supabase/supabase-js";
-import { ExternalLink, QrCode, ArrowLeft, ArrowRight, Check, EyeOff, RotateCcw, Trash2, MonitorPlay, MonitorOff } from "lucide-react";
+import { ExternalLink, QrCode, ArrowLeft, ArrowRight, EyeOff, RotateCcw, Trash2, MonitorPlay, MonitorOff } from "lucide-react";
 import { VozLockup } from "@/components/voz/wordmark";
 import { StatusBadge } from "@/components/voz/status-badge";
 import { HeaderControls } from "@/components/voz/header-controls";
@@ -39,6 +39,7 @@ export function MediatorDashboard() {
   const [tab, setTab] = useState<Tab>("unread");
   const [selectedId, setSelectedId] = useState<string>("");
   const [projectedId, setProjectedId] = useState<string | null>(null);
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
   const [qrOpen, setQrOpen] = useState(false);
   const [eventId, setEventId] = useState<string | null>(null);
   const [eventName, setEventName] = useState<string>("");
@@ -227,7 +228,7 @@ export function MediatorDashboard() {
   }, [nextQ, prevQ, applyAction]);
 
   const deleteQuestion = useCallback(async (id: string) => {
-    if (!window.confirm("Apagar esta pergunta permanentemente? Não pode ser desfeito.")) return;
+    setDeleteTargetId(null);
     if (nextQ) setSelectedId(nextQ.id);
     else if (prevQ) setSelectedId(prevQ.id);
     setQuestions((qs) => qs.filter((q) => q.id !== id));
@@ -244,7 +245,6 @@ export function MediatorDashboard() {
       if ((e.target as HTMLElement).tagName === "INPUT" || (e.target as HTMLElement).tagName === "TEXTAREA") return;
       if (e.key === "j" || e.key === "ArrowDown") { e.preventDefault(); goNext(); }
       if (e.key === "k" || e.key === "ArrowUp") { e.preventDefault(); goPrev(); }
-      if (e.key === "r" && currentQ) { e.preventDefault(); applyAction(currentQ.id, "markAnswered"); }
       if (e.key === "p" && currentQ) {
         e.preventDefault();
         if (projectedId === currentQ.id) unprojectQuestion();
@@ -253,7 +253,7 @@ export function MediatorDashboard() {
     };
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
-  }, [goNext, goPrev, currentQ, applyAction, projectedId, projectQuestion, unprojectQuestion]);
+  }, [goNext, goPrev, currentQ, projectedId, projectQuestion, unprojectQuestion]);
 
   if (loading) {
     return (
@@ -357,8 +357,7 @@ export function MediatorDashboard() {
             onUnproject={unprojectQuestion}
             onHide={() => hideAndAdvance(currentQ.id)}
             onRestore={() => applyAction(currentQ.id, "restore")}
-            onMarkAnswered={() => applyAction(currentQ.id, "markAnswered")}
-            onDelete={() => deleteQuestion(currentQ.id)}
+            onDelete={() => setDeleteTargetId(currentQ.id)}
           />
         )}
 
@@ -375,8 +374,17 @@ export function MediatorDashboard() {
 
       {qrOpen && <QRModal slug={eventSlug} eventName={eventName} theme={eventTheme} onClose={() => setQrOpen(false)} />}
 
+      {deleteTargetId && (
+        <DeleteModal
+          onConfirm={() => deleteQuestion(deleteTargetId)}
+          onCancel={() => setDeleteTargetId(null)}
+        />
+      )}
+
       <style>{`
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+        .nav-lbl { display: inline; }
+        @media (max-width: 480px) { .nav-lbl { display: none; } }
       `}</style>
     </div>
   );
@@ -393,11 +401,10 @@ interface QuestionSlotProps {
   onUnproject?: () => void;
   onHide?: () => void;
   onRestore?: () => void;
-  onMarkAnswered?: () => void;
   onDelete?: () => void;
 }
 
-function QuestionSlot({ q, role, projectedId, onClick, onPrev, onNext, onProject, onUnproject, onHide, onRestore, onMarkAnswered, onDelete }: QuestionSlotProps) {
+function QuestionSlot({ q, role, projectedId, onClick, onPrev, onNext, onProject, onUnproject, onHide, onRestore, onDelete }: QuestionSlotProps) {
   const isCurrent = role === "current";
   const isProjected = projectedId === q.id;
 
@@ -462,13 +469,19 @@ function QuestionSlot({ q, role, projectedId, onClick, onPrev, onNext, onProject
         {isCurrent && <StatusBadge status={q.status} />}
         <span style={{ fontSize: 12, color: "hsl(var(--muted-foreground))", marginLeft: "auto", flexShrink: 0 }}>{formatRelative(q.createdAt)}</span>
         {isCurrent && (
-          q.status === "hidden"
-            ? <button onClick={onRestore} style={ghostSmallStyle} aria-label="Restaurar pergunta">
-                <RotateCcw size={13} aria-hidden /> Restaurar
-              </button>
-            : <button onClick={onHide} style={ghostSmallStyle} aria-label="Ocultar pergunta">
-                <EyeOff size={13} aria-hidden /> Ocultar
-              </button>
+          <>
+            <button onClick={onDelete} style={deleteBtnStyle} aria-label="Apagar pergunta permanentemente">
+              <Trash2 size={13} aria-hidden />
+            </button>
+            {q.status === "hidden"
+              ? <button onClick={onRestore} style={ghostSmallStyle} aria-label="Restaurar pergunta">
+                  <RotateCcw size={13} aria-hidden /> Restaurar
+                </button>
+              : <button onClick={onHide} style={ghostSmallStyle} aria-label="Ocultar pergunta">
+                  <EyeOff size={13} aria-hidden /> Ocultar
+                </button>
+            }
+          </>
         )}
       </div>
 
@@ -487,54 +500,35 @@ function QuestionSlot({ q, role, projectedId, onClick, onPrev, onNext, onProject
         </p>
       </div>
 
-      {/* Action bar — current only, two rows so buttons never clip */}
+      {/* Action bar — single row, never wraps */}
       {isCurrent && (
-        <div style={{ padding: "10px 16px 14px", borderTop: "1px solid hsl(var(--border))", display: "flex", flexDirection: "column", gap: 8 }}>
-          {/* Row 1: navigation + project */}
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            <button
-              onClick={onPrev}
-              disabled={!onPrev}
-              style={{ ...outlineBtnStyle, opacity: onPrev ? 1 : 0.35, flex: "1 1 auto" }}
-              aria-label="Pergunta anterior"
-            >
-              <ArrowLeft size={14} aria-hidden /> Anterior
-            </button>
-            {q.status !== "hidden" && (
-              isProjected
-                ? <button onClick={onUnproject} style={{ ...projectedBtnStyle, flex: "2 1 auto", justifyContent: "center" }} aria-label="Retirar do projetor">
-                    <MonitorOff size={14} aria-hidden /> Retirar do Projetor
-                  </button>
-                : <button onClick={onProject} style={{ ...primaryBtnStyle, flex: "2 1 auto", justifyContent: "center" }} aria-label="Projetar esta pergunta">
-                    <MonitorPlay size={14} aria-hidden /> Projetar
-                  </button>
-            )}
-            <button
-              onClick={onNext}
-              disabled={!onNext}
-              style={{ ...outlineBtnStyle, opacity: onNext ? 1 : 0.35, flex: "1 1 auto", justifyContent: "center" }}
-              aria-label="Próxima pergunta"
-            >
-              Próxima <ArrowRight size={14} aria-hidden />
-            </button>
-          </div>
-          {/* Row 2: secondary actions */}
-          {q.status !== "hidden" && (
-            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-              <button onClick={onDelete} style={deleteBtnStyle} aria-label="Apagar pergunta permanentemente">
-                <Trash2 size={14} aria-hidden />
-              </button>
-              <div style={{ flex: 1 }} />
-              {q.status === "answered"
-                ? <button onClick={onRestore} style={{ ...secondaryBtnStyle, color: "hsl(var(--muted-foreground))" }} aria-label="Desmarcar respondida">
-                    <RotateCcw size={14} aria-hidden /> Desmarcar
-                  </button>
-                : <button onClick={onMarkAnswered} style={secondaryBtnStyle} aria-label="Marcar como respondida">
-                    <Check size={14} aria-hidden /> Respondida
-                  </button>
-              }
-            </div>
-          )}
+        <div style={{ padding: "10px 16px 14px", borderTop: "1px solid hsl(var(--border))", display: "flex", gap: 8 }}>
+          <button
+            onClick={onPrev}
+            disabled={!onPrev}
+            style={{ ...outlineBtnStyle, opacity: onPrev ? 1 : 0.35, flex: 1, justifyContent: "center", minWidth: 0 }}
+            aria-label="Pergunta anterior"
+          >
+            <ArrowLeft size={14} aria-hidden /> <span className="nav-lbl">Anterior</span>
+          </button>
+          {q.status !== "hidden"
+            ? isProjected
+              ? <button onClick={onUnproject} style={{ ...projectedBtnStyle, flex: 2, justifyContent: "center", minWidth: 0 }} aria-label="Retirar do projetor">
+                  <MonitorOff size={14} aria-hidden /> <span className="nav-lbl">Retirar</span>
+                </button>
+              : <button onClick={onProject} style={{ ...primaryBtnStyle, flex: 2, justifyContent: "center", minWidth: 0 }} aria-label="Projetar esta pergunta">
+                  <MonitorPlay size={14} aria-hidden /> <span className="nav-lbl">Projetar</span>
+                </button>
+            : <div style={{ flex: 2 }} />
+          }
+          <button
+            onClick={onNext}
+            disabled={!onNext}
+            style={{ ...outlineBtnStyle, opacity: onNext ? 1 : 0.35, flex: 1, justifyContent: "center", minWidth: 0 }}
+            aria-label="Próxima pergunta"
+          >
+            <span className="nav-lbl">Próxima</span> <ArrowRight size={14} aria-hidden />
+          </button>
         </div>
       )}
     </article>
@@ -556,3 +550,23 @@ const outlineBtnStyle: React.CSSProperties = { ...primaryBtnStyle, background: "
 const ghostSmallStyle: React.CSSProperties = { display: "inline-flex", alignItems: "center", gap: 4, height: 28, padding: "0 8px", borderRadius: 6, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 500, background: "transparent", color: "hsl(var(--muted-foreground))", flexShrink: 0 };
 const deleteBtnStyle: React.CSSProperties = { display: "inline-flex", alignItems: "center", justifyContent: "center", width: 36, height: 36, borderRadius: 8, border: "1px solid hsl(var(--destructive) / .3)", cursor: "pointer", background: "transparent", color: "hsl(var(--destructive))", flexShrink: 0 };
 const toolBtnStyle: React.CSSProperties = { display: "inline-flex", flexDirection: "column", alignItems: "center", gap: 2, padding: "5px 14px", borderRadius: 8, border: "1px solid hsl(var(--border))", cursor: "pointer", fontSize: 11, fontWeight: 500, background: "transparent", color: "hsl(var(--foreground))", minWidth: 64, flexShrink: 0 };
+
+function DeleteModal({ onConfirm, onCancel }: { onConfirm: () => void; onCancel: () => void }) {
+  return (
+    <div
+      role="dialog"
+      aria-modal
+      aria-labelledby="delete-modal-title"
+      style={{ position: "fixed", inset: 0, background: "hsl(var(--background) / .75)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50, backdropFilter: "blur(4px)" }}
+    >
+      <div style={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 14, padding: 24, maxWidth: 360, width: "calc(100% - 32px)", display: "flex", flexDirection: "column", gap: 16 }}>
+        <p id="delete-modal-title" style={{ fontFamily: '"Archivo", sans-serif', fontWeight: 600, fontSize: 16, margin: 0 }}>Apagar pergunta?</p>
+        <p style={{ fontSize: 14, color: "hsl(var(--muted-foreground))", margin: 0 }}>Esta ação não pode ser desfeita.</p>
+        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+          <button onClick={onCancel} style={outlineBtnStyle}>Cancelar</button>
+          <button onClick={onConfirm} style={{ ...primaryBtnStyle, background: "hsl(var(--destructive))", color: "#fff", border: "none" }}>Apagar</button>
+        </div>
+      </div>
+    </div>
+  );
+}

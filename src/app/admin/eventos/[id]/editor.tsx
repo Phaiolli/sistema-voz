@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowLeft, Save, Download, Plus, X, Upload, CheckCircle2, Package, Trophy, ExternalLink } from "lucide-react";
+import { ArrowLeft, Save, Download, Plus, X, Upload, CheckCircle2, Package, Trophy, ExternalLink, ImagePlus, FileDown } from "lucide-react";
 import { VozWordmark } from "@/components/voz/wordmark";
 import { HeaderControls } from "@/components/voz/header-controls";
 import { generateQrWithLogo } from "@/lib/qr";
@@ -81,12 +81,15 @@ export function EventEditor({ eventId, isNew }: { eventId: string | null; isNew:
   // Sobre (estruturado)
   const [logo, setLogo] = useState("");
   const [logoUploading, setLogoUploading] = useState(false);
+  const [coverUrl, setCoverUrl] = useState("");
+  const [coverUploading, setCoverUploading] = useState(false);
   const [aboutText, setAboutText] = useState("");
   const [organizer, setOrganizer] = useState("");
   const [organizerInstagram, setOrganizerInstagram] = useState("");
   const [speakers, setSpeakers] = useState<EventPageSpeaker[]>([]);
   const [schedule, setSchedule] = useState<EventPageScheduleItem[]>([]);
   const logoInputRef = useRef<HTMLInputElement>(null);
+  const coverInputRef = useRef<HTMLInputElement>(null);
 
   // Mediadores
   const [mediators, setMediators] = useState<UserPublic[]>([]);
@@ -150,6 +153,7 @@ export function EventEditor({ eventId, isNew }: { eventId: string | null; isNew:
         setDrawEnabled(ev.config?.drawEnabled ?? false);
         const page = ev.config?.page;
         setLogo(page?.logo ?? "");
+        setCoverUrl(page?.coverUrl ?? "");
         setAboutText(page?.aboutText ?? ev.about ?? "");
         setOrganizer(page?.organizer ?? "");
         setOrganizerInstagram(page?.organizerInstagram ?? "");
@@ -204,7 +208,7 @@ export function EventEditor({ eventId, isNew }: { eventId: string | null; isNew:
           about: aboutText,
           theme: { preset, background: bgColor, accent: accentColor },
           config: {
-            page: { logo, aboutText, organizer, organizerInstagram, speakers, schedule },
+            page: { logo, coverUrl, aboutText, organizer, organizerInstagram, speakers, schedule },
             registration: {
               enabled: regEnabled,
               opensAt: regOpensAt ? new Date(regOpensAt).toISOString() : undefined,
@@ -239,6 +243,43 @@ export function EventEditor({ eventId, isNew }: { eventId: string | null; isNew:
       setLogoUploading(false);
       if (logoInputRef.current) logoInputRef.current.value = "";
     }
+  }
+
+  async function handleCoverUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setCoverUploading(true);
+    try {
+      const url = await uploadImage(file);
+      setCoverUrl(url);
+      toast.success("Imagem de capa enviada.");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Erro no upload.");
+    } finally {
+      setCoverUploading(false);
+      if (coverInputRef.current) coverInputRef.current.value = "";
+    }
+  }
+
+  function exportCsv() {
+    if (registrations.length === 0) return;
+    const header = ["Nome", "E-mail", "Telefone", "Documento", "Presença", "Kit", "Data de inscrição"];
+    const rows = registrations.map((r) => [
+      r.name,
+      r.email,
+      r.phone ?? "",
+      r.document ?? "",
+      r.checkedIn ? "Sim" : "Não",
+      r.kitDelivered ? "Sim" : "Não",
+      new Date(r.createdAt).toLocaleString("pt-BR"),
+    ]);
+    const csv = [header, ...rows].map((row) => row.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `inscritos-${slug || eventId || "evento"}.csv`;
+    a.click();
+    URL.revokeObjectURL(a.href);
   }
 
   function addSpeaker() {
@@ -504,6 +545,36 @@ export function EventEditor({ eventId, isNew }: { eventId: string | null; isNew:
               </div>
             </SectionBlock>
 
+            {/* Imagem de capa */}
+            <SectionBlock title="Imagem de capa">
+              <div style={{ display: "flex", alignItems: "flex-start", gap: 16 }}>
+                {coverUrl ? (
+                  <div style={{ width: 120, height: 68, borderRadius: 8, overflow: "hidden", border: "1px solid hsl(var(--border))", flexShrink: 0 }}>
+                    <Image src={coverUrl} alt="Capa" width={120} height={68} style={{ objectFit: "cover", width: "100%", height: "100%" }} unoptimized />
+                  </div>
+                ) : (
+                  <div style={{ width: 120, height: 68, borderRadius: 8, border: "1px dashed hsl(var(--border))", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, color: "hsl(var(--muted-foreground))" }}>
+                    <ImagePlus size={22} aria-hidden />
+                  </div>
+                )}
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  <input ref={coverInputRef} type="file" accept="image/*" style={{ display: "none" }} id="cover-upload" onChange={handleCoverUpload} />
+                  <label
+                    htmlFor="cover-upload"
+                    style={{ display: "inline-flex", alignItems: "center", gap: 6, height: 36, padding: "0 14px", borderRadius: 8, border: "1px solid hsl(var(--border))", background: "transparent", fontSize: 13, cursor: coverUploading ? "not-allowed" : "pointer", opacity: coverUploading ? 0.6 : 1 }}
+                  >
+                    <Upload size={14} aria-hidden /> {coverUploading ? "Enviando…" : coverUrl ? "Trocar capa" : "Fazer upload"}
+                  </label>
+                  {coverUrl && (
+                    <button onClick={() => setCoverUrl("")} style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 12, color: "hsl(var(--destructive))", border: "none", background: "none", cursor: "pointer", padding: 0 }}>
+                      <X size={12} /> Remover
+                    </button>
+                  )}
+                  <p style={{ fontSize: 12, color: "hsl(var(--muted-foreground))", margin: 0 }}>Exibida como banner no evento · max 3 MB</p>
+                </div>
+              </div>
+            </SectionBlock>
+
             {/* Sobre */}
             <SectionBlock title="Texto sobre o evento">
               <textarea
@@ -532,7 +603,7 @@ export function EventEditor({ eventId, isNew }: { eventId: string | null; isNew:
             <SectionBlock title="Programação" action={<button onClick={addScheduleItem} style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 13, height: 30, padding: "0 10px", borderRadius: 6, border: "1px solid hsl(var(--border))", background: "transparent", cursor: "pointer" }}><Plus size={12} /> Adicionar</button>}>
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 {schedule.length === 0 && (
-                  <p style={{ fontSize: 13, color: "hsl(var(--muted-foreground))" }}>Nenhum item. Clique em "Adicionar" para incluir.</p>
+                  <p style={{ fontSize: 13, color: "hsl(var(--muted-foreground))" }}>Nenhum item. Clique em &quot;Adicionar&quot; para incluir.</p>
                 )}
                 {schedule.map((item) => (
                   <div key={item.id} style={{ display: "grid", gridTemplateColumns: "80px 1fr 1fr auto", gap: 8, alignItems: "start", padding: 12, background: "hsl(var(--muted))", borderRadius: 8 }}>
@@ -551,7 +622,7 @@ export function EventEditor({ eventId, isNew }: { eventId: string | null; isNew:
             <SectionBlock title="Palestrantes" action={<button onClick={addSpeaker} style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 13, height: 30, padding: "0 10px", borderRadius: 6, border: "1px solid hsl(var(--border))", background: "transparent", cursor: "pointer" }}><Plus size={12} /> Adicionar</button>}>
               <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
                 {speakers.length === 0 && (
-                  <p style={{ fontSize: 13, color: "hsl(var(--muted-foreground))" }}>Nenhum palestrante. Clique em "Adicionar" para incluir.</p>
+                  <p style={{ fontSize: 13, color: "hsl(var(--muted-foreground))" }}>Nenhum palestrante. Clique em &quot;Adicionar&quot; para incluir.</p>
                 )}
                 {speakers.map((sp) => (
                   <div key={sp.id} style={{ padding: 14, background: "hsl(var(--muted))", borderRadius: 10, border: "1px solid hsl(var(--border))" }}>
@@ -763,6 +834,14 @@ export function EventEditor({ eventId, isNew }: { eventId: string | null; isNew:
             {/* List */}
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
               <p style={{ fontWeight: 600, fontSize: 15, margin: 0 }}>{registrations.length} inscritos</p>
+              {registrations.length > 0 && (
+                <button
+                  onClick={exportCsv}
+                  style={{ display: "inline-flex", alignItems: "center", gap: 6, height: 34, padding: "0 12px", borderRadius: 8, border: "1px solid hsl(var(--border))", background: "transparent", fontSize: 13, cursor: "pointer" }}
+                >
+                  <FileDown size={14} aria-hidden /> Exportar CSV
+                </button>
+              )}
             </div>
             {regsLoading && <div style={{ padding: 32, textAlign: "center", color: "hsl(var(--muted-foreground))" }}>Carregando…</div>}
             {!regsLoading && registrations.length === 0 && (

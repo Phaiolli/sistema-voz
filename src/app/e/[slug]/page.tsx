@@ -61,6 +61,7 @@ export default async function EventPage({ params }: { params: Promise<{ slug: st
   const bg = event.theme?.background ?? "#1E4953";
   const regOpen = registrationIsOpen(event);
   const page: EventPage = event.config?.page ?? {};
+  const coverUrl = page.coverUrl ?? null;
   const speakers = page.speakers ?? [];
   const schedule = page.schedule ?? [];
   const organizer = page.organizer ?? "";
@@ -84,6 +85,13 @@ export default async function EventPage({ params }: { params: Promise<{ slug: st
       </header>
 
       <main id="conteudo-principal">
+        {/* Cover image */}
+        {coverUrl && (
+          <div style={{ width: "100%", height: 200, overflow: "hidden", position: "relative" }}>
+            <Image src={coverUrl} alt={event.name} fill style={{ objectFit: "cover" }} unoptimized priority />
+          </div>
+        )}
+
         {/* Hero */}
         <section aria-labelledby="hero-heading" style={{ padding: "8px 24px 32px" }}>
           <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: `${accent}30`, color: accent, padding: "6px 12px", borderRadius: 999, fontSize: 12, fontWeight: 700, letterSpacing: "0.06em", marginBottom: 16 }}>

@@ -54,7 +54,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     return NextResponse.json({ error: { code: "NOT_FOUND", message: "Inscrição não encontrada." } }, { status: 404 });
   }
 
-  return NextResponse.json({
+  const updated = {
     id: row.id,
     eventId: row.event_id,
     name: row.name,
@@ -66,5 +66,14 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     drawn: row.drawn,
     lgpdAccepted: row.lgpd_accepted,
     createdAt: row.created_at,
+  };
+
+  // Notify other connected mediators via Realtime
+  await supabase.channel(`event:${eventId}:registrations`).send({
+    type: "broadcast",
+    event: "registration:updated",
+    payload: updated,
   });
+
+  return NextResponse.json(updated);
 }

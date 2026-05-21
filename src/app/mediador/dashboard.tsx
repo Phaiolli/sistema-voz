@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import type { RealtimeChannel } from "@supabase/supabase-js";
-import { MonitorPlay, StopCircle, ExternalLink, Mic, QrCode, ArrowLeft, ArrowRight, Check, EyeOff, RotateCcw, Trash2 } from "lucide-react";
+import { MonitorPlay, StopCircle, ExternalLink, Mic, QrCode, ArrowLeft, ArrowRight, Check, EyeOff, RotateCcw, Trash2, Shuffle } from "lucide-react";
 import { VozLockup } from "@/components/voz/wordmark";
 import { StatusBadge } from "@/components/voz/status-badge";
 import { HeaderControls } from "@/components/voz/header-controls";

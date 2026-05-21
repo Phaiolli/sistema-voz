@@ -308,8 +308,6 @@ export function MediatorDashboard() {
         {/* Question summary */}
         <div style={{ display: "flex", gap: 10, fontSize: 12, color: "hsl(var(--muted-foreground))", flexShrink: 0, alignItems: "center", padding: "0 4px" }} aria-live="polite" aria-atomic="true">
           <span><strong style={{ color: "hsl(var(--foreground))", fontVariantNumeric: "tabular-nums" }}>{questions.length}</strong> perguntas</span>
-          {counts.pending > 0 && <span style={{ color: "hsl(var(--muted-foreground))" }}>·&nbsp;<strong style={{ color: "hsl(var(--foreground))", fontVariantNumeric: "tabular-nums" }}>{counts.pending}</strong> pendentes</span>}
-          {counts.answered > 0 && <span style={{ color: "hsl(var(--muted-foreground))" }}>·&nbsp;<strong style={{ color: "hsl(142 71% 55%)", fontVariantNumeric: "tabular-nums" }}>{counts.answered}</strong> respondidas</span>}
         </div>
         <div style={{ width: 1, height: 20, background: "hsl(var(--border))", flexShrink: 0 }} aria-hidden />
         <button

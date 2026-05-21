@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, boolean, integer, jsonb, pgEnum, uniqueIndex } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, boolean, integer, jsonb, pgEnum, uniqueIndex, index } from "drizzle-orm/pg-core";
 
 export const eventStatusEnum = pgEnum("event_status", ["draft", "active", "ended"]);
 export const questionStatusEnum = pgEnum("question_status", ["pending", "next", "answered", "hidden"]);
@@ -63,3 +63,23 @@ export const participants = pgTable("participants", {
   lgpdAccepted: boolean("lgpd_accepted").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+export const registrations = pgTable("registrations", {
+  id: text("id").primaryKey(),
+  eventId: text("event_id").notNull().references(() => events.id),
+  name: text("name").notNull(),
+  email: text("email").notNull(),
+  phone: text("phone"),
+  document: text("document"),
+  checkedIn: boolean("checked_in").notNull().default(false),
+  checkedInAt: timestamp("checked_in_at", { withTimezone: true }),
+  kitDelivered: boolean("kit_delivered").notNull().default(false),
+  kitDeliveredAt: timestamp("kit_delivered_at", { withTimezone: true }),
+  drawn: boolean("drawn").notNull().default(false),
+  drawnAt: timestamp("drawn_at", { withTimezone: true }),
+  lgpdAccepted: boolean("lgpd_accepted").notNull().default(false),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  uniqueIndex("registrations_event_email_idx").on(t.eventId, t.email),
+  index("registrations_event_id_idx").on(t.eventId),
+]);

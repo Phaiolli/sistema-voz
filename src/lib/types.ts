@@ -33,12 +33,21 @@ export interface EventPage {
   schedule?: EventPageScheduleItem[];
 }
 
+export interface RegistrationConfig {
+  enabled?: boolean;
+  opensAt?: string;
+  closesAt?: string;
+  requiresPhone?: boolean;
+  requiresDocument?: boolean;
+}
+
 export interface EventConfig {
   maxQuestionsPerParticipant?: number;
   manualModeration?: boolean;
   allowAnonymous?: boolean;
   lgpdRequired?: boolean;
   page?: EventPage;
+  registration?: RegistrationConfig;
 }
 
 export interface Event {
@@ -100,6 +109,23 @@ export interface Participant {
   name: string;
   contact: string;
   questionsCount: number;
+  lgpdAccepted: boolean;
+  createdAt: string;
+}
+
+export interface Registration {
+  id: string;
+  eventId: string;
+  name: string;
+  email: string;
+  phone?: string;
+  document?: string;
+  checkedIn: boolean;
+  checkedInAt?: string;
+  kitDelivered: boolean;
+  kitDeliveredAt?: string;
+  drawn: boolean;
+  drawnAt?: string;
   lgpdAccepted: boolean;
   createdAt: string;
 }

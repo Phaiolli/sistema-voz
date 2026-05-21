@@ -458,10 +458,6 @@ function QuestionDetail({ q, onPrev, onNext, onMarkAnswered, onHide, onRestore, 
         <p style={{ fontFamily: '"Archivo", sans-serif', fontWeight: 500, fontSize: 28, lineHeight: 1.3, letterSpacing: "-0.005em", maxWidth: 720, margin: "0 0 28px" } as React.CSSProperties}>
           {q.text}
         </p>
-        <div style={{ padding: 16, background: "hsl(var(--muted))", borderRadius: 12, maxWidth: 720, display: "flex", gap: 12 }}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="hsl(var(--primary))" strokeWidth="1.75" strokeLinecap="round" style={{ flexShrink: 0 }} aria-hidden><circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/></svg>
-          <p style={{ fontSize: 13, margin: 0 }}>Durante a apresentação, <strong>&quot;Respondida&quot;</strong> e <strong>&quot;Próxima&quot;</strong> avançam automaticamente a projeção.</p>
-        </div>
       </div>
 
       <div style={{ padding: "16px 28px 20px", borderTop: "1px solid hsl(var(--border))", display: "flex", alignItems: "center", gap: 8, flexShrink: 0, flexWrap: "wrap" }}>

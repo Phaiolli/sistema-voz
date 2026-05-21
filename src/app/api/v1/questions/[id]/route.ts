@@ -10,7 +10,6 @@ function mapQuestion(row: Record<string, any>) {
     eventId: row.event_id,
     authorName: row.author_name,
     authorContact: row.author_contact ?? null,
-    authorIp: row.author_ip ?? null,
     text: row.text,
     status: row.status,
     createdAt: row.created_at,

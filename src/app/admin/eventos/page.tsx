@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Plus, Mic, Eye, Download } from "lucide-react";
+import { Plus, Mic, Eye, Download, Edit } from "lucide-react";
 import { VozWordmark } from "@/components/voz/wordmark";
 import { HeaderControls } from "@/components/voz/header-controls";
 import { toast } from "sonner";
@@ -48,18 +48,20 @@ export default function AdminEventosPage() {
           <NavLink href="/admin/usuarios">Usuários</NavLink>
         </nav>
         <div style={{ flex: 1 }} />
-        <Link
-          href="/admin/eventos/novo"
-          style={{ display: "inline-flex", alignItems: "center", gap: 6, height: 36, padding: "0 14px", borderRadius: 8, border: "none", background: "hsl(var(--primary))", color: "hsl(var(--primary-foreground))", fontSize: 13, fontWeight: 600, textDecoration: "none" }}
-        >
-          <Plus size={14} aria-hidden /> Novo evento
-        </Link>
         <div style={{ width: 1, height: 24, background: "hsl(var(--border))" }} aria-hidden />
         <HeaderControls />
       </header>
 
       <main style={{ maxWidth: 960, margin: "0 auto", padding: "32px 24px" }}>
-        <h1 style={{ fontFamily: '"Archivo", sans-serif', fontWeight: 700, fontSize: 28, margin: "0 0 24px" }}>Eventos</h1>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
+          <h1 style={{ fontFamily: '"Archivo", sans-serif', fontWeight: 700, fontSize: 28, margin: 0 }}>Eventos</h1>
+          <Link
+            href="/admin/eventos/novo"
+            style={{ display: "inline-flex", alignItems: "center", gap: 6, height: 36, padding: "0 14px", borderRadius: 8, border: "none", background: "hsl(var(--primary))", color: "hsl(var(--primary-foreground))", fontSize: 13, fontWeight: 600, textDecoration: "none" }}
+          >
+            <Plus size={14} aria-hidden /> Novo evento
+          </Link>
+        </div>
 
         {loading && (
           <div style={{ padding: 48, textAlign: "center", color: "hsl(var(--muted-foreground))" }}>
@@ -128,6 +130,7 @@ export default function AdminEventosPage() {
                   <div style={{ display: "flex", gap: 6, position: "relative", zIndex: 1 }}>
                     <ActionBtn href="/mediador" icon={<Mic size={14} />} label="Abrir mediador" />
                     <ActionBtn href={`/e/${ev.slug}`} icon={<Eye size={14} />} label="Ver página do evento" />
+                    <ActionBtn href={`/admin/eventos/${ev.id}`} icon={<Edit size={14} />} label="Editar evento" />
                     <ActionBtn href="#" icon={<Download size={14} />} label="Exportar CSV" />
                   </div>
                 </div>

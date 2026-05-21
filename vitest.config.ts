@@ -5,14 +5,18 @@ export default defineConfig({
   test: {
     environment: "node",
     globals: true,
+    environmentMatchGlobs: [
+      ["src/components/**/*.test.tsx", "jsdom"],
+      ["src/app/**/*.test.tsx", "jsdom"],
+    ],
     coverage: {
       provider: "v8",
       reporter: ["text", "json", "html"],
-      // Coverage measured only for core logic files — React components require
-      // @testing-library/react setup tracked in issue #6
       include: [
         "src/lib/schemas.ts",
         "src/app/api/v1/**/*.ts",
+        "src/components/voz/admin-theme-provider.tsx",
+        "src/components/voz/theme-toggle.tsx",
       ],
       exclude: [
         "src/**/*.test.ts",

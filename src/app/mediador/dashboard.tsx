@@ -126,9 +126,10 @@ export function MediatorDashboard() {
   }, [eventId]);
 
   const listed = useMemo(() => {
+    // "unread" = all non-hidden (answered stays visible — it's only a moderator marker)
     const base =
-      tab === "unread" ? questions.filter((q) => q.status === "pending" || q.status === "next")
-      : tab === "all" ? questions.filter((q) => q.status !== "hidden")
+      tab === "unread" ? questions.filter((q) => q.status !== "hidden")
+      : tab === "all" ? questions
       : questions.filter((q) => q.status === "hidden");
     return [...base].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
   }, [questions, tab]);
@@ -162,8 +163,8 @@ export function MediatorDashboard() {
   }, [questions, loadedAt]);
 
   const counts = useMemo(() => ({
-    unread: questions.filter((q) => q.status === "pending" || q.status === "next").length,
-    all: questions.filter((q) => q.status !== "hidden").length,
+    unread: questions.filter((q) => q.status !== "hidden").length,
+    all: questions.length,
     hidden: questions.filter((q) => q.status === "hidden").length,
   }), [questions]);
 
@@ -304,7 +305,7 @@ export function MediatorDashboard() {
         </button>
         <div style={{ flex: 1 }} />
         <div style={{ display: "flex", gap: 2 }} role="tablist" aria-label="Filtro de perguntas">
-          {([["unread", "Não lidas", counts.unread], ["all", "Todas", counts.all], ["hidden", "Ocultas", counts.hidden]] as const).map(([t, label, count]) => (
+          {([["unread", "Ativas", counts.unread], ["all", "Todas", counts.all], ["hidden", "Ocultas", counts.hidden]] as const).map(([t, label, count]) => (
             <button key={t} role="tab" aria-selected={tab === t} onClick={() => setTab(t)} style={{ padding: "6px 12px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 13, fontWeight: 500, background: tab === t ? "hsl(var(--muted))" : "transparent", color: tab === t ? "hsl(var(--foreground))" : "hsl(var(--muted-foreground))", whiteSpace: "nowrap" }}>
               {label} <span style={{ fontSize: 12 }}>{count}</span>
             </button>

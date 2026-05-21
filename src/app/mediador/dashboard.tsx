@@ -146,7 +146,7 @@ export function MediatorDashboard() {
   );
   const currentQ = listed[currentIdx] ?? null;
   const nextQuestions = useMemo(
-    () => listed.slice(currentIdx + 1, currentIdx + 4),
+    () => listed.slice(currentIdx + 1),
     [listed, currentIdx]
   );
 

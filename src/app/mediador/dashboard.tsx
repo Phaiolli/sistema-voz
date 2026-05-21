@@ -313,13 +313,19 @@ export function MediatorDashboard() {
           {counts.answered > 0 && <span style={{ color: "hsl(var(--muted-foreground))" }}>·&nbsp;<strong style={{ color: "hsl(142 71% 55%)", fontVariantNumeric: "tabular-nums" }}>{counts.answered}</strong> respondidas</span>}
         </div>
         <div style={{ width: 1, height: 20, background: "hsl(var(--border))", flexShrink: 0 }} aria-hidden />
-        <div style={{ display: "flex", gap: 2 }} role="tablist" aria-label="Filtro de perguntas">
-          {([["unread", "Ativas", counts.unread], ["all", "Todas", counts.all], ["hidden", "Ocultas", counts.hidden]] as const).map(([t, label, count]) => (
-            <button key={t} role="tab" aria-selected={tab === t} onClick={() => setTab(t)} style={{ padding: "6px 12px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 13, fontWeight: 500, background: tab === t ? "hsl(var(--muted))" : "transparent", color: tab === t ? "hsl(var(--foreground))" : "hsl(var(--muted-foreground))", whiteSpace: "nowrap" }}>
-              {label} <span style={{ fontSize: 12 }}>{count}</span>
-            </button>
-          ))}
-        </div>
+        <button
+          onClick={() => setTab(tab === "hidden" ? "unread" : "hidden")}
+          aria-pressed={tab === "hidden"}
+          style={{
+            padding: "6px 12px", borderRadius: 8, border: "1px solid",
+            cursor: "pointer", fontSize: 13, fontWeight: 500, whiteSpace: "nowrap", flexShrink: 0,
+            borderColor: tab === "hidden" ? "hsl(var(--border))" : "hsl(var(--border) / .4)",
+            background: tab === "hidden" ? "hsl(var(--muted))" : "transparent",
+            color: tab === "hidden" ? "hsl(var(--foreground))" : "hsl(var(--muted-foreground))",
+          }}
+        >
+          Ocultas <span style={{ fontSize: 12 }}>{counts.hidden}</span>
+        </button>
       </div>
 
       {/* Main: single column — up to 2 prev + current + up to 3 next */}

@@ -276,8 +276,8 @@ export function MediatorDashboard() {
         <button onClick={() => setQrOpen(true)} style={outlineBtnStyle} aria-label="QR Code do evento">
           <QrCode size={14} aria-hidden /><span className="med-lbl"> QR Code</span>
         </button>
-        <button onClick={() => eventId && window.open(`/apresentar/${eventId}`, "_blank")} style={outlineBtnStyle} aria-label="Abrir visualização de projeção">
-          <ExternalLink size={14} aria-hidden /><span className="med-lbl"> Visualização</span>
+        <button onClick={() => eventId && window.open(`/apresentar/${eventId}`, "_blank")} style={outlineBtnStyle} aria-label="Abrir link para projeção">
+          <ExternalLink size={14} aria-hidden /><span className="med-lbl"> Link para Projeção</span>
         </button>
         <div style={{ flex: 1 }} />
         {!isPresenting ? (

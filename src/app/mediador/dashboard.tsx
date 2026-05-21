@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import type { RealtimeChannel } from "@supabase/supabase-js";
-import { MonitorPlay, StopCircle, ExternalLink, QrCode, ArrowLeft, ArrowRight, Check, EyeOff, RotateCcw, Trash2 } from "lucide-react";
+import { ExternalLink, QrCode, ArrowLeft, ArrowRight, Check, EyeOff, RotateCcw, Trash2, MonitorPlay, MonitorOff } from "lucide-react";
 import { VozLockup } from "@/components/voz/wordmark";
 import { StatusBadge } from "@/components/voz/status-badge";
 import { HeaderControls } from "@/components/voz/header-controls";
@@ -38,16 +38,13 @@ export function MediatorDashboard() {
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<Tab>("unread");
   const [selectedId, setSelectedId] = useState<string>("");
+  const [projectedId, setProjectedId] = useState<string | null>(null);
   const [qrOpen, setQrOpen] = useState(false);
   const [eventId, setEventId] = useState<string | null>(null);
   const [eventName, setEventName] = useState<string>("");
   const [eventSlug, setEventSlug] = useState<string>("");
   const [noEvent, setNoEvent] = useState(false);
-  const [isPresenting, setIsPresenting] = useState(false);
-  const [presentingIdx, setPresentingIdx] = useState(0);
-  const [presentQueue, setPresentQueue] = useState<Question[]>([]);
   const apresentarChannelRef = useRef<RealtimeChannel | null>(null);
-  const [mobileDetail, setMobileDetail] = useState(false);
   const [eventTheme, setEventTheme] = useState<{ background?: string; accent?: string; logoUrl?: string }>({});
 
   useEffect(() => {
@@ -89,8 +86,10 @@ export function MediatorDashboard() {
       .then((data: { questions?: Question[] } | null) => {
         if (data?.questions?.length) {
           setQuestions(data.questions);
-          const nextQ = data.questions.find((q) => q.status === "next");
-          setSelectedId(nextQ?.id ?? data.questions[0]?.id ?? "");
+          const firstPending = [...data.questions]
+            .filter((q) => q.status === "pending" || q.status === "next")
+            .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())[0];
+          setSelectedId(firstPending?.id ?? data.questions[0]?.id ?? "");
         }
       })
       .catch(() => toast.error("Erro ao carregar dados do evento."))
@@ -126,50 +125,22 @@ export function MediatorDashboard() {
     };
   }, [eventId]);
 
-  const broadcastApresentar = useCallback((payload: { phase: string; question?: { id: string; text: string; authorName: string } }) => {
-    apresentarChannelRef.current?.send({ type: "broadcast", event: "state", payload });
-  }, []);
+  const listed = useMemo(() => {
+    const base =
+      tab === "unread" ? questions.filter((q) => q.status === "pending" || q.status === "next")
+      : tab === "all" ? questions.filter((q) => q.status !== "hidden")
+      : questions.filter((q) => q.status === "hidden");
+    return [...base].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+  }, [questions, tab]);
 
-  const startPresenting = useCallback(() => {
-    const queue = questions
-      .filter((q) => q.status !== "hidden" && q.status !== "answered")
-      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-    if (queue.length === 0) { toast("Nenhuma pergunta disponível para apresentar."); return; }
-    setPresentQueue(queue);
-    setPresentingIdx(0);
-    setIsPresenting(true);
-    setSelectedId(queue[0].id);
-    broadcastApresentar({ phase: "showing", question: { id: queue[0].id, text: queue[0].text, authorName: queue[0].authorName } });
-  }, [questions, broadcastApresentar]);
+  const currentIdx = useMemo(() => {
+    const idx = listed.findIndex((q) => q.id === selectedId);
+    return idx >= 0 ? idx : 0;
+  }, [listed, selectedId]);
 
-  const stopPresenting = useCallback(() => {
-    setIsPresenting(false);
-    broadcastApresentar({ phase: "waiting" });
-  }, [broadcastApresentar]);
-
-  const presentNext = useCallback(() => {
-    const next = Math.min(presentingIdx + 1, presentQueue.length - 1);
-    if (next === presentingIdx) return;
-    setPresentingIdx(next);
-    const q = presentQueue[next];
-    setSelectedId(q.id);
-    broadcastApresentar({ phase: "showing", question: { id: q.id, text: q.text, authorName: q.authorName } });
-  }, [presentingIdx, presentQueue, broadcastApresentar]);
-
-  const presentPrev = useCallback(() => {
-    const prev = Math.max(presentingIdx - 1, 0);
-    if (prev === presentingIdx) return;
-    setPresentingIdx(prev);
-    const q = presentQueue[prev];
-    setSelectedId(q.id);
-    broadcastApresentar({ phase: "showing", question: { id: q.id, text: q.text, authorName: q.authorName } });
-  }, [presentingIdx, presentQueue, broadcastApresentar]);
-
-  const counts = {
-    unread: questions.filter((q) => q.status === "pending" || q.status === "next").length,
-    all: questions.filter((q) => q.status !== "hidden").length,
-    hidden: questions.filter((q) => q.status === "hidden").length,
-  };
+  const prevQ = currentIdx > 0 ? listed[currentIdx - 1] : null;
+  const currentQ = listed[currentIdx] ?? null;
+  const nextQ = currentIdx < listed.length - 1 ? listed[currentIdx + 1] : null;
 
   const [loadedAt] = useState(() => Date.now());
   const newBadge = useMemo(() => {
@@ -179,23 +150,34 @@ export function MediatorDashboard() {
     ).length;
   }, [questions, loadedAt]);
 
-  const listed =
-    tab === "unread" ? questions.filter((q) => q.status === "pending" || q.status === "next")
-    : tab === "all" ? questions.filter((q) => q.status !== "hidden")
-    : questions.filter((q) => q.status === "hidden");
+  const counts = useMemo(() => ({
+    unread: questions.filter((q) => q.status === "pending" || q.status === "next").length,
+    all: questions.filter((q) => q.status !== "hidden").length,
+    hidden: questions.filter((q) => q.status === "hidden").length,
+  }), [questions]);
 
-  const answeredSection = tab === "unread" ? questions.filter((q) => q.status === "answered") : [];
-  const selected = questions.find((q) => q.id === selectedId) ?? listed[0] ?? null;
+  const goNext = useCallback(() => {
+    if (nextQ) setSelectedId(nextQ.id);
+  }, [nextQ]);
 
-  const deleteQuestion = useCallback(async (id: string) => {
-    if (!window.confirm("Apagar esta pergunta permanentemente? Não pode ser desfeito.")) return;
-    setQuestions((qs) => qs.filter((q) => q.id !== id));
-    try {
-      const res = await fetch(`/api/v1/questions/${id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("Falha");
-    } catch {
-      toast.error("Erro ao apagar. Atualize a página.");
-    }
+  const goPrev = useCallback(() => {
+    if (prevQ) setSelectedId(prevQ.id);
+  }, [prevQ]);
+
+  const unprojectQuestion = useCallback(() => {
+    setProjectedId(null);
+    apresentarChannelRef.current?.send({
+      type: "broadcast", event: "state",
+      payload: { phase: "waiting" },
+    });
+  }, []);
+
+  const projectQuestion = useCallback((q: Question) => {
+    setProjectedId(q.id);
+    apresentarChannelRef.current?.send({
+      type: "broadcast", event: "state",
+      payload: { phase: "showing", question: { id: q.id, text: q.text, authorName: q.authorName } },
+    });
   }, []);
 
   const applyAction = useCallback(async (id: string, action: "markAnswered" | "hide" | "restore") => {
@@ -205,6 +187,9 @@ export function MediatorDashboard() {
       restore: { status: "pending" as QuestionStatus },
     };
     setQuestions((qs) => qs.map((q) => q.id === id ? { ...q, ...patchMap[action] } : q));
+    if (projectedId === id && action !== "restore") {
+      unprojectQuestion();
+    }
     try {
       await fetch(`/api/v1/questions/${id}`, {
         method: "PATCH",
@@ -214,25 +199,42 @@ export function MediatorDashboard() {
     } catch {
       toast.error("Erro ao salvar. Atualize a página.");
     }
-  }, []);
+  }, [projectedId, unprojectQuestion]);
 
-  const navigate = useCallback((dir: 1 | -1) => {
-    const i = listed.findIndex((q) => q.id === selectedId);
-    const next = listed[(i + dir + listed.length) % listed.length];
-    if (next) setSelectedId(next.id);
-  }, [listed, selectedId]);
+  const hideAndAdvance = useCallback(async (id: string) => {
+    if (nextQ) setSelectedId(nextQ.id);
+    else if (prevQ) setSelectedId(prevQ.id);
+    await applyAction(id, "hide");
+  }, [nextQ, prevQ, applyAction]);
+
+  const deleteQuestion = useCallback(async (id: string) => {
+    if (!window.confirm("Apagar esta pergunta permanentemente? Não pode ser desfeito.")) return;
+    if (nextQ) setSelectedId(nextQ.id);
+    else if (prevQ) setSelectedId(prevQ.id);
+    setQuestions((qs) => qs.filter((q) => q.id !== id));
+    try {
+      const res = await fetch(`/api/v1/questions/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Falha");
+    } catch {
+      toast.error("Erro ao apagar. Atualize a página.");
+    }
+  }, [nextQ, prevQ]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if ((e.target as HTMLElement).tagName === "INPUT" || (e.target as HTMLElement).tagName === "TEXTAREA") return;
-      if (e.key === "j" || e.key === "ArrowDown") { e.preventDefault(); navigate(1); }
-      if (e.key === "k" || e.key === "ArrowUp") { e.preventDefault(); navigate(-1); }
-      if (e.key === "r" && selected) { e.preventDefault(); applyAction(selected.id, "markAnswered"); if (isPresenting) presentNext(); }
-      if (e.key === "p") { e.preventDefault(); startPresenting(); }
+      if (e.key === "j" || e.key === "ArrowDown") { e.preventDefault(); goNext(); }
+      if (e.key === "k" || e.key === "ArrowUp") { e.preventDefault(); goPrev(); }
+      if (e.key === "r" && currentQ) { e.preventDefault(); applyAction(currentQ.id, "markAnswered"); }
+      if (e.key === "p" && currentQ) {
+        e.preventDefault();
+        if (projectedId === currentQ.id) unprojectQuestion();
+        else projectQuestion(currentQ);
+      }
     };
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
-  }, [navigate, selected, applyAction, startPresenting, isPresenting, presentNext]);
+  }, [goNext, goPrev, currentQ, applyAction, projectedId, projectQuestion, unprojectQuestion]);
 
   const kbd: React.CSSProperties = {
     fontFamily: '"JetBrains Mono", monospace', fontSize: 11,
@@ -266,214 +268,218 @@ export function MediatorDashboard() {
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100dvh", background: "hsl(var(--background))", color: "hsl(var(--foreground))" }}>
 
-      {/* Header — logo + badge + conta */}
-      <header className="med-header">
+      {/* Header */}
+      <header style={{ height: 56, borderBottom: "1px solid hsl(var(--border))", display: "flex", alignItems: "center", padding: "0 16px", gap: 10, flexShrink: 0, minWidth: 0, overflow: "hidden" }}>
         <VozLockup eventName={eventName} size={18} />
         <div style={{ flex: 1 }} />
-        <div aria-live="polite" aria-atomic="true">
-          {newBadge > 0 && (
-            <span style={{ display: "inline-block", padding: "4px 10px", borderRadius: 999, background: "hsl(var(--accent) / .15)", color: "hsl(38 85% 32%)", fontSize: 13, fontWeight: 600, animation: "pulse 2s infinite" }}>
-              {newBadge} nova{newBadge > 1 ? "s" : ""}
-            </span>
-          )}
-        </div>
+        {newBadge > 0 && (
+          <span aria-live="polite" aria-atomic="true" style={{ display: "inline-block", padding: "4px 10px", borderRadius: 999, background: "hsl(var(--accent) / .15)", color: "hsl(38 85% 32%)", fontSize: 13, fontWeight: 600, animation: "pulse 2s infinite", flexShrink: 0 }}>
+            {newBadge} nova{newBadge > 1 ? "s" : ""}
+          </span>
+        )}
         <div style={{ width: 1, height: 24, background: "hsl(var(--border))", flexShrink: 0 }} aria-hidden />
         <HeaderControls />
       </header>
 
-      {/* Barra de ações */}
-      <div className="med-toolbar">
-        <button onClick={() => setQrOpen(true)} style={outlineBtnStyle} aria-label="QR Code do evento">
-          <QrCode size={14} aria-hidden /><span className="med-lbl"> QR Code</span>
+      {/* Toolbar: links + tab filter */}
+      <div style={{ borderBottom: "1px solid hsl(var(--border))", display: "flex", alignItems: "center", padding: "6px 12px", gap: 8, flexShrink: 0, overflowX: "auto", scrollbarWidth: "none" }}>
+        <button onClick={() => setQrOpen(true)} style={toolBtnStyle} aria-label="QR Code do evento">
+          <QrCode size={16} aria-hidden />
+          <span>QR Code</span>
         </button>
-        <button onClick={() => eventId && window.open(`/apresentar/${eventId}`, "_blank")} style={outlineBtnStyle} aria-label="Abrir link para projeção">
-          <ExternalLink size={14} aria-hidden /><span className="med-lbl"> Link para Projeção</span>
+        <button onClick={() => eventId && window.open(`/apresentar/${eventId}`, "_blank")} style={toolBtnStyle} aria-label="Abrir link para projeção">
+          <ExternalLink size={16} aria-hidden />
+          <span>Link para Projeção</span>
         </button>
         <div style={{ flex: 1 }} />
-        {!isPresenting ? (
-          <button onClick={startPresenting} style={primaryBtnStyle}>
-            <MonitorPlay size={14} aria-hidden /> Iniciar Respostas
-          </button>
-        ) : (
-          <>
-            <button onClick={presentPrev} disabled={presentingIdx === 0} style={{ ...outlineBtnStyle, opacity: presentingIdx === 0 ? 0.4 : 1 }} aria-label="Pergunta anterior">
-              <ArrowLeft size={14} aria-hidden /><span className="med-lbl"> Anterior</span>
+        <div style={{ display: "flex", gap: 2 }} role="tablist" aria-label="Filtro de perguntas">
+          {([["unread", "Não lidas", counts.unread], ["all", "Todas", counts.all], ["hidden", "Ocultas", counts.hidden]] as const).map(([t, label, count]) => (
+            <button key={t} role="tab" aria-selected={tab === t} onClick={() => setTab(t)} style={{ padding: "6px 12px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 13, fontWeight: 500, background: tab === t ? "hsl(var(--muted))" : "transparent", color: tab === t ? "hsl(var(--foreground))" : "hsl(var(--muted-foreground))", whiteSpace: "nowrap" }}>
+              {label} <span style={{ fontSize: 12 }}>{count}</span>
             </button>
-            <span style={{ fontSize: 12, color: "hsl(var(--muted-foreground))", fontVariantNumeric: "tabular-nums", minWidth: 32, textAlign: "center", flexShrink: 0 }}>
-              {presentingIdx + 1}/{presentQueue.length}
-            </span>
-            <button onClick={presentNext} disabled={presentingIdx === presentQueue.length - 1} style={{ ...outlineBtnStyle, opacity: presentingIdx === presentQueue.length - 1 ? 0.4 : 1 }} aria-label="Próxima pergunta">
-              <span className="med-lbl">Próxima </span><ArrowRight size={14} aria-hidden />
-            </button>
-            <button onClick={stopPresenting} style={{ ...outlineBtnStyle, color: "hsl(var(--destructive))", borderColor: "hsl(var(--destructive) / .3)" }} aria-label="Encerrar apresentação">
-              <StopCircle size={14} aria-hidden /><span className="med-lbl"> Encerrar</span>
-            </button>
-          </>
+          ))}
+        </div>
+      </div>
+
+      {/* Main: single column — prev / current / next */}
+      <main style={{ flex: 1, overflowY: "auto", padding: "16px", display: "flex", flexDirection: "column", gap: 8, maxWidth: 800, width: "100%", margin: "0 auto", boxSizing: "border-box" }}>
+        {listed.length === 0 && (
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", flex: 1, flexDirection: "column", gap: 8, color: "hsl(var(--muted-foreground))" }}>
+            <p style={{ fontFamily: '"Archivo", sans-serif', fontWeight: 600, fontSize: 16, color: "hsl(var(--foreground))", margin: 0 }}>Sem perguntas aqui</p>
+            <p style={{ fontSize: 13, margin: 0 }}>Compartilhe o QR Code com a plateia.</p>
+          </div>
         )}
-      </div>
 
-      {/* Corpo: lista ↔ detalhe */}
-      <div className="med-body" data-view={mobileDetail ? "detail" : "list"}>
-        <nav className="med-sidebar" aria-label="Lista de perguntas">
-          <div style={{ padding: "12px 16px", borderBottom: "1px solid hsl(var(--border))", display: "flex", gap: 4 }} role="tablist">
-            {([["unread", "Não lidas", counts.unread], ["all", "Todas", counts.all], ["hidden", "Ocultas", counts.hidden]] as const).map(([t, label, count]) => (
-              <button key={t} role="tab" aria-selected={tab === t} onClick={() => setTab(t)} style={{ padding: "6px 12px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 13, fontWeight: 500, background: tab === t ? "hsl(var(--muted))" : "transparent", color: tab === t ? "hsl(var(--foreground))" : "hsl(var(--muted-foreground))" }}>
-                {label} <span style={{ fontSize: 12 }}>{count}</span>
-              </button>
-            ))}
-          </div>
-          <div role="tabpanel" style={{ flex: 1, overflowY: "auto", padding: 8, display: "flex", flexDirection: "column", gap: 4 }}>
-            {!loading && listed.length === 0 && (
-              <div style={{ padding: 40, textAlign: "center", color: "hsl(var(--muted-foreground))" }}>
-                <p style={{ fontFamily: '"Archivo", sans-serif', fontWeight: 600, fontSize: 16, color: "hsl(var(--foreground))", marginBottom: 6 }}>Sem perguntas aqui</p>
-                <p style={{ fontSize: 13, margin: 0 }}>Compartilhe o QR Code com a plateia.</p>
-              </div>
-            )}
-            {listed.map((q) => (
-              <QuestionCard key={q.id} q={q} selected={q.id === selected?.id}
-                onClick={() => { setSelectedId(q.id); setMobileDetail(true); }} />
-            ))}
-            {answeredSection.length > 0 && (
-              <>
-                <p style={{ padding: "12px 8px 4px", fontSize: 11, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: "hsl(var(--muted-foreground))", margin: 0 }}>respondidas · hoje</p>
-                {answeredSection.map((q) => (
-                  <QuestionCard key={q.id} q={q} selected={q.id === selected?.id}
-                    onClick={() => { setSelectedId(q.id); setMobileDetail(true); }} />
-                ))}
-              </>
-            )}
-          </div>
-        </nav>
+        {prevQ && (
+          <QuestionSlot
+            q={prevQ}
+            role="prev"
+            projectedId={projectedId}
+            onClick={() => setSelectedId(prevQ.id)}
+          />
+        )}
 
-        <main className="med-main">
-          <button className="med-back" onClick={() => setMobileDetail(false)}>
-            <ArrowLeft size={14} aria-hidden /> Perguntas
-          </button>
-          {selected ? (
-            <QuestionDetail
-              q={selected}
-              onPrev={() => isPresenting ? presentPrev() : navigate(-1)}
-              onNext={() => isPresenting ? presentNext() : navigate(1)}
-              onMarkAnswered={() => { applyAction(selected.id, "markAnswered"); if (isPresenting) presentNext(); }}
-              onHide={() => applyAction(selected.id, "hide")}
-              onRestore={() => applyAction(selected.id, "restore")}
-              onDelete={() => deleteQuestion(selected.id)}
-            />
-          ) : (
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "hsl(var(--muted-foreground))" }}>
-              Selecione uma pergunta.
-            </div>
-          )}
-        </main>
-      </div>
+        {currentQ && (
+          <QuestionSlot
+            q={currentQ}
+            role="current"
+            projectedId={projectedId}
+            onPrev={prevQ ? goPrev : undefined}
+            onNext={nextQ ? goNext : undefined}
+            onProject={() => projectQuestion(currentQ)}
+            onUnproject={unprojectQuestion}
+            onHide={() => hideAndAdvance(currentQ.id)}
+            onRestore={() => applyAction(currentQ.id, "restore")}
+            onMarkAnswered={() => applyAction(currentQ.id, "markAnswered")}
+            onDelete={() => deleteQuestion(currentQ.id)}
+          />
+        )}
 
-      <footer className="med-footer">
-        <span>Atalhos: <kbd style={kbd}>J</kbd>/<kbd style={kbd}>K</kbd> navegar · <kbd style={kbd}>R</kbd> respondida · <kbd style={kbd}>P</kbd> apresentar</span>
+        {nextQ && (
+          <QuestionSlot
+            q={nextQ}
+            role="next"
+            projectedId={projectedId}
+            onClick={() => setSelectedId(nextQ.id)}
+          />
+        )}
+      </main>
+
+      {/* Footer */}
+      <footer style={{ height: 34, borderTop: "1px solid hsl(var(--border))", display: "flex", alignItems: "center", padding: "0 20px", gap: 16, fontSize: 12, color: "hsl(var(--muted-foreground))", flexShrink: 0 }}>
+        <span>Atalhos: <kbd style={kbd}>J</kbd>/<kbd style={kbd}>K</kbd> navegar · <kbd style={kbd}>P</kbd> projetar · <kbd style={kbd}>R</kbd> respondida</span>
+        {currentQ && <span style={{ marginLeft: "auto", fontVariantNumeric: "tabular-nums" }}>{currentIdx + 1} / {listed.length}</span>}
       </footer>
 
       {qrOpen && <QRModal slug={eventSlug} eventName={eventName} theme={eventTheme} onClose={() => setQrOpen(false)} />}
 
       <style>{`
-        .med-header {
-          height: 56px; border-bottom: 1px solid hsl(var(--border));
-          display: flex; align-items: center; padding: 0 16px; gap: 10px;
-          flex-shrink: 0; min-width: 0; overflow: hidden;
-        }
-        .med-toolbar {
-          border-bottom: 1px solid hsl(var(--border));
-          display: flex; align-items: center; padding: 8px 12px; gap: 8px;
-          flex-shrink: 0; overflow-x: auto; scrollbar-width: none;
-        }
-        .med-toolbar::-webkit-scrollbar { display: none; }
-        .med-body { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
-        .med-sidebar { display: flex; flex-direction: column; overflow: hidden; flex: 1; }
-        .med-main { display: none; flex-direction: column; overflow: hidden; flex: 1; }
-        .med-body[data-view="detail"] .med-sidebar { display: none; }
-        .med-body[data-view="detail"] .med-main { display: flex; }
-        .med-back {
-          display: flex; align-items: center; gap: 8px; padding: 10px 16px;
-          border: none; border-bottom: 1px solid hsl(var(--border));
-          background: transparent; cursor: pointer; font-size: 13px;
-          color: hsl(var(--muted-foreground)); flex-shrink: 0; width: 100%;
-        }
-        .med-footer {
-          display: none; height: 34px; border-top: 1px solid hsl(var(--border));
-          align-items: center; padding: 0 20px; gap: 16px; font-size: 12px;
-          color: hsl(var(--muted-foreground)); flex-shrink: 0;
-        }
-        .med-lbl { display: none; }
-        @media (min-width: 768px) {
-          .med-body { display: grid; grid-template-columns: 380px 1fr; flex-direction: unset; }
-          .med-sidebar { display: flex !important; border-right: 1px solid hsl(var(--border)); }
-          .med-main { display: flex !important; }
-          .med-back { display: none !important; }
-          .med-footer { display: flex; }
-          .med-lbl { display: inline; }
-        }
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
       `}</style>
     </div>
   );
 }
 
-function QuestionCard({ q, selected, onClick }: { q: Question; selected: boolean; onClick: () => void }) {
-  const initials = q.authorName === "Anônimo" ? "?" : q.authorName.split(/\s+/).map((w) => w[0]).slice(0, 2).join("").toUpperCase();
-  const when = formatRelative(q.createdAt);
-  return (
-    <article onClick={onClick} aria-current={selected ? "true" : undefined} style={{ padding: 14, borderRadius: 10, cursor: "pointer", background: selected ? "hsl(var(--primary) / .06)" : "transparent", border: "1px solid", borderColor: selected ? "hsl(var(--primary) / .35)" : "transparent", display: "flex", flexDirection: "column", gap: 8 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        <div style={{ width: 24, height: 24, borderRadius: "50%", background: "hsl(var(--muted))", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 700, flexShrink: 0 }}>{initials}</div>
-        <span style={{ fontSize: 13, fontWeight: 600 }}>{q.authorName}</span>
-        <span style={{ fontSize: 12, color: "hsl(var(--muted-foreground))", marginLeft: "auto" }}>{when}</span>
-      </div>
-      <p style={{ fontSize: 14, lineHeight: 1.45, margin: 0, display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden", color: q.status === "answered" || q.status === "hidden" ? "hsl(var(--muted-foreground))" : "hsl(var(--foreground))" }}>
-        {q.text}
-      </p>
-      {(q.status === "answered" || q.status === "hidden") && <StatusBadge status={q.status} />}
-    </article>
-  );
+interface QuestionSlotProps {
+  q: Question;
+  role: "prev" | "current" | "next";
+  projectedId: string | null;
+  onClick?: () => void;
+  onPrev?: () => void;
+  onNext?: () => void;
+  onProject?: () => void;
+  onUnproject?: () => void;
+  onHide?: () => void;
+  onRestore?: () => void;
+  onMarkAnswered?: () => void;
+  onDelete?: () => void;
 }
 
-function QuestionDetail({ q, onPrev, onNext, onMarkAnswered, onHide, onRestore, onDelete }: {
-  q: Question; onPrev: () => void; onNext: () => void;
-  onMarkAnswered: () => void; onHide: () => void; onRestore: () => void;
-  onDelete: () => void;
-}) {
-  const initials = q.authorName === "Anônimo" ? "?" : q.authorName.split(/\s+/).map((w) => w[0]).slice(0, 2).join("").toUpperCase();
+function QuestionSlot({ q, role, projectedId, onClick, onPrev, onNext, onProject, onUnproject, onHide, onRestore, onMarkAnswered, onDelete }: QuestionSlotProps) {
+  const isCurrent = role === "current";
+  const isProjected = projectedId === q.id;
+
+  const clampStyle: React.CSSProperties = {
+    display: "-webkit-box",
+    WebkitLineClamp: 2,
+    WebkitBoxOrient: "vertical",
+    overflow: "hidden",
+  };
+
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-      <div style={{ padding: "20px 28px 16px", borderBottom: "1px solid hsl(var(--border))", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexShrink: 0 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <div style={{ width: 40, height: 40, borderRadius: "50%", background: "hsl(var(--muted))", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 700 }}>{initials}</div>
-          <div>
-            <p style={{ fontSize: 15, fontWeight: 600, margin: 0 }}>{q.authorName}</p>
-            <p style={{ fontSize: 13, color: "hsl(var(--muted-foreground))", margin: 0 }}>{q.authorContact || "sem contato"} · {formatRelative(q.createdAt)}</p>
-          </div>
-        </div>
-        <StatusBadge status={q.status} />
+    <article
+      onClick={!isCurrent ? onClick : undefined}
+      onKeyDown={!isCurrent ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick?.(); } } : undefined}
+      tabIndex={!isCurrent ? 0 : undefined}
+      aria-label={!isCurrent ? `Ir para pergunta de ${q.authorName}` : undefined}
+      style={{
+        borderRadius: 14,
+        border: `1px solid ${isCurrent ? (isProjected ? "hsl(var(--primary) / .5)" : "hsl(var(--border))") : "hsl(var(--border) / .4)"}`,
+        background: isCurrent ? "hsl(var(--card))" : "transparent",
+        opacity: isCurrent ? 1 : 0.55,
+        cursor: isCurrent ? "default" : "pointer",
+        position: "relative",
+        overflow: "hidden",
+        outline: "none",
+      }}
+    >
+      {/* Active projection indicator bar */}
+      {isProjected && (
+        <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 3, background: "hsl(var(--primary))" }} aria-hidden />
+      )}
+
+      {/* Card header */}
+      <div style={{ padding: isCurrent ? "16px 16px 0" : "10px 14px 0", display: "flex", alignItems: "center", gap: 8, flexWrap: "nowrap" }}>
+        <span style={{ fontSize: isCurrent ? 14 : 13, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 180 }}>{q.authorName}</span>
+        {isCurrent && <StatusBadge status={q.status} />}
+        <span style={{ fontSize: 12, color: "hsl(var(--muted-foreground))", marginLeft: "auto", flexShrink: 0 }}>{formatRelative(q.createdAt)}</span>
+        {isCurrent && (
+          q.status === "hidden"
+            ? <button onClick={onRestore} style={ghostSmallStyle} aria-label="Restaurar pergunta">
+                <RotateCcw size={13} aria-hidden /> Restaurar
+              </button>
+            : <button onClick={onHide} style={ghostSmallStyle} aria-label="Ocultar pergunta">
+                <EyeOff size={13} aria-hidden /> Ocultar
+              </button>
+        )}
       </div>
 
-      <div style={{ flex: 1, padding: "28px 28px 0", overflowY: "auto" }}>
-        <p style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 11, fontWeight: 500, letterSpacing: "0.1em", textTransform: "uppercase", color: "hsl(var(--muted-foreground))", marginBottom: 10 }}>PERGUNTA</p>
-        <p style={{ fontFamily: '"Archivo", sans-serif', fontWeight: 500, fontSize: 28, lineHeight: 1.3, letterSpacing: "-0.005em", maxWidth: 720, margin: "0 0 28px" } as React.CSSProperties}>
+      {/* Question text */}
+      <div style={{ padding: isCurrent ? "12px 16px" : "6px 14px 10px" }}>
+        <p style={{
+          fontFamily: '"Archivo", sans-serif',
+          fontWeight: isCurrent ? 500 : 400,
+          fontSize: isCurrent ? 22 : 14,
+          lineHeight: 1.35,
+          margin: 0,
+          color: q.status === "answered" || q.status === "hidden" ? "hsl(var(--muted-foreground))" : "hsl(var(--foreground))",
+          ...(!isCurrent ? clampStyle : {}),
+        }}>
           {q.text}
         </p>
       </div>
 
-      <div style={{ padding: "16px 28px 20px", borderTop: "1px solid hsl(var(--border))", display: "flex", alignItems: "center", gap: 8, flexShrink: 0, flexWrap: "wrap" }}>
-        <button onClick={onDelete} style={deleteBtnStyle} aria-label="Apagar pergunta permanentemente"><Trash2 size={14} aria-hidden /></button>
-        <div style={{ width: 1, height: 24, background: "hsl(var(--border))", flexShrink: 0 }} aria-hidden />
-        <button onClick={onPrev} style={outlineBtnStyle} aria-label="Pergunta anterior"><ArrowLeft size={14} aria-hidden /> Anterior</button>
-        <button onClick={onNext} style={outlineBtnStyle} aria-label="Próxima pergunta">Próxima <ArrowRight size={14} aria-hidden /></button>
-        <div style={{ flex: 1 }} />
-        {q.status === "hidden"
-          ? <button onClick={onRestore} style={ghostBtnStyle}><RotateCcw size={14} aria-hidden /> Restaurar</button>
-          : <button onClick={onHide} style={ghostBtnStyle}><EyeOff size={14} aria-hidden /> Ocultar</button>}
-        {q.status !== "answered" && q.status !== "hidden" && (
-          <button onClick={onMarkAnswered} style={primaryBtnStyle}><Check size={14} aria-hidden /> Respondida</button>
-        )}
-      </div>
-    </div>
+      {/* Action bar — current only */}
+      {isCurrent && (
+        <div style={{ padding: "10px 16px 14px", borderTop: "1px solid hsl(var(--border))", display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+          <button onClick={onDelete} style={deleteBtnStyle} aria-label="Apagar pergunta permanentemente">
+            <Trash2 size={14} aria-hidden />
+          </button>
+          <div style={{ width: 1, height: 20, background: "hsl(var(--border))", flexShrink: 0 }} aria-hidden />
+          <button
+            onClick={onPrev}
+            disabled={!onPrev}
+            style={{ ...outlineBtnStyle, opacity: onPrev ? 1 : 0.35 }}
+            aria-label="Pergunta anterior"
+          >
+            <ArrowLeft size={14} aria-hidden /> Anterior
+          </button>
+          {q.status !== "answered" && q.status !== "hidden" && (
+            isProjected
+              ? <button onClick={onUnproject} style={projectedBtnStyle} aria-label="Retirar do projetor">
+                  <MonitorOff size={14} aria-hidden /> Retirar do Projetor
+                </button>
+              : <button onClick={onProject} style={primaryBtnStyle} aria-label="Projetar esta pergunta">
+                  <MonitorPlay size={14} aria-hidden /> Projetar
+                </button>
+          )}
+          <button
+            onClick={onNext}
+            disabled={!onNext}
+            style={{ ...outlineBtnStyle, opacity: onNext ? 1 : 0.35 }}
+            aria-label="Próxima pergunta"
+          >
+            Próxima <ArrowRight size={14} aria-hidden />
+          </button>
+          <div style={{ flex: 1 }} />
+          {q.status !== "answered" && q.status !== "hidden" && (
+            <button onClick={onMarkAnswered} style={secondaryBtnStyle} aria-label="Marcar como respondida">
+              <Check size={14} aria-hidden /> Respondida
+            </button>
+          )}
+        </div>
+      )}
+    </article>
   );
 }
 
@@ -485,8 +491,10 @@ function formatRelative(iso: string) {
   return `há ${Math.floor(diff / 60)}h`;
 }
 
-const primaryBtnStyle: React.CSSProperties = { display: "inline-flex", alignItems: "center", gap: 6, height: 36, padding: "0 14px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 13, fontWeight: 600, background: "hsl(var(--primary))", color: "hsl(var(--primary-foreground))" };
+const primaryBtnStyle: React.CSSProperties = { display: "inline-flex", alignItems: "center", gap: 6, height: 36, padding: "0 14px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 13, fontWeight: 600, background: "hsl(var(--primary))", color: "hsl(var(--primary-foreground))", flexShrink: 0 };
+const projectedBtnStyle: React.CSSProperties = { ...primaryBtnStyle, background: "hsl(var(--primary) / .12)", color: "hsl(var(--primary))", border: "1px solid hsl(var(--primary) / .35)" };
 const secondaryBtnStyle: React.CSSProperties = { ...primaryBtnStyle, background: "hsl(var(--muted))", color: "hsl(var(--foreground))", border: "1px solid hsl(var(--border))" };
 const outlineBtnStyle: React.CSSProperties = { ...primaryBtnStyle, background: "transparent", color: "hsl(var(--foreground))", border: "1px solid hsl(var(--border))" };
-const ghostBtnStyle: React.CSSProperties = { ...primaryBtnStyle, background: "transparent", color: "hsl(var(--muted-foreground))", border: "none" };
+const ghostSmallStyle: React.CSSProperties = { display: "inline-flex", alignItems: "center", gap: 4, height: 28, padding: "0 8px", borderRadius: 6, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 500, background: "transparent", color: "hsl(var(--muted-foreground))", flexShrink: 0 };
 const deleteBtnStyle: React.CSSProperties = { display: "inline-flex", alignItems: "center", justifyContent: "center", width: 36, height: 36, borderRadius: 8, border: "1px solid hsl(var(--destructive) / .3)", cursor: "pointer", background: "transparent", color: "hsl(var(--destructive))", flexShrink: 0 };
+const toolBtnStyle: React.CSSProperties = { display: "inline-flex", flexDirection: "column", alignItems: "center", gap: 2, padding: "5px 14px", borderRadius: 8, border: "1px solid hsl(var(--border))", cursor: "pointer", fontSize: 11, fontWeight: 500, background: "transparent", color: "hsl(var(--foreground))", minWidth: 64, flexShrink: 0 };

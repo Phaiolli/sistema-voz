@@ -2,16 +2,26 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Plus, Mic, QrCode, Download, Edit } from "lucide-react";
+import { Plus, Mic, Eye, Download } from "lucide-react";
 import { VozWordmark } from "@/components/voz/wordmark";
 import { HeaderControls } from "@/components/voz/header-controls";
 import { toast } from "sonner";
 import type { Event } from "@/lib/types";
 
-function statusLabel(s: string) {
-  if (s === "active") return { label: "Ao vivo", color: "hsl(var(--success))", bg: "hsl(142 71% 45% / .12)" };
-  if (s === "ended") return { label: "Encerrado", color: "hsl(var(--muted-foreground))", bg: "hsl(var(--muted))" };
-  return { label: "Rascunho", color: "hsl(38 85% 40%)", bg: "hsl(var(--accent) / .12)" };
+function eventDateLabel(status: string, startsAt: string | null) {
+  if (status === "active") return { label: "Ao vivo", color: "hsl(var(--success))", bg: "hsl(142 71% 45% / .12)" };
+  if (status === "ended") return { label: "Encerrado", color: "hsl(var(--muted-foreground))", bg: "hsl(var(--muted))" };
+
+  if (!startsAt) return { label: "Sem data", color: "hsl(var(--muted-foreground))", bg: "hsl(var(--muted))" };
+
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const start = new Date(startsAt); start.setHours(0, 0, 0, 0);
+  const diff = Math.round((start.getTime() - today.getTime()) / 86400000);
+
+  if (diff < 0) return { label: `Há ${Math.abs(diff)} dia${Math.abs(diff) !== 1 ? "s" : ""}`, color: "hsl(var(--muted-foreground))", bg: "hsl(var(--muted))" };
+  if (diff === 0) return { label: "Hoje", color: "hsl(var(--success))", bg: "hsl(142 71% 45% / .12)" };
+  if (diff === 1) return { label: "Amanhã", color: "hsl(38 85% 40%)", bg: "hsl(var(--accent) / .12)" };
+  return { label: `Em ${diff} dias`, color: "hsl(38 85% 40%)", bg: "hsl(var(--accent) / .12)" };
 }
 
 export default function AdminEventosPage() {
@@ -74,23 +84,50 @@ export default function AdminEventosPage() {
         {!loading && events.length > 0 && (
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             {events.map((ev) => {
-              const st = statusLabel(ev.status);
+              const st = eventDateLabel(ev.status, ev.startsAt ?? null);
+              const logo = ev.theme?.logoUrl ?? ev.config?.page?.logo;
+              const bg = ev.theme?.background ?? "#1E4953";
+              const accent = ev.theme?.accent ?? "#F2B33D";
               return (
-                <div key={ev.id} style={{ display: "flex", alignItems: "center", gap: 16, padding: "16px 20px", background: "hsl(var(--muted))", borderRadius: 12, border: "1px solid hsl(var(--border))" }}>
-                  <div style={{ width: 48, height: 48, borderRadius: 10, background: ev.theme.background ?? "#1E4953", flexShrink: 0 }} aria-hidden />
-                  <div style={{ flex: 1, minWidth: 0 }}>
+                <div key={ev.id} className="ev-row">
+                  {/* Overlay link — cobre a linha e vai para o editor */}
+                  <Link href={`/admin/eventos/${ev.id}`} className="ev-overlay" aria-label={`Editar ${ev.name}`} />
+
+                  {/* Ícone do evento */}
+                  <div
+                    style={{ width: 48, height: 48, borderRadius: 10, background: bg, flexShrink: 0, overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", position: "relative", zIndex: 1 }}
+                    aria-hidden
+                  >
+                    {logo ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={logo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    ) : (
+                      <span style={{ fontFamily: '"Archivo Black", sans-serif', fontSize: 20, fontWeight: 900, color: accent, lineHeight: 1, userSelect: "none" }}>
+                        {ev.name.slice(0, 1).toUpperCase()}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Info */}
+                  <div style={{ flex: 1, minWidth: 0, position: "relative", zIndex: 1 }}>
                     <p style={{ fontFamily: '"Archivo", sans-serif', fontWeight: 600, fontSize: 16, margin: "0 0 4px" }}>{ev.name}</p>
                     <p style={{ fontSize: 13, color: "hsl(var(--muted-foreground))", margin: 0 }}>
-                      {new Date(ev.startsAt).toLocaleDateString("pt-BR", { day: "numeric", month: "long", year: "numeric" })} · {ev.place}
+                      {ev.startsAt
+                        ? new Date(ev.startsAt).toLocaleDateString("pt-BR", { day: "numeric", month: "long", year: "numeric" })
+                        : "Sem data"}
+                      {ev.place ? ` · ${ev.place}` : ""}
                     </p>
                   </div>
-                  <span style={{ padding: "4px 10px", borderRadius: 999, fontSize: 12, fontWeight: 600, color: st.color, background: st.bg }}>
+
+                  {/* Label de data/status */}
+                  <span style={{ padding: "4px 10px", borderRadius: 999, fontSize: 12, fontWeight: 600, color: st.color, background: st.bg, flexShrink: 0, position: "relative", zIndex: 1 }}>
                     {st.label}
                   </span>
-                  <div style={{ display: "flex", gap: 6 }}>
+
+                  {/* Botões de ação */}
+                  <div style={{ display: "flex", gap: 6, position: "relative", zIndex: 1 }}>
                     <ActionBtn href="/mediador" icon={<Mic size={14} />} label="Abrir mediador" />
-                    <ActionBtn href={`/admin/eventos/${ev.id}`} icon={<Edit size={14} />} label="Editar" />
-                    <ActionBtn href={`/e/${ev.slug}`} icon={<QrCode size={14} />} label="Ver QR" />
+                    <ActionBtn href={`/e/${ev.slug}`} icon={<Eye size={14} />} label="Ver página do evento" />
                     <ActionBtn href="#" icon={<Download size={14} />} label="Exportar CSV" />
                   </div>
                 </div>
@@ -99,6 +136,22 @@ export default function AdminEventosPage() {
           </div>
         )}
       </main>
+
+      <style>{`
+        .ev-row {
+          position: relative;
+          display: flex;
+          align-items: center;
+          gap: 16px;
+          padding: 16px 20px;
+          background: hsl(var(--muted));
+          border-radius: 12px;
+          border: 1px solid hsl(var(--border));
+          cursor: pointer;
+        }
+        .ev-row:hover { background: hsl(var(--accent) / .06); border-color: hsl(var(--primary) / .25); }
+        .ev-overlay { position: absolute; inset: 0; border-radius: 12px; z-index: 0; }
+      `}</style>
     </div>
   );
 }
@@ -113,7 +166,7 @@ function NavLink({ href, children, active }: { href: string; children: React.Rea
 
 function ActionBtn({ href, icon, label }: { href: string; icon: React.ReactNode; label: string }) {
   return (
-    <Link href={href} aria-label={label} title={label} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 36, height: 36, borderRadius: 8, border: "1px solid hsl(var(--border))", background: "transparent", textDecoration: "none", color: "hsl(var(--foreground))" }}>
+    <Link href={href} aria-label={label} title={label} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 36, height: 36, borderRadius: 8, border: "1px solid hsl(var(--border))", background: "hsl(var(--background))", textDecoration: "none", color: "hsl(var(--foreground))" }}>
       {icon}
     </Link>
   );

@@ -4,13 +4,13 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowLeft, Save, Download, Plus, X, Upload } from "lucide-react";
+import { ArrowLeft, Save, Download, Plus, X, Upload, CheckCircle2, Package, Trophy, ExternalLink } from "lucide-react";
 import { VozWordmark } from "@/components/voz/wordmark";
 import { HeaderControls } from "@/components/voz/header-controls";
 import { toast } from "sonner";
-import type { Event, UserRole, EventPageSpeaker, EventPageScheduleItem } from "@/lib/types";
+import type { Event, UserRole, EventPageSpeaker, EventPageScheduleItem, Registration, RegistrationConfig } from "@/lib/types";
 
-type Tab = "geral" | "sobre" | "identidade" | "mediadores" | "participantes" | "qrcode" | "configuracoes";
+type Tab = "geral" | "sobre" | "identidade" | "mediadores" | "participantes" | "qrcode" | "configuracoes" | "inscricoes" | "sorteio";
 
 interface UserPublic {
   id: string;
@@ -27,6 +27,8 @@ const TABS: { id: Tab; label: string }[] = [
   { id: "identidade", label: "Identidade visual" },
   { id: "mediadores", label: "Mediadores" },
   { id: "participantes", label: "Participantes" },
+  { id: "inscricoes", label: "Inscrições" },
+  { id: "sorteio", label: "Sorteio" },
   { id: "qrcode", label: "QR Code" },
   { id: "configuracoes", label: "Configurações" },
 ];
@@ -93,6 +95,19 @@ export function EventEditor({ eventId, isNew }: { eventId: string | null; isNew:
   // QR Code
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
 
+  // Inscrições
+  const [regEnabled, setRegEnabled] = useState(false);
+  const [regOpensAt, setRegOpensAt] = useState("");
+  const [regClosesAt, setRegClosesAt] = useState("");
+  const [registrations, setRegistrations] = useState<Registration[]>([]);
+  const [regsLoading, setRegsLoading] = useState(false);
+
+  // Sorteio
+  const [drawPhase, setDrawPhase] = useState<"idle" | "counting" | "winner">("idle");
+  const [drawCountdown, setDrawCountdown] = useState(5);
+  const [drawWinner, setDrawWinner] = useState<{ id: string; name: string } | null>(null);
+  const [drawRemaining, setDrawRemaining] = useState<number | null>(null);
+
   const inp: React.CSSProperties = {
     padding: "10px 14px",
     borderRadius: 8,
@@ -126,6 +141,10 @@ export function EventEditor({ eventId, isNew }: { eventId: string | null; isNew:
         setBgColor(ev.theme.background ?? "#1E4953");
         setPreset(ev.theme.preset ?? "incluir");
         setEventName(ev.name);
+        const regCfg = ev.config?.registration as RegistrationConfig | undefined;
+        setRegEnabled(regCfg?.enabled ?? false);
+        setRegOpensAt(regCfg?.opensAt ? new Date(regCfg.opensAt).toISOString().slice(0, 16) : "");
+        setRegClosesAt(regCfg?.closesAt ? new Date(regCfg.closesAt).toISOString().slice(0, 16) : "");
         const page = ev.config?.page;
         setLogo(page?.logo ?? "");
         setAboutText(page?.aboutText ?? ev.about ?? "");
@@ -146,6 +165,18 @@ export function EventEditor({ eventId, isNew }: { eventId: string | null; isNew:
       .then((res: { mediators: UserPublic[] }) => setMediators(res.mediators ?? []))
       .catch(() => toast.error("Erro ao carregar mediadores."))
       .finally(() => setMediatorsLoading(false));
+  }, [tab, eventId]);
+
+  // Load registrations when tab opens
+  useEffect(() => {
+    if (tab !== "inscricoes" && tab !== "sorteio") return;
+    if (!eventId) return;
+    setRegsLoading(true);
+    fetch(`/api/v1/events/${eventId}/registrations`)
+      .then((r) => r.json() as Promise<{ registrations: Registration[] }>)
+      .then((d) => setRegistrations(d.registrations ?? []))
+      .catch(() => toast.error("Erro ao carregar inscritos."))
+      .finally(() => setRegsLoading(false));
   }, [tab, eventId]);
 
   // Generate QR code
@@ -178,6 +209,11 @@ export function EventEditor({ eventId, isNew }: { eventId: string | null; isNew:
           theme: { preset, background: bgColor, accent: accentColor },
           config: {
             page: { logo, aboutText, organizer, organizerInstagram, speakers, schedule },
+            registration: {
+              enabled: regEnabled,
+              opensAt: regOpensAt ? new Date(regOpensAt).toISOString() : undefined,
+              closesAt: regClosesAt ? new Date(regClosesAt).toISOString() : undefined,
+            },
           },
         }),
       });
@@ -301,6 +337,58 @@ export function EventEditor({ eventId, isNew }: { eventId: string | null; isNew:
       router.push("/admin/eventos");
     } catch {
       toast.error("Erro ao encerrar evento.");
+    }
+  }
+
+  async function handleDraw() {
+    if (!eventId) return;
+    setDrawPhase("counting");
+    setDrawCountdown(5);
+    setDrawWinner(null);
+    let tick = 5;
+    const interval = setInterval(() => { tick -= 1; setDrawCountdown(tick); if (tick <= 0) clearInterval(interval); }, 1000);
+    await new Promise((r) => setTimeout(r, 5000));
+    clearInterval(interval);
+    try {
+      const res = await fetch(`/api/v1/events/${eventId}/draw`, { method: "POST" });
+      const data = await res.json() as { winner?: { id: string; name: string }; remainingCount?: number; error?: { message?: string; code?: string } };
+      if (!res.ok) {
+        if (data.error?.code === "NO_ELIGIBLE") toast.info("Todos os inscritos com check-in já foram sorteados.");
+        else toast.error(data.error?.message ?? "Erro ao sortear.");
+        setDrawPhase("idle");
+        return;
+      }
+      setDrawWinner(data.winner ?? null);
+      setDrawRemaining(data.remainingCount ?? null);
+      setDrawPhase("winner");
+    } catch { toast.error("Erro de conexão."); setDrawPhase("idle"); }
+  }
+
+  async function handleResetDraw() {
+    if (!eventId) return;
+    if (!window.confirm("Resetar o sorteio? Todos os inscritos voltarão a participar.")) return;
+    try {
+      await fetch(`/api/v1/events/${eventId}/draw`, { method: "DELETE" });
+      toast.success("Sorteio resetado.");
+      setDrawPhase("idle");
+      setDrawWinner(null);
+    } catch { toast.error("Erro ao resetar."); }
+  }
+
+  async function toggleRegistrationField(reg: Registration, field: "checkedIn" | "kitDelivered") {
+    if (!eventId) return;
+    const newVal = !reg[field];
+    setRegistrations((prev) => prev.map((r) => r.id === reg.id ? { ...r, [field]: newVal } : r));
+    try {
+      const res = await fetch(`/api/v1/events/${eventId}/registrations/${reg.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ [field]: newVal }),
+      });
+      if (!res.ok) throw new Error("Falha");
+    } catch {
+      setRegistrations((prev) => prev.map((r) => r.id === reg.id ? { ...r, [field]: !newVal } : r));
+      toast.error("Erro ao atualizar inscrição.");
     }
   }
 
@@ -636,6 +724,151 @@ export function EventEditor({ eventId, isNew }: { eventId: string | null; isNew:
           </div>
         )}
 
+        {/* ─── INSCRIÇÕES ─── */}
+        {tab === "inscricoes" && (
+          <div style={{ maxWidth: 800 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
+              <h2 style={{ fontFamily: '"Archivo", sans-serif', fontWeight: 700, fontSize: 22, margin: 0 }}>Inscrições</h2>
+              {slug && (
+                <a href={`/e/${slug}/inscricao`} target="_blank" rel="noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 6, height: 34, padding: "0 12px", borderRadius: 8, border: "1px solid hsl(var(--border))", fontSize: 13, color: "hsl(var(--foreground))", textDecoration: "none" }}>
+                  <ExternalLink size={13} /> Ver formulário
+                </a>
+              )}
+            </div>
+
+            {/* Config */}
+            <div style={{ padding: 20, background: "hsl(var(--muted) / .4)", border: "1px solid hsl(var(--border))", borderRadius: 12, marginBottom: 24, display: "flex", flexDirection: "column", gap: 16 }}>
+              <Toggle
+                label="Inscrições abertas"
+                description="Habilita o formulário público de inscrição."
+                checked={regEnabled}
+                onToggle={() => setRegEnabled((v) => !v)}
+              />
+              {regEnabled && (
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                  <Field label="Abertura das inscrições" htmlFor="reg-opens">
+                    <input id="reg-opens" type="datetime-local" value={regOpensAt} onChange={(e) => setRegOpensAt(e.target.value)} style={inp} />
+                  </Field>
+                  <Field label="Encerramento das inscrições" htmlFor="reg-closes">
+                    <input id="reg-closes" type="datetime-local" value={regClosesAt} onChange={(e) => setRegClosesAt(e.target.value)} style={inp} />
+                  </Field>
+                </div>
+              )}
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                style={{ alignSelf: "flex-start", display: "inline-flex", alignItems: "center", gap: 6, height: 36, padding: "0 14px", borderRadius: 8, border: "none", background: "hsl(var(--primary))", color: "hsl(var(--primary-foreground))", fontSize: 13, fontWeight: 600, cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.7 : 1 }}
+              >
+                <Save size={13} /> {saving ? "Salvando…" : "Salvar configurações"}
+              </button>
+            </div>
+
+            {/* List */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+              <p style={{ fontWeight: 600, fontSize: 15, margin: 0 }}>{registrations.length} inscritos</p>
+            </div>
+            {regsLoading && <div style={{ padding: 32, textAlign: "center", color: "hsl(var(--muted-foreground))" }}>Carregando…</div>}
+            {!regsLoading && registrations.length === 0 && (
+              <div style={{ padding: 32, textAlign: "center", color: "hsl(var(--muted-foreground))" }}>Nenhum inscrito ainda.</div>
+            )}
+            {!regsLoading && registrations.length > 0 && (
+              <div style={{ border: "1px solid hsl(var(--border))", borderRadius: 12, overflow: "hidden" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                  <thead>
+                    <tr style={{ background: "hsl(var(--muted))", borderBottom: "1px solid hsl(var(--border))" }}>
+                      {["Nome", "E-mail", "Telefone", "CPF", "Check-in", "Kit", "Ações"].map((h) => (
+                        <th key={h} style={{ padding: "10px 14px", textAlign: "left", fontWeight: 600 }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {registrations.map((reg, i) => (
+                      <tr key={reg.id} style={{ borderBottom: i < registrations.length - 1 ? "1px solid hsl(var(--border))" : "none" }}>
+                        <td style={{ padding: "10px 14px", fontWeight: 500 }}>{reg.name}</td>
+                        <td style={{ padding: "10px 14px", color: "hsl(var(--muted-foreground))" }}>{reg.email}</td>
+                        <td style={{ padding: "10px 14px", color: "hsl(var(--muted-foreground))" }}>{reg.phone ?? "—"}</td>
+                        <td style={{ padding: "10px 14px", color: "hsl(var(--muted-foreground))" }}>{reg.document ?? "—"}</td>
+                        <td style={{ padding: "10px 14px" }}>
+                          <Badge active={reg.checkedIn} label={reg.checkedIn ? "Sim" : "Não"} />
+                        </td>
+                        <td style={{ padding: "10px 14px" }}>
+                          <Badge active={reg.kitDelivered} label={reg.kitDelivered ? "Sim" : "Não"} />
+                        </td>
+                        <td style={{ padding: "10px 14px" }}>
+                          <div style={{ display: "flex", gap: 6 }}>
+                            <button onClick={() => toggleRegistrationField(reg, "checkedIn")} style={{ display: "inline-flex", alignItems: "center", gap: 4, height: 28, padding: "0 8px", borderRadius: 6, border: "1px solid hsl(var(--border))", background: "transparent", fontSize: 11, cursor: "pointer" }}>
+                              <CheckCircle2 size={11} /> {reg.checkedIn ? "Desfazer" : "Check-in"}
+                            </button>
+                            <button onClick={() => toggleRegistrationField(reg, "kitDelivered")} style={{ display: "inline-flex", alignItems: "center", gap: 4, height: 28, padding: "0 8px", borderRadius: 6, border: "1px solid hsl(var(--border))", background: "transparent", fontSize: 11, cursor: "pointer" }}>
+                              <Package size={11} /> {reg.kitDelivered ? "Desfazer kit" : "Kit"}
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ─── SORTEIO ─── */}
+        {tab === "sorteio" && (
+          <div style={{ maxWidth: 600 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
+              <h2 style={{ fontFamily: '"Archivo", sans-serif', fontWeight: 700, fontSize: 22, margin: 0 }}>Sorteio</h2>
+              <button onClick={handleResetDraw} style={{ height: 32, padding: "0 12px", borderRadius: 7, border: "1px solid hsl(var(--border))", background: "transparent", fontSize: 12, cursor: "pointer", color: "hsl(var(--muted-foreground))" }}>
+                Resetar sorteio
+              </button>
+            </div>
+            <p style={{ fontSize: 14, color: "hsl(var(--muted-foreground))", margin: "0 0 32px" }}>
+              Apenas inscritos com check-in participam. Sorteados não aparecem novamente.
+            </p>
+
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 32, padding: "40px 0" }}>
+              {drawPhase === "idle" && (
+                <button
+                  onClick={handleDraw}
+                  style={{ display: "inline-flex", alignItems: "center", gap: 10, height: 64, padding: "0 48px", borderRadius: 16, border: "none", background: "hsl(var(--primary))", color: "hsl(var(--primary-foreground))", fontSize: 20, fontWeight: 700, cursor: "pointer" }}
+                >
+                  <Trophy size={22} aria-hidden /> Sortear
+                </button>
+              )}
+
+              {drawPhase === "counting" && (
+                <div style={{ textAlign: "center" }}>
+                  <p style={{ fontFamily: '"Archivo Black", sans-serif', fontSize: 96, margin: 0, lineHeight: 1, color: "hsl(var(--primary))" }}>
+                    {drawCountdown}
+                  </p>
+                  <p style={{ fontSize: 16, color: "hsl(var(--muted-foreground))", margin: "16px 0 0" }}>Sorteando…</p>
+                </div>
+              )}
+
+              {drawPhase === "winner" && drawWinner && (
+                <div style={{ textAlign: "center" }}>
+                  <div style={{ display: "inline-flex", alignItems: "center", gap: 8, color: "hsl(142 71% 40%)", marginBottom: 16 }}>
+                    <Trophy size={28} />
+                    <span style={{ fontSize: 18, fontWeight: 600 }}>Sorteado!</span>
+                  </div>
+                  <p style={{ fontFamily: '"Archivo Black", sans-serif', fontSize: 48, margin: "0 0 8px", lineHeight: 1.1 }}>{drawWinner.name}</p>
+                  {drawRemaining !== null && (
+                    <p style={{ fontSize: 13, color: "hsl(var(--muted-foreground))", margin: "0 0 32px" }}>
+                      {drawRemaining} {drawRemaining === 1 ? "inscrito restante" : "inscritos restantes"}
+                    </p>
+                  )}
+                  <button
+                    onClick={() => { setDrawPhase("idle"); setDrawWinner(null); }}
+                    style={{ height: 44, padding: "0 24px", borderRadius: 10, border: "1px solid hsl(var(--border))", background: "transparent", fontSize: 14, cursor: "pointer" }}
+                  >
+                    Novo sorteio
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* ─── QR CODE ─── */}
         {tab === "qrcode" && (
           <div style={{ maxWidth: 500 }}>
@@ -728,14 +961,36 @@ function ConfigToggle({ label, description, defaultChecked }: { label: string; d
         <p style={{ fontWeight: 500, fontSize: 15, margin: "0 0 2px" }}>{label}</p>
         <p style={{ fontSize: 13, color: "hsl(var(--muted-foreground))", margin: 0 }}>{description}</p>
       </div>
+      <Toggle checked={checked} onToggle={() => setChecked((v) => !v)} />
+    </div>
+  );
+}
+
+function Toggle({ label, description, checked, onToggle }: { label?: string; description?: string; checked: boolean; onToggle: () => void }) {
+  return (
+    <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16, width: "100%" }}>
+      {(label || description) && (
+        <div>
+          {label && <p style={{ fontWeight: 500, fontSize: 15, margin: "0 0 2px" }}>{label}</p>}
+          {description && <p style={{ fontSize: 13, color: "hsl(var(--muted-foreground))", margin: 0 }}>{description}</p>}
+        </div>
+      )}
       <button
         role="switch"
         aria-checked={checked}
-        onClick={() => setChecked((v) => !v)}
+        onClick={onToggle}
         style={{ width: 44, height: 24, borderRadius: 999, border: "none", cursor: "pointer", position: "relative", flexShrink: 0, background: checked ? "hsl(var(--primary))" : "hsl(var(--muted))" }}
       >
         <span style={{ position: "absolute", top: 2, left: checked ? 22 : 2, width: 20, height: 20, borderRadius: "50%", background: "#fff" }} />
       </button>
     </div>
+  );
+}
+
+function Badge({ active, label }: { active: boolean; label: string }) {
+  return (
+    <span style={{ padding: "3px 8px", borderRadius: 999, fontSize: 11, fontWeight: 600, background: active ? "hsl(142 71% 45% / .12)" : "hsl(var(--muted))", color: active ? "hsl(142 71% 35%)" : "hsl(var(--muted-foreground))" }}>
+      {label}
+    </span>
   );
 }

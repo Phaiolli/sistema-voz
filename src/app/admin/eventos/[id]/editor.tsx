@@ -98,6 +98,7 @@ export function EventEditor({ eventId, isNew }: { eventId: string | null; isNew:
 
   // Inscrições
   const [regEnabled, setRegEnabled] = useState(false);
+  const [drawEnabled, setDrawEnabled] = useState(false);
   const [regOpensAt, setRegOpensAt] = useState("");
   const [regClosesAt, setRegClosesAt] = useState("");
   const [registrations, setRegistrations] = useState<Registration[]>([]);
@@ -146,6 +147,7 @@ export function EventEditor({ eventId, isNew }: { eventId: string | null; isNew:
         setRegEnabled(regCfg?.enabled ?? false);
         setRegOpensAt(regCfg?.opensAt ? new Date(regCfg.opensAt).toISOString().slice(0, 16) : "");
         setRegClosesAt(regCfg?.closesAt ? new Date(regCfg.closesAt).toISOString().slice(0, 16) : "");
+        setDrawEnabled(ev.config?.drawEnabled ?? false);
         const page = ev.config?.page;
         setLogo(page?.logo ?? "");
         setAboutText(page?.aboutText ?? ev.about ?? "");
@@ -208,6 +210,7 @@ export function EventEditor({ eventId, isNew }: { eventId: string | null; isNew:
               opensAt: regOpensAt ? new Date(regOpensAt).toISOString() : undefined,
               closesAt: regClosesAt ? new Date(regClosesAt).toISOString() : undefined,
             },
+            drawEnabled,
           },
         }),
       });
@@ -902,6 +905,12 @@ export function EventEditor({ eventId, isNew }: { eventId: string | null; isNew:
               <ConfigToggle label="Moderação manual" description="O mediador aprova cada pergunta antes de exibir." defaultChecked />
               <ConfigToggle label="Permitir anônimos" description="Participantes podem enviar sem identificação." defaultChecked />
               <ConfigToggle label="LGPD obrigatório" description="Exige aceite antes do envio." defaultChecked />
+              <Toggle
+                label="Habilitar sorteio"
+                description="Permite que o mediador realize sorteios entre os inscritos durante o evento."
+                checked={drawEnabled}
+                onToggle={() => setDrawEnabled((v) => !v)}
+              />
               <div style={{ marginTop: 8, padding: 20, background: "hsl(var(--destructive) / .08)", border: "1px solid hsl(var(--destructive) / .2)", borderRadius: 12 }}>
                 <p style={{ fontWeight: 600, fontSize: 15, color: "hsl(var(--destructive))", margin: "0 0 8px" }}>Zona de perigo</p>
                 <p style={{ fontSize: 13, color: "hsl(var(--muted-foreground))", margin: "0 0 12px" }}>Encerrar o evento impede novos envios de perguntas.</p>

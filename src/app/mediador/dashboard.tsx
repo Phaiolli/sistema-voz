@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import type { RealtimeChannel } from "@supabase/supabase-js";
-import { MonitorPlay, StopCircle, ExternalLink, Mic, QrCode, ArrowLeft, ArrowRight, Check, EyeOff, RotateCcw, Trash2 } from "lucide-react";
+import { MonitorPlay, StopCircle, ExternalLink, Mic, QrCode, ArrowLeft, ArrowRight, Check, EyeOff, RotateCcw, Trash2, Shuffle, X } from "lucide-react";
 import { VozLockup } from "@/components/voz/wordmark";
 import { StatusBadge } from "@/components/voz/status-badge";
 import { HeaderControls } from "@/components/voz/header-controls";
@@ -14,14 +14,16 @@ import { toast } from "sonner";
 
 type Tab = "unread" | "all" | "hidden";
 
+interface EventSummary { id: string; slug: string; name: string; config?: { drawEnabled?: boolean } }
+
 interface Assignment {
   eventId: string;
-  event: { id: string; slug: string; name: string };
+  event: EventSummary;
   assignedAt: string;
 }
 
 interface AssignmentsResponse {
-  events?: { id: string; slug: string; name: string }[];
+  events?: EventSummary[];
   assignments?: Assignment[];
 }
 
@@ -40,6 +42,12 @@ export function MediatorDashboard() {
   const [presentQueue, setPresentQueue] = useState<Question[]>([]);
   const apresentarChannelRef = useRef<RealtimeChannel | null>(null);
   const [mobileDetail, setMobileDetail] = useState(false);
+  const [drawEnabled, setDrawEnabled] = useState(false);
+  const [drawOpen, setDrawOpen] = useState(false);
+  const [drawPhase, setDrawPhase] = useState<"idle" | "counting" | "winner">("idle");
+  const [drawCountdown, setDrawCountdown] = useState(5);
+  const [drawWinner, setDrawWinner] = useState<{ name: string } | null>(null);
+  const [drawRemaining, setDrawRemaining] = useState<number | null>(null);
 
   useEffect(() => {
     fetch("/api/v1/me/assignments")
@@ -68,6 +76,8 @@ export function MediatorDashboard() {
         setEventId(id);
         setEventName(name);
         setEventSlug(slug);
+        const evConfig = data.events?.[0]?.config ?? data.assignments?.[0]?.event?.config;
+        if (evConfig?.drawEnabled) setDrawEnabled(true);
         return fetch(`/api/v1/events/${id}/questions`);
       })
       .then((r) => {
@@ -149,6 +159,24 @@ export function MediatorDashboard() {
     const q = presentQueue[prev];
     broadcastApresentar({ phase: "showing", question: { id: q.id, text: q.text, authorName: q.authorName } });
   }, [presentingIdx, presentQueue, broadcastApresentar]);
+
+  const handleDraw = useCallback(async () => {
+    if (!eventId) return;
+    setDrawPhase("counting");
+    setDrawCountdown(5);
+    setDrawWinner(null);
+    let tick = 5;
+    const interval = setInterval(() => { tick -= 1; setDrawCountdown(tick); if (tick <= 0) clearInterval(interval); }, 1000);
+    try {
+      const res = await fetch(`/api/v1/events/${eventId}/draw`, { method: "POST" });
+      clearInterval(interval);
+      if (!res.ok) { toast.error("Erro ao realizar sorteio."); setDrawPhase("idle"); return; }
+      const data = await res.json() as { winner?: { name: string }; remainingCount?: number };
+      setDrawWinner(data.winner ?? null);
+      setDrawRemaining(data.remainingCount ?? null);
+      setDrawPhase("winner");
+    } catch { clearInterval(interval); toast.error("Erro de conexão."); setDrawPhase("idle"); }
+  }, [eventId]);
 
   const counts = {
     unread: questions.filter((q) => q.status === "pending" || q.status === "next").length,
@@ -279,6 +307,11 @@ export function MediatorDashboard() {
         <button onClick={() => eventId && window.open(`/apresentar/${eventId}`, "_blank")} style={outlineBtnStyle} aria-label="Abrir link para projeção">
           <ExternalLink size={14} aria-hidden /><span className="med-lbl"> Link para Projeção</span>
         </button>
+        {drawEnabled && (
+          <button onClick={() => { setDrawPhase("idle"); setDrawOpen(true); }} style={outlineBtnStyle} aria-label="Realizar sorteio">
+            <Shuffle size={14} aria-hidden /><span className="med-lbl"> Sortear</span>
+          </button>
+        )}
         <div style={{ flex: 1 }} />
         {!isPresenting ? (
           <button onClick={startPresenting} style={primaryBtnStyle}>
@@ -363,6 +396,49 @@ export function MediatorDashboard() {
       </footer>
 
       {qrOpen && <QRModal slug={eventSlug} onClose={() => setQrOpen(false)} />}
+
+      {drawOpen && (
+        <div role="dialog" aria-modal="true" aria-label="Sorteio" onClick={() => drawPhase === "idle" && setDrawOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.6)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100, backdropFilter: "blur(4px)" }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ background: "hsl(var(--background))", borderRadius: 20, padding: 36, maxWidth: 400, width: "calc(100% - 40px)", boxShadow: "0 24px 60px rgba(0,0,0,.35)", textAlign: "center", position: "relative" }}>
+            <button onClick={() => setDrawOpen(false)} aria-label="Fechar" style={{ position: "absolute", top: 16, right: 16, display: "flex", alignItems: "center", justifyContent: "center", width: 32, height: 32, borderRadius: 8, border: "1px solid hsl(var(--border))", background: "transparent", cursor: "pointer" }}>
+              <X size={14} aria-hidden />
+            </button>
+            <p style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 11, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: "hsl(var(--muted-foreground))", margin: "0 0 20px" }}>Sorteio</p>
+
+            {drawPhase === "idle" && (
+              <>
+                <p style={{ fontSize: 15, color: "hsl(var(--muted-foreground))", margin: "0 0 24px" }}>Clique em <strong>Sortear</strong> para selecionar um inscrito aleatoriamente.</p>
+                <button onClick={handleDraw} style={{ ...primaryBtnStyle, width: "100%", justifyContent: "center", height: 48, fontSize: 15 }}>
+                  <Shuffle size={16} aria-hidden /> Sortear
+                </button>
+              </>
+            )}
+
+            {drawPhase === "counting" && (
+              <div style={{ padding: "20px 0" }}>
+                <p style={{ fontFamily: '"Archivo Black", sans-serif', fontSize: 96, margin: 0, lineHeight: 1, color: "hsl(var(--primary))" }}>{drawCountdown}</p>
+                <p style={{ fontSize: 13, color: "hsl(var(--muted-foreground))", margin: "12px 0 0" }}>sorteando…</p>
+              </div>
+            )}
+
+            {drawPhase === "winner" && drawWinner && (
+              <>
+                <p style={{ fontSize: 13, color: "hsl(var(--muted-foreground))", margin: "0 0 8px" }}>🎉 Vencedor</p>
+                <p style={{ fontFamily: '"Archivo Black", sans-serif', fontSize: 36, margin: "0 0 8px", lineHeight: 1.1 }}>{drawWinner.name}</p>
+                {drawRemaining !== null && (
+                  <p style={{ fontSize: 13, color: "hsl(var(--muted-foreground))", margin: "0 0 24px" }}>{drawRemaining} {drawRemaining === 1 ? "inscrito restante" : "inscritos restantes"}</p>
+                )}
+                <button onClick={handleDraw} style={{ ...primaryBtnStyle, width: "100%", justifyContent: "center", height: 44, marginBottom: 8 }}>
+                  <Shuffle size={14} aria-hidden /> Novo sorteio
+                </button>
+                <button onClick={() => setDrawOpen(false)} style={{ ...outlineBtnStyle, width: "100%", justifyContent: "center", height: 44 }}>
+                  Fechar
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       <style>{`
         .med-header {

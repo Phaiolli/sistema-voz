@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { Calendar, MapPin, Mic, Lock } from "lucide-react";
+import { Calendar, MapPin, Mic, Lock, UserPlus } from "lucide-react";
 import { createServerClient } from "@/lib/supabase";
 import { VozWordmark } from "@/components/voz/wordmark";
 import type { Event, EventPage } from "@/lib/types";
@@ -37,6 +37,15 @@ async function getEvent(slug: string): Promise<Event | null> {
   return data ? mapEvent(data) : null;
 }
 
+function registrationIsOpen(event: Event): boolean {
+  const reg = event.config?.registration;
+  if (!reg?.enabled) return false;
+  const now = new Date();
+  if (reg.opensAt && new Date(reg.opensAt) > now) return false;
+  if (reg.closesAt && new Date(reg.closesAt) < now) return false;
+  return true;
+}
+
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("pt-BR", {
     weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit",
@@ -50,6 +59,7 @@ export default async function EventPage({ params }: { params: Promise<{ slug: st
 
   const accent = event.theme?.accent ?? "#F2B33D";
   const bg = event.theme?.background ?? "#1E4953";
+  const regOpen = registrationIsOpen(event);
   const page: EventPage = event.config?.page ?? {};
   const speakers = page.speakers ?? [];
   const schedule = page.schedule ?? [];
@@ -178,12 +188,21 @@ export default async function EventPage({ params }: { params: Promise<{ slug: st
 
       {/* Sticky CTA */}
       <div style={{ position: "fixed", left: 0, right: 0, bottom: 0, padding: "14px 16px 28px", background: `linear-gradient(180deg, transparent, ${bg} 30%)`, zIndex: 10 }}>
-        <Link
-          href={`/e/${slug}/perguntar`}
-          style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, height: 52, width: "100%", borderRadius: 10, fontSize: 16, fontWeight: 700, background: accent, color: bg, textDecoration: "none", boxShadow: `0 8px 24px ${accent}55` }}
-        >
-          <Mic size={20} aria-hidden /> Fazer uma pergunta
-        </Link>
+        {regOpen ? (
+          <Link
+            href={`/e/${slug}/inscricao`}
+            style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, height: 52, width: "100%", borderRadius: 10, fontSize: 16, fontWeight: 700, background: accent, color: bg, textDecoration: "none", boxShadow: `0 8px 24px ${accent}55` }}
+          >
+            <UserPlus size={20} aria-hidden /> Se inscrever
+          </Link>
+        ) : (
+          <Link
+            href={`/e/${slug}/perguntar`}
+            style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, height: 52, width: "100%", borderRadius: 10, fontSize: 16, fontWeight: 700, background: accent, color: bg, textDecoration: "none", boxShadow: `0 8px 24px ${accent}55` }}
+          >
+            <Mic size={20} aria-hidden /> Fazer uma pergunta
+          </Link>
+        )}
       </div>
     </>
   );

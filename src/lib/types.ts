@@ -46,6 +46,7 @@ export interface EventConfig {
   manualModeration?: boolean;
   allowAnonymous?: boolean;
   lgpdRequired?: boolean;
+  drawEnabled?: boolean;
   page?: EventPage;
   registration?: RegistrationConfig;
 }

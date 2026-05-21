@@ -76,6 +76,7 @@ export interface Question {
   eventId: string;
   authorName: string;
   authorContact?: string;
+  authorEmail?: string;
   text: string;
   status: QuestionStatus;
   createdAt: string;

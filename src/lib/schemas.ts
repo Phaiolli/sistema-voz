@@ -7,8 +7,14 @@ export const submitQuestionSchema = z.object({
     .max(100, "Nome muito longo."),
   authorContact: z
     .string()
-    .min(5, "Informe email ou telefone.")
+    .min(5, "Informe seu WhatsApp.")
     .max(200, "Contato muito longo."),
+  authorEmail: z
+    .string()
+    .email("E-mail inválido.")
+    .max(200, "E-mail muito longo.")
+    .optional()
+    .or(z.literal("")),
   text: z
     .string()
     .min(10, "Pergunta muito curta.")

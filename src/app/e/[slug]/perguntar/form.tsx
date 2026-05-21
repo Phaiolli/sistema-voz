@@ -17,6 +17,7 @@ export function QuestionForm({ slug, eventId, eventName }: Props) {
   const router = useRouter();
   const [name, setName] = useState("");
   const [contact, setContact] = useState("");
+  const [email, setEmail] = useState("");
   const [text, setText] = useState("");
   const [lgpd, setLgpd] = useState(false);
   const [anonymous, setAnonymous] = useState(false);
@@ -29,8 +30,9 @@ export function QuestionForm({ slug, eventId, eventName }: Props) {
   const overChars = chars > MAX;
   const nameOk = name.trim().length >= 2;
   const contactOk = contact.trim().length >= 5;
+  const emailOk = email.trim() === "" || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
   const textOk = text.trim().length >= 10 && !overChars;
-  const valid = nameOk && contactOk && textOk && lgpd;
+  const valid = nameOk && contactOk && emailOk && textOk && lgpd;
 
   const showErr = (cond: boolean) => touched && !cond;
 
@@ -43,7 +45,7 @@ export function QuestionForm({ slug, eventId, eventName }: Props) {
       const res = await fetch(`/api/v1/events/${eventId}/questions`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ authorName: anonymous ? "Anônimo" : name.trim(), authorContact: contact.trim(), text: text.trim(), lgpdAccepted: true }),
+        body: JSON.stringify({ authorName: anonymous ? "Anônimo" : name.trim(), authorContact: contact.trim(), authorEmail: email.trim() || undefined, text: text.trim(), lgpdAccepted: true }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -143,20 +145,38 @@ export function QuestionForm({ slug, eventId, eventName }: Props) {
           )}
 
           <Field
-            label="WhatsApp ou email"
+            label="WhatsApp"
             labelSuffix="· só para o mediador entrar em contato se necessário"
             htmlFor="f-contact"
-            error={showErr(contactOk) ? "Informe seu WhatsApp ou email." : undefined}
+            error={showErr(contactOk) ? "Informe seu WhatsApp." : undefined}
           >
             <input
               id="f-contact"
-              type="text"
+              type="tel"
               value={contact}
               onChange={(e) => setContact(e.target.value)}
-              placeholder="(11) 90000-0000 ou voce@exemplo.com"
+              placeholder="(11) 90000-0000"
               autoComplete="tel"
               aria-describedby={showErr(contactOk) ? "f-contact-err" : undefined}
               style={inputStyle(showErr(contactOk))}
+            />
+          </Field>
+
+          <Field
+            label="E-mail"
+            labelSuffix="· opcional"
+            htmlFor="f-email"
+            error={touched && !emailOk ? "E-mail inválido." : undefined}
+          >
+            <input
+              id="f-email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="voce@exemplo.com"
+              autoComplete="email"
+              aria-describedby={touched && !emailOk ? "f-email-err" : undefined}
+              style={inputStyle(touched && !emailOk)}
             />
           </Field>
 

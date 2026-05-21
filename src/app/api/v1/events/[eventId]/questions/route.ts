@@ -20,6 +20,7 @@ function mapQuestion(row: Record<string, any>) {
     eventId: row.event_id,
     authorName: row.author_name,
     authorContact: row.author_contact ?? null,
+    authorEmail: row.author_email ?? null,
     text: row.text,
     status: row.status,
     createdAt: row.created_at,
@@ -46,7 +47,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ eve
       { details: { field: firstField } },
     );
   }
-  const { authorName, authorContact, text } = parsed.data;
+  const { authorName, authorContact, authorEmail, text } = parsed.data;
 
   const supabase = createServerClient();
 
@@ -82,6 +83,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ eve
       event_id: eventId,
       author_name: authorName.trim(),
       author_contact: authorContact.trim(),
+      author_email: authorEmail?.trim() || null,
       author_ip: ip,
       text: text.trim(),
       status: "pending",

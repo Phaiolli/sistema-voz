@@ -107,6 +107,10 @@ export function EventEditor({ eventId, isNew }: { eventId: string | null; isNew:
   const [registrations, setRegistrations] = useState<Registration[]>([]);
   const [regsLoading, setRegsLoading] = useState(false);
 
+  // Participantes
+  const [participants, setParticipants] = useState<{ name: string; whatsapp: string | null; email: string | null; questionCount: number; firstSeen: string }[]>([]);
+  const [participantsLoading, setParticipantsLoading] = useState(false);
+
   // Sorteio
   const [drawPhase, setDrawPhase] = useState<"idle" | "counting" | "winner">("idle");
   const [drawCountdown, setDrawCountdown] = useState(5);
@@ -186,6 +190,17 @@ export function EventEditor({ eventId, isNew }: { eventId: string | null; isNew:
       .then((d) => setRegistrations(d.registrations ?? []))
       .catch(() => toast.error("Erro ao carregar inscritos."))
       .finally(() => setRegsLoading(false));
+  }, [tab, eventId]);
+
+  useEffect(() => {
+    if (tab !== "participantes") return;
+    if (!eventId) return;
+    setParticipantsLoading(true);
+    fetch(`/api/v1/events/${eventId}/participants`)
+      .then((r) => r.json() as Promise<{ participants: { name: string; whatsapp: string | null; email: string | null; questionCount: number; firstSeen: string }[] }>)
+      .then((d) => setParticipants(d.participants ?? []))
+      .catch(() => toast.error("Erro ao carregar participantes."))
+      .finally(() => setParticipantsLoading(false));
   }, [tab, eventId]);
 
   // Generate QR code
@@ -766,28 +781,54 @@ export function EventEditor({ eventId, isNew }: { eventId: string | null; isNew:
         {tab === "participantes" && (
           <div>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-              <h2 style={{ fontFamily: '"Archivo", sans-serif', fontWeight: 700, fontSize: 22, margin: 0 }}>Participantes</h2>
-              <div style={{ display: "flex", gap: 8 }}>
-                <button style={{ display: "inline-flex", alignItems: "center", gap: 6, height: 36, padding: "0 14px", borderRadius: 8, border: "1px solid hsl(var(--border))", background: "transparent", fontSize: 13, cursor: "pointer" }}>
-                  <Download size={14} aria-hidden /> CSV
-                </button>
+              <div>
+                <h2 style={{ fontFamily: '"Archivo", sans-serif', fontWeight: 700, fontSize: 22, margin: 0 }}>Participantes</h2>
+                <p style={{ fontSize: 13, color: "hsl(var(--muted-foreground))", margin: "4px 0 0" }}>
+                  Pessoas que enviaram perguntas neste evento — {participants.length} no total.
+                </p>
               </div>
+              <button
+                onClick={() => {
+                  if (participants.length === 0) return;
+                  const header = "Nome,WhatsApp,Email,Perguntas\n";
+                  const rows = participants.map((p) =>
+                    [p.name, p.whatsapp ?? "", p.email ?? "", p.questionCount].map((v) => `"${String(v).replace(/"/g, '""')}"`).join(",")
+                  ).join("\n");
+                  const blob = new Blob([header + rows], { type: "text/csv;charset=utf-8;" });
+                  const a = document.createElement("a");
+                  a.href = URL.createObjectURL(blob);
+                  a.download = `participantes-${eventId}.csv`;
+                  a.click();
+                }}
+                style={{ display: "inline-flex", alignItems: "center", gap: 6, height: 36, padding: "0 14px", borderRadius: 8, border: "1px solid hsl(var(--border))", background: "transparent", fontSize: 13, cursor: "pointer" }}
+              >
+                <Download size={14} aria-hidden /> Exportar CSV
+              </button>
             </div>
             <div style={{ border: "1px solid hsl(var(--border))", borderRadius: 10, overflow: "hidden" }}>
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
                 <thead>
                   <tr style={{ background: "hsl(var(--muted))", borderBottom: "1px solid hsl(var(--border))" }}>
-                    {["Nome", "Contato", "Perguntas", "Aceite LGPD"].map((h) => (
+                    {["Nome", "WhatsApp", "E-mail", "Perguntas"].map((h) => (
                       <th key={h} style={{ padding: "10px 16px", textAlign: "left", fontWeight: 600, fontSize: 13 }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
-                  <tr>
-                    <td colSpan={4} style={{ padding: "24px 16px", textAlign: "center", color: "hsl(var(--muted-foreground))", fontSize: 13 }}>
-                      Dados de participantes disponíveis em breve.
-                    </td>
-                  </tr>
+                  {participantsLoading && (
+                    <tr><td colSpan={4} style={{ padding: "24px 16px", textAlign: "center", color: "hsl(var(--muted-foreground))", fontSize: 13 }}>Carregando…</td></tr>
+                  )}
+                  {!participantsLoading && participants.length === 0 && (
+                    <tr><td colSpan={4} style={{ padding: "24px 16px", textAlign: "center", color: "hsl(var(--muted-foreground))", fontSize: 13 }}>Nenhum participante ainda.</td></tr>
+                  )}
+                  {!participantsLoading && participants.map((p, i) => (
+                    <tr key={i} style={{ borderTop: i === 0 ? undefined : "1px solid hsl(var(--border))" }}>
+                      <td style={{ padding: "10px 16px", fontWeight: 500 }}>{p.name}</td>
+                      <td style={{ padding: "10px 16px", color: "hsl(var(--muted-foreground))" }}>{p.whatsapp ?? "—"}</td>
+                      <td style={{ padding: "10px 16px", color: "hsl(var(--muted-foreground))" }}>{p.email ?? "—"}</td>
+                      <td style={{ padding: "10px 16px", color: "hsl(var(--muted-foreground))", textAlign: "center" }}>{p.questionCount}</td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>

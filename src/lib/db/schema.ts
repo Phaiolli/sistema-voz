@@ -26,6 +26,7 @@ export const questions = pgTable("questions", {
   eventId: text("event_id").notNull().references(() => events.id),
   authorName: text("author_name").notNull(),
   authorContact: text("author_contact"),
+  authorEmail: text("author_email"),
   authorIp: text("author_ip"), // PII — used for rate limiting only; never returned by public API
   text: text("text").notNull(),
   status: questionStatusEnum("status").notNull().default("pending"),

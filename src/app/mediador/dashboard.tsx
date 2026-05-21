@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
-import { useRouter } from "next/navigation";
-import { Mic, QrCode, ArrowLeft, ArrowRight, Check, EyeOff, RotateCcw, Trash2 } from "lucide-react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import type { RealtimeChannel } from "@supabase/supabase-js";
+import { MonitorPlay, StopCircle, ExternalLink, Mic, QrCode, ArrowLeft, ArrowRight, Check, EyeOff, RotateCcw, Trash2 } from "lucide-react";
 import { VozLockup } from "@/components/voz/wordmark";
 import { StatusBadge } from "@/components/voz/status-badge";
 import { createBrowserClient } from "@/lib/supabase";
@@ -25,7 +25,6 @@ interface AssignmentsResponse {
 }
 
 export function MediatorDashboard() {
-  const router = useRouter();
   const [questions, setQuestions] = useState<Question[]>([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<Tab>("unread");
@@ -35,6 +34,10 @@ export function MediatorDashboard() {
   const [eventName, setEventName] = useState<string>("");
   const [eventSlug, setEventSlug] = useState<string>("");
   const [noEvent, setNoEvent] = useState(false);
+  const [isPresenting, setIsPresenting] = useState(false);
+  const [presentingIdx, setPresentingIdx] = useState(0);
+  const [presentQueue, setPresentQueue] = useState<Question[]>([]);
+  const apresentarChannelRef = useRef<RealtimeChannel | null>(null);
 
   useEffect(() => {
     fetch("/api/v1/me/assignments")
@@ -98,6 +101,52 @@ export function MediatorDashboard() {
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [eventId]);
+
+  useEffect(() => {
+    if (!eventId) return;
+    const supabase = createBrowserClient();
+    const ch = supabase.channel(`event:${eventId}:apresentar`).subscribe();
+    apresentarChannelRef.current = ch;
+    return () => {
+      supabase.removeChannel(ch);
+      apresentarChannelRef.current = null;
+    };
+  }, [eventId]);
+
+  const broadcastApresentar = useCallback((payload: { phase: string; question?: { id: string; text: string; authorName: string } }) => {
+    apresentarChannelRef.current?.send({ type: "broadcast", event: "state", payload });
+  }, []);
+
+  const startPresenting = useCallback(() => {
+    const queue = questions.filter((q) => q.status !== "hidden" && q.status !== "answered");
+    if (queue.length === 0) { toast("Nenhuma pergunta disponível para apresentar."); return; }
+    const sorted = [...queue.filter((q) => q.status === "next"), ...queue.filter((q) => q.status !== "next")];
+    setPresentQueue(sorted);
+    setPresentingIdx(0);
+    setIsPresenting(true);
+    broadcastApresentar({ phase: "showing", question: { id: sorted[0].id, text: sorted[0].text, authorName: sorted[0].authorName } });
+  }, [questions, broadcastApresentar]);
+
+  const stopPresenting = useCallback(() => {
+    setIsPresenting(false);
+    broadcastApresentar({ phase: "waiting" });
+  }, [broadcastApresentar]);
+
+  const presentNext = useCallback(() => {
+    const next = Math.min(presentingIdx + 1, presentQueue.length - 1);
+    if (next === presentingIdx) return;
+    setPresentingIdx(next);
+    const q = presentQueue[next];
+    broadcastApresentar({ phase: "showing", question: { id: q.id, text: q.text, authorName: q.authorName } });
+  }, [presentingIdx, presentQueue, broadcastApresentar]);
+
+  const presentPrev = useCallback(() => {
+    const prev = Math.max(presentingIdx - 1, 0);
+    if (prev === presentingIdx) return;
+    setPresentingIdx(prev);
+    const q = presentQueue[prev];
+    broadcastApresentar({ phase: "showing", question: { id: q.id, text: q.text, authorName: q.authorName } });
+  }, [presentingIdx, presentQueue, broadcastApresentar]);
 
   const counts = {
     unread: questions.filter((q) => q.status === "pending" || q.status === "next").length,
@@ -167,11 +216,11 @@ export function MediatorDashboard() {
       if (e.key === "k" || e.key === "ArrowUp") { e.preventDefault(); navigate(-1); }
       if (e.key === "r" && selected) { e.preventDefault(); applyAction(selected.id, "markAnswered"); }
       if (e.key === "n" && selected) { e.preventDefault(); applyAction(selected.id, "setNext"); }
-      if (e.key === "p" && eventId) { e.preventDefault(); router.push(`/mediador/apresentar?eventId=${eventId}`); }
+      if (e.key === "p") { e.preventDefault(); startPresenting(); }
     };
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
-  }, [navigate, selected, applyAction, router, eventId]);
+  }, [navigate, selected, applyAction, startPresenting]);
 
   const kbd: React.CSSProperties = {
     fontFamily: '"JetBrains Mono", monospace', fontSize: 11,
@@ -222,9 +271,29 @@ export function MediatorDashboard() {
         <button onClick={() => setQrOpen(true)} style={outlineBtnStyle}>
           <QrCode size={14} aria-hidden /> QR do evento
         </button>
-        <button onClick={() => eventId && router.push(`/mediador/apresentar?eventId=${eventId}`)} style={primaryBtnStyle}>
-          <Mic size={14} aria-hidden /> Modo apresentação
+        <button onClick={() => eventId && window.open(`/apresentar/${eventId}`, "_blank")} style={outlineBtnStyle}>
+          <ExternalLink size={14} aria-hidden /> Visualização
         </button>
+        {!isPresenting ? (
+          <button onClick={startPresenting} style={primaryBtnStyle}>
+            <MonitorPlay size={14} aria-hidden /> Iniciar Respostas
+          </button>
+        ) : (
+          <>
+            <button onClick={presentPrev} disabled={presentingIdx === 0} style={{ ...outlineBtnStyle, opacity: presentingIdx === 0 ? 0.4 : 1 }} aria-label="Pergunta anterior">
+              <ArrowLeft size={14} aria-hidden /> Anterior
+            </button>
+            <span style={{ fontSize: 12, color: "hsl(var(--muted-foreground))", fontVariantNumeric: "tabular-nums", minWidth: 36, textAlign: "center" }}>
+              {presentingIdx + 1}/{presentQueue.length}
+            </span>
+            <button onClick={presentNext} disabled={presentingIdx === presentQueue.length - 1} style={{ ...outlineBtnStyle, opacity: presentingIdx === presentQueue.length - 1 ? 0.4 : 1 }} aria-label="Próxima pergunta">
+              Próxima <ArrowRight size={14} aria-hidden />
+            </button>
+            <button onClick={stopPresenting} style={{ ...outlineBtnStyle, color: "hsl(var(--destructive))", borderColor: "hsl(var(--destructive) / .3)" }}>
+              <StopCircle size={14} aria-hidden /> Encerrar
+            </button>
+          </>
+        )}
       </header>
 
       <div style={{ flex: 1, display: "grid", gridTemplateColumns: "440px 1fr", overflow: "hidden" }}>
@@ -264,7 +333,7 @@ export function MediatorDashboard() {
               onHide={() => applyAction(selected.id, "hide")}
               onRestore={() => applyAction(selected.id, "restore")}
               onDelete={() => deleteQuestion(selected.id)}
-              onPresent={() => { applyAction(selected.id, "setNext"); if (eventId) router.push(`/mediador/apresentar?eventId=${eventId}`); }}
+              onPresent={() => applyAction(selected.id, "setNext")}
             />
           ) : (
             <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "hsl(var(--muted-foreground))" }}>
@@ -346,9 +415,6 @@ function QuestionDetail({ q, onPrev, onNext, onMarkAnswered, onHide, onRestore, 
         )}
         {q.status !== "next" && q.status !== "answered" && q.status !== "hidden" && (
           <button onClick={onPresent} style={primaryBtnStyle}><Mic size={14} aria-hidden /> Levar ao palco</button>
-        )}
-        {q.status === "next" && (
-          <button onClick={onPresent} style={primaryBtnStyle}><Mic size={14} aria-hidden /> Abrir apresentação</button>
         )}
       </div>
     </div>

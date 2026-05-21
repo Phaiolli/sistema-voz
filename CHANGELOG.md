@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — Pendências de produção (#45)
+- **Supabase Storage**: migration `20260521000003_storage_voz_assets.sql` cria bucket `voz-assets` (público, 3 MB, tipos de imagem) com policies de leitura pública e escrita autenticada
+- **LGPD Cleanup Cron**: `DELETE /api/v1/internal/cleanup` — anula `author_ip` de perguntas e inscrições com mais de 30 dias; protegido por `Bearer CRON_SECRET` com `timingSafeEqual`; Vercel Cron configurado para rodar diariamente às 03:00 UTC
+- **E2E no CI**: novo job `e2e` em `.github/workflows/ci.yml` — instala Playwright chromium, roda `pnpm test:e2e` apenas em push para main (`continue-on-error: true` até staging estar disponível)
+- **Secrets configurados**: `CRON_SECRET`, `E2E_BASE_URL`, `E2E_EVENT_SLUG` adicionados ao repositório via `gh secret set`
+
+### Security
+- `timingSafeEqual` (Node.js `crypto`) em vez de `===` para comparação do `CRON_SECRET` — previne timing attacks
+
 ### Added — Backlog completo (#38–#43)
 - **Playwright E2E**: 3 specs cobrindo inscrição pública, Q&A e credenciamento do mediador; `playwright.config.ts`; scripts `test:e2e` e `test:e2e:ui`
 - **Realtime check-in**: PATCH `/registrations/[regId]` publica evento `registration:updated` via Supabase Realtime; `/mediador/credenciamento` subscreve e atualiza lista sem reload

@@ -39,6 +39,7 @@ export function MediatorDashboard() {
   const [presentingIdx, setPresentingIdx] = useState(0);
   const [presentQueue, setPresentQueue] = useState<Question[]>([]);
   const apresentarChannelRef = useRef<RealtimeChannel | null>(null);
+  const [mobileDetail, setMobileDetail] = useState(false);
 
   useEffect(() => {
     fetch("/api/v1/me/assignments")
@@ -254,7 +255,9 @@ export function MediatorDashboard() {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100dvh", background: "hsl(var(--background))", color: "hsl(var(--foreground))" }}>
-      <header style={{ height: 56, borderBottom: "1px solid hsl(var(--border))", display: "flex", alignItems: "center", padding: "0 20px", gap: 16, flexShrink: 0 }}>
+
+      {/* Header — logo + badge + conta */}
+      <header className="med-header">
         <VozLockup eventName={eventName} size={18} />
         <div style={{ flex: 1 }} />
         <div aria-live="polite" aria-atomic="true">
@@ -264,13 +267,19 @@ export function MediatorDashboard() {
             </span>
           )}
         </div>
-        <div style={{ width: 1, height: 24, background: "hsl(var(--border))" }} aria-hidden />
-        <button onClick={() => setQrOpen(true)} style={outlineBtnStyle}>
-          <QrCode size={14} aria-hidden /> QR do evento
+        <div style={{ width: 1, height: 24, background: "hsl(var(--border))", flexShrink: 0 }} aria-hidden />
+        <HeaderControls />
+      </header>
+
+      {/* Barra de ações */}
+      <div className="med-toolbar">
+        <button onClick={() => setQrOpen(true)} style={outlineBtnStyle} aria-label="QR Code do evento">
+          <QrCode size={14} aria-hidden /><span className="med-lbl"> QR Code</span>
         </button>
-        <button onClick={() => eventId && window.open(`/apresentar/${eventId}`, "_blank")} style={outlineBtnStyle}>
-          <ExternalLink size={14} aria-hidden /> Visualização
+        <button onClick={() => eventId && window.open(`/apresentar/${eventId}`, "_blank")} style={outlineBtnStyle} aria-label="Abrir visualização de projeção">
+          <ExternalLink size={14} aria-hidden /><span className="med-lbl"> Visualização</span>
         </button>
+        <div style={{ flex: 1 }} />
         {!isPresenting ? (
           <button onClick={startPresenting} style={primaryBtnStyle}>
             <MonitorPlay size={14} aria-hidden /> Iniciar Respostas
@@ -278,25 +287,24 @@ export function MediatorDashboard() {
         ) : (
           <>
             <button onClick={presentPrev} disabled={presentingIdx === 0} style={{ ...outlineBtnStyle, opacity: presentingIdx === 0 ? 0.4 : 1 }} aria-label="Pergunta anterior">
-              <ArrowLeft size={14} aria-hidden /> Anterior
+              <ArrowLeft size={14} aria-hidden /><span className="med-lbl"> Anterior</span>
             </button>
-            <span style={{ fontSize: 12, color: "hsl(var(--muted-foreground))", fontVariantNumeric: "tabular-nums", minWidth: 36, textAlign: "center" }}>
+            <span style={{ fontSize: 12, color: "hsl(var(--muted-foreground))", fontVariantNumeric: "tabular-nums", minWidth: 32, textAlign: "center", flexShrink: 0 }}>
               {presentingIdx + 1}/{presentQueue.length}
             </span>
             <button onClick={presentNext} disabled={presentingIdx === presentQueue.length - 1} style={{ ...outlineBtnStyle, opacity: presentingIdx === presentQueue.length - 1 ? 0.4 : 1 }} aria-label="Próxima pergunta">
-              Próxima <ArrowRight size={14} aria-hidden />
+              <span className="med-lbl">Próxima </span><ArrowRight size={14} aria-hidden />
             </button>
-            <button onClick={stopPresenting} style={{ ...outlineBtnStyle, color: "hsl(var(--destructive))", borderColor: "hsl(var(--destructive) / .3)" }}>
-              <StopCircle size={14} aria-hidden /> Encerrar
+            <button onClick={stopPresenting} style={{ ...outlineBtnStyle, color: "hsl(var(--destructive))", borderColor: "hsl(var(--destructive) / .3)" }} aria-label="Encerrar apresentação">
+              <StopCircle size={14} aria-hidden /><span className="med-lbl"> Encerrar</span>
             </button>
           </>
         )}
-        <div style={{ width: 1, height: 24, background: "hsl(var(--border))" }} aria-hidden />
-        <HeaderControls />
-      </header>
+      </div>
 
-      <div style={{ flex: 1, display: "grid", gridTemplateColumns: "440px 1fr", overflow: "hidden" }}>
-        <nav aria-label="Lista de perguntas" style={{ borderRight: "1px solid hsl(var(--border))", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+      {/* Corpo: lista ↔ detalhe */}
+      <div className="med-body" data-view={mobileDetail ? "detail" : "list"}>
+        <nav className="med-sidebar" aria-label="Lista de perguntas">
           <div style={{ padding: "12px 16px", borderBottom: "1px solid hsl(var(--border))", display: "flex", gap: 4 }} role="tablist">
             {([["unread", "Não lidas", counts.unread], ["all", "Todas", counts.all], ["hidden", "Ocultas", counts.hidden]] as const).map(([t, label, count]) => (
               <button key={t} role="tab" aria-selected={tab === t} onClick={() => setTab(t)} style={{ padding: "6px 12px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 13, fontWeight: 500, background: tab === t ? "hsl(var(--muted))" : "transparent", color: tab === t ? "hsl(var(--foreground))" : "hsl(var(--muted-foreground))" }}>
@@ -304,7 +312,6 @@ export function MediatorDashboard() {
               </button>
             ))}
           </div>
-
           <div role="tabpanel" style={{ flex: 1, overflowY: "auto", padding: 8, display: "flex", flexDirection: "column", gap: 4 }}>
             {!loading && listed.length === 0 && (
               <div style={{ padding: 40, textAlign: "center", color: "hsl(var(--muted-foreground))" }}>
@@ -312,17 +319,26 @@ export function MediatorDashboard() {
                 <p style={{ fontSize: 13, margin: 0 }}>Compartilhe o QR Code com a plateia.</p>
               </div>
             )}
-            {listed.map((q) => <QuestionCard key={q.id} q={q} selected={q.id === selected?.id} onClick={() => setSelectedId(q.id)} />)}
+            {listed.map((q) => (
+              <QuestionCard key={q.id} q={q} selected={q.id === selected?.id}
+                onClick={() => { setSelectedId(q.id); setMobileDetail(true); }} />
+            ))}
             {answeredSection.length > 0 && (
               <>
                 <p style={{ padding: "12px 8px 4px", fontSize: 11, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: "hsl(var(--muted-foreground))", margin: 0 }}>respondidas · hoje</p>
-                {answeredSection.map((q) => <QuestionCard key={q.id} q={q} selected={q.id === selected?.id} onClick={() => setSelectedId(q.id)} />)}
+                {answeredSection.map((q) => (
+                  <QuestionCard key={q.id} q={q} selected={q.id === selected?.id}
+                    onClick={() => { setSelectedId(q.id); setMobileDetail(true); }} />
+                ))}
               </>
             )}
           </div>
         </nav>
 
-        <main>
+        <main className="med-main">
+          <button className="med-back" onClick={() => setMobileDetail(false)}>
+            <ArrowLeft size={14} aria-hidden /> Perguntas
+          </button>
           {selected ? (
             <QuestionDetail
               q={selected}
@@ -336,18 +352,57 @@ export function MediatorDashboard() {
             />
           ) : (
             <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "hsl(var(--muted-foreground))" }}>
-              Selecione uma pergunta à esquerda.
+              Selecione uma pergunta.
             </div>
           )}
         </main>
       </div>
 
-      <footer style={{ height: 34, borderTop: "1px solid hsl(var(--border))", display: "flex", alignItems: "center", padding: "0 20px", gap: 16, fontSize: 12, color: "hsl(var(--muted-foreground))", flexShrink: 0 }}>
+      <footer className="med-footer">
         <span>Atalhos: <kbd style={kbd}>J</kbd>/<kbd style={kbd}>K</kbd> navegar · <kbd style={kbd}>R</kbd> respondida · <kbd style={kbd}>N</kbd> próxima · <kbd style={kbd}>P</kbd> apresentar</span>
       </footer>
 
       {qrOpen && <QRModal slug={eventSlug} onClose={() => setQrOpen(false)} />}
-      <style>{`@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }`}</style>
+
+      <style>{`
+        .med-header {
+          height: 56px; border-bottom: 1px solid hsl(var(--border));
+          display: flex; align-items: center; padding: 0 16px; gap: 10px;
+          flex-shrink: 0; min-width: 0; overflow: hidden;
+        }
+        .med-toolbar {
+          border-bottom: 1px solid hsl(var(--border));
+          display: flex; align-items: center; padding: 8px 12px; gap: 8px;
+          flex-shrink: 0; overflow-x: auto; scrollbar-width: none;
+        }
+        .med-toolbar::-webkit-scrollbar { display: none; }
+        .med-body { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
+        .med-sidebar { display: flex; flex-direction: column; overflow: hidden; flex: 1; }
+        .med-main { display: none; flex-direction: column; overflow: hidden; flex: 1; }
+        .med-body[data-view="detail"] .med-sidebar { display: none; }
+        .med-body[data-view="detail"] .med-main { display: flex; }
+        .med-back {
+          display: flex; align-items: center; gap: 8px; padding: 10px 16px;
+          border: none; border-bottom: 1px solid hsl(var(--border));
+          background: transparent; cursor: pointer; font-size: 13px;
+          color: hsl(var(--muted-foreground)); flex-shrink: 0; width: 100%;
+        }
+        .med-footer {
+          display: none; height: 34px; border-top: 1px solid hsl(var(--border));
+          align-items: center; padding: 0 20px; gap: 16px; font-size: 12px;
+          color: hsl(var(--muted-foreground)); flex-shrink: 0;
+        }
+        .med-lbl { display: none; }
+        @media (min-width: 768px) {
+          .med-body { display: grid; grid-template-columns: 380px 1fr; flex-direction: unset; }
+          .med-sidebar { display: flex !important; border-right: 1px solid hsl(var(--border)); }
+          .med-main { display: flex !important; }
+          .med-back { display: none !important; }
+          .med-footer { display: flex; }
+          .med-lbl { display: inline; }
+        }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+      `}</style>
     </div>
   );
 }

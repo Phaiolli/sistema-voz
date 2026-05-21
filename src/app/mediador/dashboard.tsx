@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import type { RealtimeChannel } from "@supabase/supabase-js";
-import { MonitorPlay, StopCircle, ExternalLink, Mic, QrCode, ArrowLeft, ArrowRight, Check, EyeOff, RotateCcw, Trash2, Shuffle } from "lucide-react";
+import { MonitorPlay, StopCircle, ExternalLink, Mic, QrCode, ArrowLeft, ArrowRight, Check, EyeOff, RotateCcw, Trash2 } from "lucide-react";
 import { VozLockup } from "@/components/voz/wordmark";
 import { StatusBadge } from "@/components/voz/status-badge";
 import { HeaderControls } from "@/components/voz/header-controls";
@@ -14,7 +14,13 @@ import { toast } from "sonner";
 
 type Tab = "unread" | "all" | "hidden";
 
-interface EventSummary { id: string; slug: string; name: string; config?: { drawEnabled?: boolean } }
+interface EventSummary {
+  id: string;
+  slug: string;
+  name: string;
+  config?: { drawEnabled?: boolean };
+  theme?: { background?: string; accent?: string; logoUrl?: string };
+}
 
 interface Assignment {
   eventId: string;
@@ -42,6 +48,7 @@ export function MediatorDashboard() {
   const [presentQueue, setPresentQueue] = useState<Question[]>([]);
   const apresentarChannelRef = useRef<RealtimeChannel | null>(null);
   const [mobileDetail, setMobileDetail] = useState(false);
+  const [eventTheme, setEventTheme] = useState<{ background?: string; accent?: string; logoUrl?: string }>({});
 
   useEffect(() => {
     fetch("/api/v1/me/assignments")
@@ -70,6 +77,8 @@ export function MediatorDashboard() {
         setEventId(id);
         setEventName(name);
         setEventSlug(slug);
+        const evData = data.events?.[0] ?? data.assignments?.[0]?.event;
+        if (evData?.theme) setEventTheme(evData.theme);
         return fetch(`/api/v1/events/${id}/questions`);
       })
       .then((r) => {
@@ -364,7 +373,7 @@ export function MediatorDashboard() {
         <span>Atalhos: <kbd style={kbd}>J</kbd>/<kbd style={kbd}>K</kbd> navegar · <kbd style={kbd}>R</kbd> respondida · <kbd style={kbd}>N</kbd> próxima · <kbd style={kbd}>P</kbd> apresentar</span>
       </footer>
 
-      {qrOpen && <QRModal slug={eventSlug} onClose={() => setQrOpen(false)} />}
+      {qrOpen && <QRModal slug={eventSlug} eventName={eventName} theme={eventTheme} onClose={() => setQrOpen(false)} />}
 
       <style>{`
         .med-header {

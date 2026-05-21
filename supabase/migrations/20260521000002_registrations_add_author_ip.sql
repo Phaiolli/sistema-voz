@@ -1,0 +1,1 @@
+ALTER TABLE "registrations" ADD COLUMN "author_ip" text;

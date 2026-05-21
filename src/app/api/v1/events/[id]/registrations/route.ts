@@ -3,6 +3,9 @@ import { createServerClient } from "@/lib/supabase";
 import { auth } from "@/lib/auth";
 import { createRegistrationSchema } from "@/lib/schemas";
 
+const RATE_LIMIT_MAX = 5;
+const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000; // 1 hour
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function mapRegistration(row: Record<string, any>) {
   return {
@@ -83,6 +86,21 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: { code: "REGISTRATION_ENDED", message: "As inscrições foram encerradas." } }, { status: 422 });
   }
 
+  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+  const windowStart = new Date(Date.now() - RATE_LIMIT_WINDOW_MS).toISOString();
+  const { count: recentCount } = await supabase
+    .from("registrations")
+    .select("*", { count: "exact", head: true })
+    .eq("author_ip", ip)
+    .gte("created_at", windowStart);
+
+  if ((recentCount ?? 0) >= RATE_LIMIT_MAX) {
+    return NextResponse.json(
+      { error: { code: "RATE_LIMITED", message: "Muitas tentativas. Tente novamente em 1 hora." } },
+      { status: 429 },
+    );
+  }
+
   const parsed = createRegistrationSchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) {
     return NextResponse.json(
@@ -108,7 +126,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   const { data: row, error: insertErr } = await supabase
     .from("registrations")
-    .insert({ id, event_id: eventId, name, email, phone: phone ?? null, document: document ?? null, lgpd_accepted: lgpdAccepted })
+    .insert({ id, event_id: eventId, name, email, phone: phone ?? null, document: document ?? null, author_ip: ip, lgpd_accepted: lgpdAccepted })
     .select("*")
     .single();
 

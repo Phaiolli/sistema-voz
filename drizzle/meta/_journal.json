@@ -8,6 +8,20 @@
       "when": 1779313481215,
       "tag": "0000_cynical_leopardon",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1779382610533,
+      "tag": "0001_dry_mojo",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1779383338473,
+      "tag": "0002_red_thunderbolt_ross",
+      "breakpoints": true
     }
   ]
 }

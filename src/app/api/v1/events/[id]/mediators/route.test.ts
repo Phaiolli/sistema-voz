@@ -67,7 +67,7 @@ describe("GET /api/v1/events/[id]/mediators", () => {
     expect(res.status).toBe(200);
     const json = await res.json();
     expect(json.mediators).toHaveLength(1);
-    expect(json.mediators[0].user.id).toBe("usr_med");
+    expect(json.mediators[0].id).toBe("usr_med");
   });
 });
 

@@ -71,6 +71,7 @@ export const registrations = pgTable("registrations", {
   email: text("email").notNull(),
   phone: text("phone"),
   document: text("document"),
+  authorIp: text("author_ip"),
   checkedIn: boolean("checked_in").notNull().default(false),
   checkedInAt: timestamp("checked_in_at", { withTimezone: true }),
   kitDelivered: boolean("kit_delivered").notNull().default(false),

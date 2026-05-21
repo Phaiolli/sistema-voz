@@ -104,7 +104,7 @@ export function ProjectionView({ eventId, eventName, eventSlug, accent, bg }: Pr
 
   return (
     <div
-      key={questionKey.current}
+      key={questionKey}
       style={{
         width: "100vw", height: "100dvh", background: bg,
         display: "flex", flexDirection: "column",

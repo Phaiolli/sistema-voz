@@ -1,37 +1,27 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import { VozWordmark } from "@/components/voz/wordmark";
 import { Download, CheckCircle2 } from "lucide-react";
-import type { Registration } from "@/lib/types";
+import { generateQrWithLogo } from "@/lib/qr";
 
 function ConfirmationContent() {
   const params = useParams<{ slug: string }>();
   const searchParams = useSearchParams();
   const regId = searchParams.get("id");
-  const [registration, setRegistration] = useState<Registration | null>(null);
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const [error, setError] = useState(false);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
     if (!regId) { setError(true); return; }
-    // We display confirmation without re-fetching sensitive data — QR is built from the public registration ID
-    setRegistration({ id: regId } as Registration);
   }, [regId]);
 
   useEffect(() => {
     if (!regId) return;
-    import("qrcode").then((mod) => {
-      const qrUrl = `${window.location.origin}/e/${params.slug}/inscricao/confirmacao?id=${regId}`;
-      mod.default.toDataURL(qrUrl, {
-        width: 280,
-        margin: 2,
-        color: { dark: "#0A0A0A", light: "#FFFFFF" },
-      }).then(setQrDataUrl);
-    });
+    const qrUrl = `${window.location.origin}/e/${params.slug}/inscricao/confirmacao?id=${regId}`;
+    generateQrWithLogo(qrUrl, 240).then(setQrDataUrl);
   }, [regId, params.slug]);
 
   function downloadQr() {
@@ -66,7 +56,7 @@ function ConfirmationContent() {
           Apresente este QR Code no credenciamento para retirar seu kit.
         </p>
 
-        <div style={{ background: "#fff", border: "1px solid hsl(var(--border))", borderRadius: 16, padding: 28, marginBottom: 16, position: "relative", display: "inline-block" }}>
+        <div style={{ background: "#fff", border: "1px solid hsl(var(--border))", borderRadius: 16, padding: 28, marginBottom: 16, display: "inline-block" }}>
           {qrDataUrl ? (
             <img src={qrDataUrl} alt="QR Code de credenciamento" width={240} height={240} style={{ display: "block" }} />
           ) : (
@@ -74,13 +64,6 @@ function ConfirmationContent() {
               Gerando QR…
             </div>
           )}
-          <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
-            <div style={{ background: "#fff", padding: "5px 9px", borderRadius: 7, border: "3px solid #F2B33D" }}>
-              <span style={{ fontFamily: '"Archivo Black", sans-serif', fontSize: 14 }}>
-                voz<span style={{ color: "#F2B33D" }}>.</span>
-              </span>
-            </div>
-          </div>
         </div>
 
         <p style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 11, color: "hsl(var(--muted-foreground))", marginBottom: 20, wordBreak: "break-all" }}>
@@ -94,8 +77,6 @@ function ConfirmationContent() {
         >
           <Download size={15} aria-hidden /> Salvar QR Code
         </button>
-
-        <canvas ref={canvasRef} style={{ display: "none" }} />
       </div>
     </div>
   );

@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { X, Download, Copy } from "lucide-react";
-import { VozWordmark } from "@/components/voz/wordmark";
 import { toast } from "sonner";
+import { generateQrWithLogo } from "@/lib/qr";
 
 export function QRModal({ slug, onClose }: { slug: string; onClose: () => void }) {
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
@@ -11,13 +11,7 @@ export function QRModal({ slug, onClose }: { slug: string; onClose: () => void }
 
   useEffect(() => {
     if (!slug) return;
-    import("qrcode").then((mod) => {
-      mod.default.toDataURL(url, {
-        width: 320,
-        margin: 2,
-        color: { dark: "#0A0A0A", light: "#FFFFFF" },
-      }).then(setQrDataUrl);
-    });
+    generateQrWithLogo(url, 320).then(setQrDataUrl);
   }, [slug, url]);
 
   function downloadQr() {
@@ -56,15 +50,8 @@ export function QRModal({ slug, onClose }: { slug: string; onClose: () => void }
 
         <div style={{ background: "#fff", border: "1px solid hsl(var(--border))", borderRadius: 12, padding: 16, position: "relative", textAlign: "center", minHeight: 352, display: "flex", alignItems: "center", justifyContent: "center" }}>
           {qrDataUrl ? (
-            <div style={{ position: "relative", display: "inline-block" }}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={qrDataUrl} alt="QR Code do evento" width={320} height={320} />
-              <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
-                <div style={{ background: "#fff", padding: "8px 12px", borderRadius: 8, border: "3px solid hsl(38 85% 58%)" }}>
-                  <VozWordmark size={22} />
-                </div>
-              </div>
-            </div>
+            /* eslint-disable-next-line @next/next/no-img-element */
+            <img src={qrDataUrl} alt="QR Code do evento" width={320} height={320} />
           ) : (
             <div style={{ color: "hsl(var(--muted-foreground))", fontSize: 13 }}>Gerando QR…</div>
           )}

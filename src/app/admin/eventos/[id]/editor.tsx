@@ -7,6 +7,7 @@ import Image from "next/image";
 import { ArrowLeft, Save, Download, Plus, X, Upload, CheckCircle2, Package, Trophy, ExternalLink } from "lucide-react";
 import { VozWordmark } from "@/components/voz/wordmark";
 import { HeaderControls } from "@/components/voz/header-controls";
+import { generateQrWithLogo } from "@/lib/qr";
 import { toast } from "sonner";
 import type { Event, UserRole, EventPageSpeaker, EventPageScheduleItem, Registration, RegistrationConfig } from "@/lib/types";
 
@@ -182,15 +183,8 @@ export function EventEditor({ eventId, isNew }: { eventId: string | null; isNew:
   // Generate QR code
   useEffect(() => {
     if (tab !== "qrcode" || !slug) return;
-    import("qrcode").then((mod) => {
-      const QRCode = mod.default;
-      const url = `${window.location.origin}/e/${slug}`;
-      QRCode.toDataURL(url, {
-        width: 280,
-        margin: 2,
-        color: { dark: "#0A0A0A", light: "#FFFFFF" },
-      }).then(setQrDataUrl);
-    });
+    const url = `${window.location.origin}/e/${slug}`;
+    generateQrWithLogo(url, 280).then(setQrDataUrl);
   }, [tab, slug]);
 
   async function handleSave() {
@@ -873,7 +867,7 @@ export function EventEditor({ eventId, isNew }: { eventId: string | null; isNew:
         {tab === "qrcode" && (
           <div style={{ maxWidth: 500 }}>
             <h2 style={{ fontFamily: '"Archivo", sans-serif', fontWeight: 700, fontSize: 22, margin: "0 0 20px" }}>QR Code</h2>
-            <div style={{ background: "#fff", border: "1px solid hsl(var(--border))", borderRadius: 16, padding: 24, textAlign: "center", marginBottom: 16, position: "relative" }}>
+            <div style={{ background: "#fff", border: "1px solid hsl(var(--border))", borderRadius: 16, padding: 24, textAlign: "center", marginBottom: 16 }}>
               {qrDataUrl ? (
                 <img src={qrDataUrl} alt={`QR Code para /e/${slug}`} width={280} height={280} style={{ display: "block", margin: "0 auto" }} />
               ) : (
@@ -881,14 +875,6 @@ export function EventEditor({ eventId, isNew }: { eventId: string | null; isNew:
                   {slug ? "Gerando…" : "Salve o slug primeiro"}
                 </div>
               )}
-              {/* voz. badge overlay */}
-              <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
-                <div style={{ background: "#fff", padding: "6px 10px", borderRadius: 8, border: "3px solid #F2B33D" }}>
-                  <span style={{ fontFamily: '"Archivo Black", sans-serif', fontSize: 16 }}>
-                    voz<span style={{ color: "#F2B33D" }}>.</span>
-                  </span>
-                </div>
-              </div>
             </div>
             <p style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 12, color: "hsl(var(--muted-foreground))", textAlign: "center", marginBottom: 16 }}>
               {window?.location?.origin ?? "https://sistema-voz-beta.vercel.app"}/e/{slug || "slug-do-evento"}

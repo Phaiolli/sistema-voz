@@ -26,6 +26,7 @@ export interface EventPageScheduleItem {
 
 export interface EventPage {
   logo?: string;
+  coverUrl?: string;
   aboutText?: string;
   organizer?: string;
   organizerInstagram?: string;
@@ -75,7 +76,6 @@ export interface Question {
   eventId: string;
   authorName: string;
   authorContact?: string;
-  authorIp?: string;
   text: string;
   status: QuestionStatus;
   createdAt: string;

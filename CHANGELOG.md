@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — Backlog completo (#38–#43)
+- **Playwright E2E**: 3 specs cobrindo inscrição pública, Q&A e credenciamento do mediador; `playwright.config.ts`; scripts `test:e2e` e `test:e2e:ui`
+- **Realtime check-in**: PATCH `/registrations/[regId]` publica evento `registration:updated` via Supabase Realtime; `/mediador/credenciamento` subscreve e atualiza lista sem reload
+- **CSV export**: botão "Exportar CSV" na aba Inscrições do editor de eventos; BOM UTF-8; 7 colunas; download client-side
+- **Upload de capa**: campo de upload com preview na aba Sobre do editor; armazena URL em `config.page.coverUrl`; exibida como banner 200px na landing pública
+- **Página `/e/[slug]/programacao`**: lista cronológica da grade do evento; usa `config.page.schedule` já existente
+- **ADR-008**: política LGPD para `author_ip` (PII, rate-limit only, não exposto via API)
+
+### Security — LGPD (#39)
+- `author_ip` removido das funções `mapQuestion` em `/questions` e `/events/[eventId]/questions`
+- `authorIp` removido do type público `Question`
+- Comentário PII adicionado ao schema Drizzle em `questions.authorIp` e `registrations.authorIp`
+
+### Fixed
+- `Shuffle` icon ausente no import de `dashboard.tsx` (pré-existente)
+- Unescaped entities `"Adicionar"` e `"Incluir"` em `editor.tsx` → `&quot;`
+
+### Tests
+- 166 testes unitários passando (14 arquivos Vitest + 8 novos: csv.test.ts, regId/route.test.ts)
+- Vitest configurado para excluir `e2e/**` (evita conflito com Playwright)
+
 ### Added — Módulo de Inscrições e Sorteio (#35–#36)
 - **DB**: Tabela `registrations` com campos: id, event_id, name, email, phone, document, checked_in, kit_delivered, drawn, lgpd_accepted, created_at. Unique index em (event_id, email)
 - **Types**: `Registration`, `RegistrationConfig` em `src/lib/types.ts`; `EventConfig.registration` como campo opcional

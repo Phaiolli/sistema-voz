@@ -59,6 +59,20 @@ export async function generateQrWithLogo(url: string, size = 300): Promise<strin
   return canvas.toDataURL("image/png");
 }
 
+/** Generates a clean QR code (no logo) suitable for embedding in posters. */
+export async function generateQr(url: string, size = 480): Promise<string> {
+  const mod = await import("qrcode");
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+  await mod.default.toCanvas(canvas, url, {
+    width: size,
+    margin: 2,
+    color: { dark: "#000000", light: "#FFFFFF" },
+  });
+  return canvas.toDataURL("image/png");
+}
+
 function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
   ctx.beginPath();
   ctx.moveTo(x + r, y);

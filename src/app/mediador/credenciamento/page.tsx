@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { VozLockup } from "@/components/voz/wordmark";
 import { HeaderControls } from "@/components/voz/header-controls";
 import { toast } from "sonner";
 import { Search, CheckCircle2, Package, Trophy } from "lucide-react";
 import type { Registration } from "@/lib/types";
+import { createBrowserClient } from "@/lib/supabase";
 
 interface Assignment {
   eventId: string;
@@ -125,6 +126,10 @@ function CredenciamentoTab({ eventId }: { eventId: string }) {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
 
+  const applyUpdate = useCallback((updated: Registration) => {
+    setRegistrations((prev) => prev.map((r) => r.id === updated.id ? { ...r, ...updated } : r));
+  }, []);
+
   useEffect(() => {
     fetch(`/api/v1/events/${eventId}/registrations`)
       .then((r) => r.json() as Promise<{ registrations: Registration[] }>)
@@ -132,6 +137,18 @@ function CredenciamentoTab({ eventId }: { eventId: string }) {
       .catch(() => toast.error("Erro ao carregar inscritos."))
       .finally(() => setLoading(false));
   }, [eventId]);
+
+  // Subscribe to check-in updates from other mediators
+  useEffect(() => {
+    const supabase = createBrowserClient();
+    const channel = supabase
+      .channel(`event:${eventId}:registrations`)
+      .on("broadcast", { event: "registration:updated" }, ({ payload }) => {
+        applyUpdate(payload as Registration);
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [eventId, applyUpdate]);
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();

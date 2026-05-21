@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { createBrowserClient } from "@/lib/supabase";
 import { VozWordmark } from "@/components/voz/wordmark";
 
@@ -25,7 +25,7 @@ interface Props {
 export function ProjectionView({ eventId, eventName, eventSlug, accent, bg }: Props) {
   const [state, setState] = useState<ProjectionState>({ phase: "waiting" });
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
-  const questionKey = useRef(0);
+  const [questionKey, setQuestionKey] = useState(0);
 
   useEffect(() => {
     const url = `${window.location.origin}/e/${eventSlug}`;
@@ -43,7 +43,7 @@ export function ProjectionView({ eventId, eventName, eventSlug, accent, bg }: Pr
     const channel = supabase
       .channel(`event:${eventId}:apresentar`)
       .on("broadcast", { event: "state" }, ({ payload }) => {
-        if (payload.phase === "showing") questionKey.current += 1;
+        if (payload.phase === "showing") setQuestionKey((k) => k + 1);
         setState(payload as ProjectionState);
       })
       .subscribe();
@@ -104,7 +104,7 @@ export function ProjectionView({ eventId, eventName, eventSlug, accent, bg }: Pr
 
   return (
     <div
-      key={questionKey.current}
+      key={questionKey}
       style={{
         width: "100vw", height: "100dvh", background: bg,
         display: "flex", flexDirection: "column",

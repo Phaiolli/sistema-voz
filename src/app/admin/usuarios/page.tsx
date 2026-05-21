@@ -59,6 +59,7 @@ export default function AdminUsuariosPage() {
   }
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadUsers();
   }, []);
 
@@ -131,18 +132,20 @@ export default function AdminUsuariosPage() {
           <NavLink href="/admin/usuarios" active>Usuários</NavLink>
         </nav>
         <div style={{ flex: 1 }} />
-        <button
-          onClick={openCreate}
-          style={{ display: "inline-flex", alignItems: "center", gap: 6, height: 36, padding: "0 14px", borderRadius: 8, border: "none", background: "hsl(var(--primary))", color: "hsl(var(--primary-foreground))", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
-        >
-          <Plus size={14} aria-hidden /> Novo administrador
-        </button>
         <div style={{ width: 1, height: 24, background: "hsl(var(--border))" }} aria-hidden />
         <HeaderControls />
       </header>
 
       <main style={{ maxWidth: 800, margin: "0 auto", padding: "32px 24px" }}>
-        <h1 style={{ fontFamily: '"Archivo", sans-serif', fontWeight: 700, fontSize: 28, margin: "0 0 24px" }}>Administradores</h1>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
+          <h1 style={{ fontFamily: '"Archivo", sans-serif', fontWeight: 700, fontSize: 28, margin: 0 }}>Administradores</h1>
+          <button
+            onClick={openCreate}
+            style={{ display: "inline-flex", alignItems: "center", gap: 6, height: 36, padding: "0 14px", borderRadius: 8, border: "none", background: "hsl(var(--primary))", color: "hsl(var(--primary-foreground))", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
+          >
+            <Plus size={14} aria-hidden /> Novo administrador
+          </button>
+        </div>
 
         {showForm && (
           <form

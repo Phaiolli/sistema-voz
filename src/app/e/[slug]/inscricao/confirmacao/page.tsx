@@ -11,12 +11,8 @@ function ConfirmationContent() {
   const params = useParams<{ slug: string }>();
   const searchParams = useSearchParams();
   const regId = searchParams.get("id");
+  const error = !regId;
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
-  const [error, setError] = useState(false);
-
-  useEffect(() => {
-    if (!regId) { setError(true); return; }
-  }, [regId]);
 
   useEffect(() => {
     if (!regId) return;

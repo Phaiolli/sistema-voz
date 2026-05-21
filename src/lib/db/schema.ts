@@ -26,7 +26,7 @@ export const questions = pgTable("questions", {
   eventId: text("event_id").notNull().references(() => events.id),
   authorName: text("author_name").notNull(),
   authorContact: text("author_contact"),
-  authorIp: text("author_ip"),
+  authorIp: text("author_ip"), // PII — used for rate limiting only; never returned by public API
   text: text("text").notNull(),
   status: questionStatusEnum("status").notNull().default("pending"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -71,7 +71,7 @@ export const registrations = pgTable("registrations", {
   email: text("email").notNull(),
   phone: text("phone"),
   document: text("document"),
-  authorIp: text("author_ip"),
+  authorIp: text("author_ip"), // PII — used for rate limiting only; never returned by public API
   checkedIn: boolean("checked_in").notNull().default(false),
   checkedInAt: timestamp("checked_in_at", { withTimezone: true }),
   kitDelivered: boolean("kit_delivered").notNull().default(false),

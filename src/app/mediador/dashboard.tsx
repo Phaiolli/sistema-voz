@@ -166,6 +166,8 @@ export function MediatorDashboard() {
     unread: questions.filter((q) => q.status !== "hidden").length,
     all: questions.length,
     hidden: questions.filter((q) => q.status === "hidden").length,
+    answered: questions.filter((q) => q.status === "answered").length,
+    pending: questions.filter((q) => q.status === "pending" || q.status === "next").length,
   }), [questions]);
 
   const goNext = useCallback(() => {
@@ -304,6 +306,13 @@ export function MediatorDashboard() {
           <span>Link para Projeção</span>
         </button>
         <div style={{ flex: 1 }} />
+        {/* Question summary */}
+        <div style={{ display: "flex", gap: 10, fontSize: 12, color: "hsl(var(--muted-foreground))", flexShrink: 0, alignItems: "center", padding: "0 4px" }} aria-live="polite" aria-atomic="true">
+          <span><strong style={{ color: "hsl(var(--foreground))", fontVariantNumeric: "tabular-nums" }}>{questions.length}</strong> perguntas</span>
+          {counts.pending > 0 && <span style={{ color: "hsl(var(--muted-foreground))" }}>·&nbsp;<strong style={{ color: "hsl(var(--foreground))", fontVariantNumeric: "tabular-nums" }}>{counts.pending}</strong> pendentes</span>}
+          {counts.answered > 0 && <span style={{ color: "hsl(var(--muted-foreground))" }}>·&nbsp;<strong style={{ color: "hsl(142 71% 55%)", fontVariantNumeric: "tabular-nums" }}>{counts.answered}</strong> respondidas</span>}
+        </div>
+        <div style={{ width: 1, height: 20, background: "hsl(var(--border))", flexShrink: 0 }} aria-hidden />
         <div style={{ display: "flex", gap: 2 }} role="tablist" aria-label="Filtro de perguntas">
           {([["unread", "Ativas", counts.unread], ["all", "Todas", counts.all], ["hidden", "Ocultas", counts.hidden]] as const).map(([t, label, count]) => (
             <button key={t} role="tab" aria-selected={tab === t} onClick={() => setTab(t)} style={{ padding: "6px 12px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 13, fontWeight: 500, background: tab === t ? "hsl(var(--muted))" : "transparent", color: tab === t ? "hsl(var(--foreground))" : "hsl(var(--muted-foreground))", whiteSpace: "nowrap" }}>

@@ -29,9 +29,10 @@ export function PresentationMode() {
   }, []);
 
   useEffect(() => {
-    showControls();
+    // Controls start visible — start the initial hide timer
+    hideTimer.current = setTimeout(() => setControlsVisible(false), 3000);
     return () => { if (hideTimer.current) clearTimeout(hideTimer.current); };
-  }, [showControls]);
+  }, []);
 
   const go = useCallback((d: 1 | -1) => {
     setIdx((i) => Math.max(0, Math.min(activeQueue.length - 1, i + d)));

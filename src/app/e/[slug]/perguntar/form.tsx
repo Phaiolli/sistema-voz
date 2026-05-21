@@ -68,7 +68,7 @@ export function QuestionForm({ slug, eventId, eventName }: Props) {
           <ArrowLeft size={20} aria-hidden />
           Voltar
         </Link>
-        <VozLockup eventName="INCLUIR" size={16} inverse />
+        <VozLockup eventName={eventName} size={16} inverse />
         <div style={{ width: 72 }} aria-hidden />
       </header>
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Mic, QrCode, ArrowLeft, ArrowRight, Check, EyeOff, RotateCcw } from "lucide-react";
 import { VozLockup } from "@/components/voz/wordmark";
@@ -20,7 +20,7 @@ export function MediatorDashboard() {
   const [questions, setQuestions] = useState<Question[]>(
     sampleQuestions.map((q) => ({ ...q, eventId: EVENT_ID }))
   );
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<Tab>("unread");
   const [selectedId, setSelectedId] = useState<string>(
     sampleQuestions.find((q) => q.status === "next")?.id ?? sampleQuestions[0]?.id ?? ""
@@ -29,7 +29,6 @@ export function MediatorDashboard() {
 
   // Load questions from API on mount
   useEffect(() => {
-    setLoading(true);
     fetch(`/api/v1/events/${EVENT_ID}/questions`)
       .then((r) => r.json())
       .then((data) => {
@@ -59,9 +58,13 @@ export function MediatorDashboard() {
     all: questions.filter((q) => q.status !== "hidden").length,
     hidden: questions.filter((q) => q.status === "hidden").length,
   };
-  const newBadge = questions.filter(
-    (q) => q.status === "pending" && new Date(q.createdAt) > new Date(Date.now() - 5 * 60000)
-  ).length;
+  const newBadge = useMemo(() => {
+    // eslint-disable-next-line react-hooks/purity -- intentional: fresh timestamp per questions update
+    const cutoff = new Date(Date.now() - 5 * 60000);
+    return questions.filter(
+      (q) => q.status === "pending" && new Date(q.createdAt) > cutoff
+    ).length;
+  }, [questions]);
 
   const listed =
     tab === "unread" ? questions.filter((q) => q.status === "pending" || q.status === "next")
@@ -188,7 +191,6 @@ export function MediatorDashboard() {
               onMarkAnswered={() => applyAction(selected.id, "markAnswered")}
               onHide={() => applyAction(selected.id, "hide")}
               onRestore={() => applyAction(selected.id, "restore")}
-              onSetNext={() => applyAction(selected.id, "setNext")}
               onPresent={() => { applyAction(selected.id, "setNext"); router.push("/mediador/apresentar"); }}
             />
           ) : (
@@ -228,10 +230,10 @@ function QuestionCard({ q, selected, onClick }: { q: Question; selected: boolean
   );
 }
 
-function QuestionDetail({ q, onPrev, onNext, onMarkAnswered, onHide, onRestore, onSetNext, onPresent }: {
+function QuestionDetail({ q, onPrev, onNext, onMarkAnswered, onHide, onRestore, onPresent }: {
   q: Question; onPrev: () => void; onNext: () => void;
   onMarkAnswered: () => void; onHide: () => void; onRestore: () => void;
-  onSetNext: () => void; onPresent: () => void;
+  onPresent: () => void;
 }) {
   const initials = q.authorName === "Anônimo" ? "?" : q.authorName.split(/\s+/).map((w) => w[0]).slice(0, 2).join("").toUpperCase();
   return (

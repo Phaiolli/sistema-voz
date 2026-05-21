@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { Mic, QrCode, ArrowLeft, ArrowRight, Check, EyeOff, RotateCcw } from "lucide-react";
+import { Mic, QrCode, ArrowLeft, ArrowRight, Check, EyeOff, RotateCcw, Trash2 } from "lucide-react";
 import { VozLockup } from "@/components/voz/wordmark";
 import { StatusBadge } from "@/components/voz/status-badge";
 import { createBrowserClient } from "@/lib/supabase";
@@ -92,6 +92,9 @@ export function MediatorDashboard() {
       .on("broadcast", { event: "question:updated" }, ({ payload }) => {
         setQuestions((qs) => qs.map((q) => q.id === (payload as Question).id ? (payload as Question) : q));
       })
+      .on("broadcast", { event: "question:deleted" }, ({ payload }) => {
+        setQuestions((qs) => qs.filter((q) => q.id !== (payload as { id: string }).id));
+      })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [eventId]);
@@ -116,6 +119,17 @@ export function MediatorDashboard() {
 
   const answeredSection = tab === "unread" ? questions.filter((q) => q.status === "answered") : [];
   const selected = questions.find((q) => q.id === selectedId) ?? listed[0] ?? null;
+
+  const deleteQuestion = useCallback(async (id: string) => {
+    if (!window.confirm("Apagar esta pergunta permanentemente? Não pode ser desfeito.")) return;
+    setQuestions((qs) => qs.filter((q) => q.id !== id));
+    try {
+      const res = await fetch(`/api/v1/questions/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Falha");
+    } catch {
+      toast.error("Erro ao apagar. Atualize a página.");
+    }
+  }, []);
 
   const applyAction = useCallback(async (id: string, action: "setNext" | "markAnswered" | "hide" | "restore") => {
     const patchMap: Record<string, Partial<Question>> = {
@@ -249,6 +263,7 @@ export function MediatorDashboard() {
               onMarkAnswered={() => applyAction(selected.id, "markAnswered")}
               onHide={() => applyAction(selected.id, "hide")}
               onRestore={() => applyAction(selected.id, "restore")}
+              onDelete={() => deleteQuestion(selected.id)}
               onPresent={() => { applyAction(selected.id, "setNext"); if (eventId) router.push(`/mediador/apresentar?eventId=${eventId}`); }}
             />
           ) : (
@@ -287,10 +302,10 @@ function QuestionCard({ q, selected, onClick }: { q: Question; selected: boolean
   );
 }
 
-function QuestionDetail({ q, onPrev, onNext, onMarkAnswered, onHide, onRestore, onPresent }: {
+function QuestionDetail({ q, onPrev, onNext, onMarkAnswered, onHide, onRestore, onDelete, onPresent }: {
   q: Question; onPrev: () => void; onNext: () => void;
   onMarkAnswered: () => void; onHide: () => void; onRestore: () => void;
-  onPresent: () => void;
+  onDelete: () => void; onPresent: () => void;
 }) {
   const initials = q.authorName === "Anônimo" ? "?" : q.authorName.split(/\s+/).map((w) => w[0]).slice(0, 2).join("").toUpperCase();
   return (
@@ -318,6 +333,8 @@ function QuestionDetail({ q, onPrev, onNext, onMarkAnswered, onHide, onRestore, 
       </div>
 
       <div style={{ padding: "16px 28px 20px", borderTop: "1px solid hsl(var(--border))", display: "flex", alignItems: "center", gap: 8, flexShrink: 0, flexWrap: "wrap" }}>
+        <button onClick={onDelete} style={deleteBtnStyle} aria-label="Apagar pergunta permanentemente"><Trash2 size={14} aria-hidden /></button>
+        <div style={{ width: 1, height: 24, background: "hsl(var(--border))", flexShrink: 0 }} aria-hidden />
         <button onClick={onPrev} style={outlineBtnStyle} aria-label="Pergunta anterior"><ArrowLeft size={14} aria-hidden /> Anterior</button>
         <button onClick={onNext} style={outlineBtnStyle} aria-label="Próxima pergunta">Próxima <ArrowRight size={14} aria-hidden /></button>
         <div style={{ flex: 1 }} />
@@ -350,3 +367,4 @@ const primaryBtnStyle: React.CSSProperties = { display: "inline-flex", alignItem
 const secondaryBtnStyle: React.CSSProperties = { ...primaryBtnStyle, background: "hsl(var(--muted))", color: "hsl(var(--foreground))", border: "1px solid hsl(var(--border))" };
 const outlineBtnStyle: React.CSSProperties = { ...primaryBtnStyle, background: "transparent", color: "hsl(var(--foreground))", border: "1px solid hsl(var(--border))" };
 const ghostBtnStyle: React.CSSProperties = { ...primaryBtnStyle, background: "transparent", color: "hsl(var(--muted-foreground))", border: "none" };
+const deleteBtnStyle: React.CSSProperties = { display: "inline-flex", alignItems: "center", justifyContent: "center", width: 36, height: 36, borderRadius: 8, border: "1px solid hsl(var(--destructive) / .3)", cursor: "pointer", background: "transparent", color: "hsl(var(--destructive))", flexShrink: 0 };

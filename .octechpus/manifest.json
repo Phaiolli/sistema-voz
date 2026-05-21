@@ -1,0 +1,20 @@
+{
+  "version": "2.3.0",
+  "profile": "nextjs-react",
+  "installedAt": "2026-05-20T21:13:28.527Z",
+  "files": {
+    ".claude/commands/pipeline.md": "ca802058e2b13050",
+    ".claude/commands/audit.md": "487778e29af63b24",
+    ".claude/commands/architect.md": "27d034e6f4085fa9",
+    ".claude/commands/coder.md": "9ed9bb0915e69442",
+    ".claude/commands/review.md": "5ce0be7e199a782e",
+    ".claude/commands/qa.md": "2ef004cfa094142b",
+    ".claude/commands/security.md": "d9ac8c4984128498",
+    ".claude/commands/docs.md": "d8eeb4280eb90221",
+    ".claude/commands/github-issue.md": "70a6e946f3e99ccc",
+    ".claude/commands/profiler.md": "4e1bd3dc3fa05c33",
+    ".claude/commands/design.md": "16108332dd25d615",
+    ".claude/commands/cost-engineer.md": "78bdc1572c49244f",
+    "CLAUDE.md": "0383bb083171da45"
+  }
+}

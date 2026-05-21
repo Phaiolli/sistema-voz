@@ -1,26 +1,132 @@
 @import "tailwindcss";
+@plugin "tailwindcss-animate";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  --font-display: "Archivo Black", "Archivo", system-ui, sans-serif;
+  --font-head: "Archivo", system-ui, sans-serif;
+  --font-body: "Inter", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --font-sans: var(--font-body);
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-destructive: hsl(var(--destructive));
+  --color-success: hsl(var(--success));
+  --color-ring: hsl(var(--ring));
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius: 10px;
+
+  --shadow-accent: 0 8px 24px hsl(var(--accent) / .35);
+
+  --animate-fade-up: fade-up 280ms cubic-bezier(.2,.7,.3,1);
+  --animate-pop-in: pop-in 380ms cubic-bezier(.2,.9,.3,1.2);
+  --animate-pulse: pulse 2s infinite;
+
+  @keyframes fade-up {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes pop-in {
+    0%   { transform: scale(0.4); opacity: 0; }
+    60%  { transform: scale(1.08); opacity: 1; }
+    100% { transform: scale(1); }
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.6; }
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer base {
+  :root {
+    --background:        0 0% 100%;
+    --foreground:        20 14% 4%;
+    --muted:             60 5% 96%;
+    --muted-foreground:  25 5% 45%;
+    --border:            20 6% 90%;
+    --input:             20 6% 90%;
+    --primary:           240 80% 58%;
+    --primary-foreground: 0 0% 100%;
+    --accent:            38 92% 50%;
+    --accent-foreground: 20 14% 4%;
+    --destructive:       0 72% 51%;
+    --success:           142 71% 45%;
+    --ring:              240 80% 58%;
+  }
+
+  .dark {
+    --background:        20 14% 4%;
+    --foreground:        60 9% 98%;
+    --muted:             20 6% 12%;
+    --muted-foreground:  25 5% 65%;
+    --border:            20 6% 18%;
+    --input:             20 6% 18%;
+    --primary:           240 80% 65%;
+    --primary-foreground: 20 14% 4%;
+    --accent:            38 92% 55%;
+    --accent-foreground: 20 14% 4%;
+    --destructive:       0 72% 55%;
+    --success:           142 65% 50%;
+    --ring:              240 80% 65%;
+  }
+
+  .theme-incluir {
+    --background:        190 47% 22%;
+    --foreground:        0 0% 100%;
+    --muted:             190 30% 28%;
+    --muted-foreground:  190 15% 78%;
+    --border:            190 30% 32%;
+    --input:             190 30% 32%;
+    --primary:           38 85% 58%;
+    --primary-foreground: 190 47% 18%;
+    --accent:            38 85% 58%;
+    --accent-foreground: 190 47% 18%;
+    --ring:              38 85% 58%;
+  }
+
+  * { border-color: hsl(var(--border)); }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    font-family: var(--font-body, "Inter", system-ui, sans-serif);
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  :focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px hsl(var(--background)), 0 0 0 4px hsl(var(--ring));
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+.voz-wordmark {
+  font-family: "Archivo Black", "Archivo", system-ui, sans-serif;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  line-height: 1;
 }

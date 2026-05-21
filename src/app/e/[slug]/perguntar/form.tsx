@@ -1,0 +1,239 @@
+"use client";
+
+import { useState, useRef } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { ArrowLeft, Send, AlertCircle } from "lucide-react";
+import { VozLockup } from "@/components/voz/wordmark";
+import { toast } from "sonner";
+
+interface Props {
+  slug: string;
+  eventId: string;
+  eventName: string;
+}
+
+export function QuestionForm({ slug, eventId, eventName }: Props) {
+  const router = useRouter();
+  const [name, setName] = useState("");
+  const [contact, setContact] = useState("");
+  const [text, setText] = useState("");
+  const [lgpd, setLgpd] = useState(false);
+  const [touched, setTouched] = useState(false);
+  const [sending, setSending] = useState(false);
+  const taRef = useRef<HTMLTextAreaElement>(null);
+
+  const MAX = 500;
+  const chars = text.length;
+  const overChars = chars > MAX;
+  const nameOk = name.trim().length >= 2;
+  const contactOk = contact.trim().length >= 5;
+  const textOk = text.trim().length >= 10 && !overChars;
+  const valid = nameOk && contactOk && textOk && lgpd;
+
+  const showErr = (cond: boolean) => touched && !cond;
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setTouched(true);
+    if (!valid) return;
+    setSending(true);
+    try {
+      const res = await fetch(`/api/v1/events/${eventId}/questions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ authorName: name.trim(), authorContact: contact.trim(), text: text.trim(), lgpdAccepted: true }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        toast.error(data?.error?.message ?? "Não foi possível enviar. Tente novamente.");
+        return;
+      }
+      router.push(`/e/${slug}/obrigado`);
+    } catch {
+      toast.error("Erro de conexão. Verifique sua internet e tente novamente.");
+    } finally {
+      setSending(false);
+    }
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", minHeight: "100dvh" }}>
+      <a href="#form-pergunta" className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:p-3 focus:bg-background focus:text-foreground">
+        Pular para o formulário
+      </a>
+
+      <header style={{ height: 52, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 12px", flexShrink: 0 }}>
+        <Link href={`/e/${slug}`} style={{ display: "inline-flex", alignItems: "center", gap: 6, color: "#fff", textDecoration: "none", fontSize: 14, padding: "8px", borderRadius: 8 }}>
+          <ArrowLeft size={20} aria-hidden />
+          Voltar
+        </Link>
+        <VozLockup eventName="INCLUIR" size={16} inverse />
+        <div style={{ width: 72 }} aria-hidden />
+      </header>
+
+      <main id="form-pergunta" style={{ flex: 1, padding: "8px 24px 24px", display: "flex", flexDirection: "column", gap: 20 }}>
+        <div>
+          <h1 style={{ fontFamily: '"Archivo", sans-serif', fontWeight: 700, fontSize: 26, lineHeight: 1.15, color: "#fff", margin: 0 }}>
+            Sua pergunta vai{" "}
+            <span style={{ color: "hsl(var(--accent))" }}>direto</span> para o mediador.
+          </h1>
+          <p style={{ color: "hsl(var(--muted-foreground))", fontSize: 14, marginTop: 6 }}>
+            Seu nome aparece no palco quando ela for lida.
+          </p>
+        </div>
+
+        <form onSubmit={submit} noValidate style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          <Field
+            label="Seu nome"
+            htmlFor="f-name"
+            error={showErr(nameOk) ? "Digite seu nome completo." : undefined}
+          >
+            <input
+              id="f-name"
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="ex. Marina Ribeiro"
+              autoComplete="name"
+              aria-describedby={showErr(nameOk) ? "f-name-err" : undefined}
+              style={inputStyle(showErr(nameOk))}
+            />
+          </Field>
+
+          <Field
+            label="Email ou telefone"
+            labelSuffix="· para retorno opcional"
+            htmlFor="f-contact"
+            error={showErr(contactOk) ? "Informe pelo menos um meio de contato." : undefined}
+          >
+            <input
+              id="f-contact"
+              type="text"
+              value={contact}
+              onChange={(e) => setContact(e.target.value)}
+              placeholder="voce@exemplo.com ou (11) 90000-0000"
+              autoComplete="email"
+              aria-describedby={showErr(contactOk) ? "f-contact-err" : undefined}
+              style={inputStyle(showErr(contactOk))}
+            />
+          </Field>
+
+          <Field
+            label="Sua pergunta"
+            htmlFor="f-q"
+            error={showErr(textOk) ? (overChars ? "Limite de 500 caracteres." : "Escreva pelo menos 10 caracteres.") : undefined}
+          >
+            <textarea
+              id="f-q"
+              ref={taRef}
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              placeholder="O que você gostaria de perguntar aos palestrantes?"
+              maxLength={MAX + 50}
+              aria-describedby={`f-q-counter${showErr(textOk) ? " f-q-err" : ""}`}
+              style={{ ...inputStyle(showErr(textOk)), minHeight: 140, resize: "vertical" }}
+            />
+            <div
+              id="f-q-counter"
+              aria-live="polite"
+              style={{ fontSize: 13, marginTop: 4, textAlign: "right", color: overChars ? "hsl(var(--destructive))" : "hsl(var(--muted-foreground))", fontWeight: overChars ? 600 : 400 }}
+            >
+              {chars} / {MAX}
+            </div>
+          </Field>
+
+          <label style={{ display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer", color: "#fff", fontSize: 14 }}>
+            <div
+              role="checkbox"
+              aria-checked={lgpd}
+              tabIndex={0}
+              onClick={() => setLgpd((v) => !v)}
+              onKeyDown={(e) => { if (e.key === " " || e.key === "Enter") { e.preventDefault(); setLgpd((v) => !v); } }}
+              style={{
+                width: 20, height: 20, borderRadius: 4, flexShrink: 0, marginTop: 1,
+                border: "1.5px solid", cursor: "pointer",
+                borderColor: lgpd ? "hsl(var(--accent))" : "hsl(var(--border))",
+                background: lgpd ? "hsl(var(--accent))" : "hsl(var(--muted))",
+                display: "flex", alignItems: "center", justifyContent: "center",
+              }}
+            >
+              {lgpd && (
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="hsl(var(--accent-foreground))" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                  <path d="M20 6L9 17l-5-5" />
+                </svg>
+              )}
+            </div>
+            <span>
+              Concordo com o uso dos meus dados para este evento.{" "}
+              <span style={{ color: "hsl(var(--muted-foreground))" }}>(LGPD)</span>
+            </span>
+          </label>
+          {showErr(lgpd) && (
+            <p style={{ color: "hsl(var(--destructive))", fontSize: 13, display: "flex", alignItems: "center", gap: 6, margin: "-8px 0 0" }}>
+              <AlertCircle size={12} aria-hidden /> É preciso aceitar para enviar.
+            </p>
+          )}
+
+          <div style={{ flex: 1, minHeight: 8 }} />
+
+          <button
+            type="submit"
+            disabled={sending}
+            style={{
+              height: 52, width: "100%", borderRadius: 10, border: "none", cursor: sending ? "not-allowed" : "pointer",
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+              fontSize: 16, fontWeight: 700,
+              background: "hsl(var(--accent))", color: "hsl(var(--accent-foreground))",
+              opacity: sending ? 0.7 : 1, transition: "opacity .15s",
+            }}
+          >
+            {sending ? "Enviando…" : <><Send size={18} aria-hidden /> Enviar pergunta</>}
+          </button>
+        </form>
+      </main>
+    </div>
+  );
+}
+
+function inputStyle(hasError: boolean): React.CSSProperties {
+  return {
+    width: "100%",
+    padding: "12px 16px",
+    borderRadius: 10,
+    border: "1.5px solid",
+    borderColor: hasError ? "hsl(var(--destructive))" : "hsl(var(--border))",
+    background: "hsl(var(--muted))",
+    color: "#fff",
+    fontSize: 16,
+    fontFamily: "inherit",
+    boxShadow: hasError ? "0 0 0 2px hsl(var(--destructive) / .2)" : "none",
+    outline: "none",
+    boxSizing: "border-box",
+  };
+}
+
+interface FieldProps {
+  label: string;
+  labelSuffix?: string;
+  htmlFor: string;
+  error?: string;
+  children: React.ReactNode;
+}
+
+function Field({ label, labelSuffix, htmlFor, error, children }: FieldProps) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <label htmlFor={htmlFor} style={{ fontSize: 14, fontWeight: 500, color: "#fff" }}>
+        {label}
+        {labelSuffix && <span style={{ color: "hsl(var(--muted-foreground))", fontWeight: 400 }}> {labelSuffix}</span>}
+      </label>
+      {children}
+      {error && (
+        <p role="alert" id={`${htmlFor}-err`} style={{ color: "hsl(var(--destructive))", fontSize: 13, display: "flex", alignItems: "center", gap: 6, margin: 0 }}>
+          <AlertCircle size={12} aria-hidden /> {error}
+        </p>
+      )}
+    </div>
+  );
+}

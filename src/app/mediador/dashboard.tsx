@@ -5,6 +5,7 @@ import type { RealtimeChannel } from "@supabase/supabase-js";
 import { MonitorPlay, StopCircle, ExternalLink, Mic, QrCode, ArrowLeft, ArrowRight, Check, EyeOff, RotateCcw, Trash2 } from "lucide-react";
 import { VozLockup } from "@/components/voz/wordmark";
 import { StatusBadge } from "@/components/voz/status-badge";
+import { HeaderControls } from "@/components/voz/header-controls";
 import { createBrowserClient } from "@/lib/supabase";
 import { signOut } from "next-auth/react";
 import type { Question, QuestionStatus } from "@/lib/types";
@@ -255,11 +256,6 @@ export function MediatorDashboard() {
     <div style={{ display: "flex", flexDirection: "column", height: "100dvh", background: "hsl(var(--background))", color: "hsl(var(--foreground))" }}>
       <header style={{ height: 56, borderBottom: "1px solid hsl(var(--border))", display: "flex", alignItems: "center", padding: "0 20px", gap: 16, flexShrink: 0 }}>
         <VozLockup eventName={eventName} size={18} />
-        <div style={{ width: 1, height: 24, background: "hsl(var(--border))" }} aria-hidden />
-        <div style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 500 }}>
-          <span style={{ width: 8, height: 8, borderRadius: "50%", background: "hsl(var(--success))", boxShadow: "0 0 0 4px hsl(var(--success) / .2)" }} aria-hidden />
-          ao vivo
-        </div>
         <div style={{ flex: 1 }} />
         <div aria-live="polite" aria-atomic="true">
           {newBadge > 0 && (
@@ -268,6 +264,7 @@ export function MediatorDashboard() {
             </span>
           )}
         </div>
+        <div style={{ width: 1, height: 24, background: "hsl(var(--border))" }} aria-hidden />
         <button onClick={() => setQrOpen(true)} style={outlineBtnStyle}>
           <QrCode size={14} aria-hidden /> QR do evento
         </button>
@@ -294,6 +291,8 @@ export function MediatorDashboard() {
             </button>
           </>
         )}
+        <div style={{ width: 1, height: 24, background: "hsl(var(--border))" }} aria-hidden />
+        <HeaderControls />
       </header>
 
       <div style={{ flex: 1, display: "grid", gridTemplateColumns: "440px 1fr", overflow: "hidden" }}>

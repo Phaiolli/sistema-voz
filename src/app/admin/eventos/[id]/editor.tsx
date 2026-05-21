@@ -202,8 +202,8 @@ export function EventEditor({ eventId, isNew }: { eventId: string | null; isNew:
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name, slug,
-          startsAt: new Date(startsAt).toISOString(),
-          endsAt: new Date(endsAt).toISOString(),
+          ...(startsAt ? { startsAt: new Date(startsAt).toISOString() } : {}),
+          ...(endsAt ? { endsAt: new Date(endsAt).toISOString() } : {}),
           place, address,
           about: aboutText,
           theme: { preset, background: bgColor, accent: accentColor },

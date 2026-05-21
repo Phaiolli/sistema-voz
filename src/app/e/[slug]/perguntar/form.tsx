@@ -3,7 +3,7 @@
 import { useState, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Send, AlertCircle } from "lucide-react";
+import { ArrowLeft, Send, AlertCircle, EyeOff } from "lucide-react";
 import { VozLockup } from "@/components/voz/wordmark";
 import { toast } from "sonner";
 
@@ -19,6 +19,7 @@ export function QuestionForm({ slug, eventId, eventName }: Props) {
   const [contact, setContact] = useState("");
   const [text, setText] = useState("");
   const [lgpd, setLgpd] = useState(false);
+  const [anonymous, setAnonymous] = useState(false);
   const [touched, setTouched] = useState(false);
   const [sending, setSending] = useState(false);
   const taRef = useRef<HTMLTextAreaElement>(null);
@@ -42,7 +43,7 @@ export function QuestionForm({ slug, eventId, eventName }: Props) {
       const res = await fetch(`/api/v1/events/${eventId}/questions`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ authorName: name.trim(), authorContact: contact.trim(), text: text.trim(), lgpdAccepted: true }),
+        body: JSON.stringify({ authorName: anonymous ? "Anônimo" : name.trim(), authorContact: contact.trim(), text: text.trim(), lgpdAccepted: true }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -79,13 +80,16 @@ export function QuestionForm({ slug, eventId, eventName }: Props) {
             <span style={{ color: "hsl(var(--accent))" }}>direto</span> para o mediador.
           </h1>
           <p style={{ color: "hsl(var(--muted-foreground))", fontSize: 14, marginTop: 6 }}>
-            Seu nome aparece no palco quando ela for lida.
+            {anonymous
+              ? <>Sua pergunta será lida como <strong style={{ color: "#fff" }}>&quot;Anônimo&quot;</strong> no palco.</>
+              : "Seu nome aparece no palco quando ela for lida."}
           </p>
         </div>
 
         <form onSubmit={submit} noValidate style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           <Field
             label="Seu nome"
+            labelSuffix={anonymous ? "· só para o mediador, não será exibido" : undefined}
             htmlFor="f-name"
             error={showErr(nameOk) ? "Digite seu nome completo." : undefined}
           >
@@ -101,19 +105,56 @@ export function QuestionForm({ slug, eventId, eventName }: Props) {
             />
           </Field>
 
+          {/* Toggle anônimo */}
+          <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", marginTop: -8 }}>
+            <div
+              role="checkbox"
+              aria-checked={anonymous}
+              tabIndex={0}
+              onClick={() => setAnonymous((v) => !v)}
+              onKeyDown={(e) => { if (e.key === " " || e.key === "Enter") { e.preventDefault(); setAnonymous((v) => !v); } }}
+              style={{
+                width: 20, height: 20, borderRadius: 4, flexShrink: 0,
+                border: "1.5px solid", cursor: "pointer",
+                borderColor: anonymous ? "hsl(var(--accent))" : "hsl(var(--border))",
+                background: anonymous ? "hsl(var(--accent))" : "hsl(var(--muted))",
+                display: "flex", alignItems: "center", justifyContent: "center",
+              }}
+            >
+              {anonymous && (
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="hsl(var(--accent-foreground))" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                  <path d="M20 6L9 17l-5-5" />
+                </svg>
+              )}
+            </div>
+            <span style={{ fontSize: 14, color: "#fff" }}>
+              Enviar como anônimo
+              <span style={{ color: "hsl(var(--muted-foreground))", fontSize: 13 }}> · seu nome não será exibido no palco</span>
+            </span>
+          </label>
+
+          {anonymous && (
+            <div style={{ display: "flex", alignItems: "flex-start", gap: 8, padding: "10px 14px", borderRadius: 8, background: "hsl(var(--muted))", border: "1px solid hsl(var(--border))", marginTop: -8 }}>
+              <EyeOff size={15} style={{ color: "hsl(var(--muted-foreground))", flexShrink: 0, marginTop: 1 }} aria-hidden />
+              <p style={{ fontSize: 13, color: "hsl(var(--muted-foreground))", margin: 0, lineHeight: 1.5 }}>
+                Seu nome e contato ficam apenas com o mediador do evento. A pergunta aparece como <strong style={{ color: "#fff" }}>&quot;Anônimo&quot;</strong> para a plateia.
+              </p>
+            </div>
+          )}
+
           <Field
-            label="Email ou telefone"
-            labelSuffix="· para retorno opcional"
+            label="WhatsApp ou email"
+            labelSuffix="· só para o mediador entrar em contato se necessário"
             htmlFor="f-contact"
-            error={showErr(contactOk) ? "Informe pelo menos um meio de contato." : undefined}
+            error={showErr(contactOk) ? "Informe seu WhatsApp ou email." : undefined}
           >
             <input
               id="f-contact"
               type="text"
               value={contact}
               onChange={(e) => setContact(e.target.value)}
-              placeholder="voce@exemplo.com ou (11) 90000-0000"
-              autoComplete="email"
+              placeholder="(11) 90000-0000 ou voce@exemplo.com"
+              autoComplete="tel"
               aria-describedby={showErr(contactOk) ? "f-contact-err" : undefined}
               style={inputStyle(showErr(contactOk))}
             />

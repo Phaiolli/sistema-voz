@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Dark mode as default theme for `/admin` and `/mediador` routes (closes #15, #16, #17, #18)
+- `AdminThemeProvider` — scoped Client Component that applies `.dark` class to a wrapper div, persists preference in `localStorage` with key `theme-admin`
+- `ThemeToggle` — discrete Sun/Moon icon button in the top-right corner of admin/mediador layouts
+- Dedicated `layout.tsx` for `/admin` and `/mediador` routes with scoped `Toaster`
+- ADR-004 documenting the dark mode architecture decision
+- Vitest jsdom environment for React component tests (`AdminThemeProvider`, `ThemeToggle`)
+
+### Changed
+- `Toaster` moved from root layout to individual sub-layouts (admin, mediador) for correct theme scoping
+
 ### Security
 - Add authentication guard to `PATCH /api/v1/questions/[id]` — previously unauthenticated
 - Add rate limiting to `POST /api/v1/events/[eventId]/questions` — max 10/hour per IP

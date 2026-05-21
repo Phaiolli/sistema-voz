@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { signIn } from "next-auth/react";
+import { signIn, getSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { VozWordmark } from "@/components/voz/wordmark";
 import { AlertCircle } from "lucide-react";
@@ -22,7 +22,15 @@ export default function EntrarPage() {
     if (res?.error) {
       setError("Email ou senha incorretos.");
     } else {
-      router.push("/mediador");
+      const params = new URLSearchParams(window.location.search);
+      const callbackUrl = params.get("callbackUrl");
+      if (callbackUrl?.startsWith("/")) {
+        router.push(callbackUrl);
+        return;
+      }
+      const session = await getSession();
+      const role = (session?.user as { role?: string })?.role;
+      router.push(role === "admin" ? "/admin/eventos" : "/mediador");
     }
   }
 

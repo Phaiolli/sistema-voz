@@ -1,11 +1,4 @@
-import { notFound } from "next/navigation";
-import { eventIncluir } from "@/lib/fixtures";
-import type { Event } from "@/lib/types";
-
-async function getEvent(slug: string): Promise<Event | null> {
-  if (slug === "incluir-2025") return eventIncluir;
-  return null;
-}
+import { createServerClient } from "@/lib/supabase";
 
 export default async function EventLayout({
   children,
@@ -15,10 +8,16 @@ export default async function EventLayout({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const event = await getEvent(slug);
-  if (!event) notFound();
+  const supabase = createServerClient();
+  const { data } = await supabase
+    .from("events")
+    .select("theme")
+    .eq("slug", slug)
+    .limit(1)
+    .maybeSingle();
 
-  const themeClass = event.theme.preset === "incluir" ? "theme-incluir" : "";
+  const preset = (data?.theme as { preset?: string } | null)?.preset;
+  const themeClass = preset === "incluir" ? "theme-incluir" : "";
 
   return (
     <div className={themeClass} style={{ minHeight: "100dvh", background: "hsl(var(--background))", color: "hsl(var(--foreground))" }}>

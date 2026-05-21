@@ -51,15 +51,13 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 
   if (fetchErr) throw fetchErr;
 
-  const mediators = (rows ?? []).map((row) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const user = Array.isArray(row.users) ? row.users[0] : (row.users as Record<string, any>);
-    return {
-      userId: row.user_id,
-      assignedAt: row.created_at,
-      user: user ? mapUser(user) : null,
-    };
-  });
+  const mediators = (rows ?? [])
+    .map((row) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const user = Array.isArray(row.users) ? row.users[0] : (row.users as Record<string, any>);
+      return user ? mapUser(user) : null;
+    })
+    .filter(Boolean);
 
   return NextResponse.json({ mediators });
 }

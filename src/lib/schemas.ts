@@ -59,8 +59,23 @@ export const assignMediatorSchema = z.object({
   userId: z.string().min(1, "userId obrigatório."),
 });
 
+export const createRegistrationSchema = z.object({
+  name: z.string().min(2, "Nome muito curto.").max(120, "Nome muito longo."),
+  email: z.string().email("E-mail inválido."),
+  phone: z.string().max(20).optional(),
+  document: z.string().max(20).optional(),
+  lgpdAccepted: z.boolean().refine((v) => v === true, "É preciso aceitar os termos LGPD."),
+});
+
+export const patchRegistrationSchema = z.object({
+  checkedIn: z.boolean().optional(),
+  kitDelivered: z.boolean().optional(),
+});
+
 export type CreateEventBody = z.infer<typeof createEventSchema>;
 export type PatchEventBody = z.infer<typeof patchEventSchema>;
 export type CreateUserBody = z.infer<typeof createUserSchema>;
 export type PatchUserBody = z.infer<typeof patchUserSchema>;
 export type AssignMediatorBody = z.infer<typeof assignMediatorSchema>;
+export type CreateRegistrationBody = z.infer<typeof createRegistrationSchema>;
+export type PatchRegistrationBody = z.infer<typeof patchRegistrationSchema>;

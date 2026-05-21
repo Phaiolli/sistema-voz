@@ -103,3 +103,54 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   return NextResponse.json(updated);
 }
+
+export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const session = await auth();
+  if (!session?.user) {
+    return NextResponse.json(
+      { error: { code: "UNAUTHORIZED", message: "Autenticação necessária." } },
+      { status: 401 },
+    );
+  }
+  const role = (session.user as { role?: string }).role;
+  if (role !== "admin" && role !== "mediador") {
+    return NextResponse.json(
+      { error: { code: "FORBIDDEN", message: "Sem permissão para apagar perguntas." } },
+      { status: 403 },
+    );
+  }
+
+  const { id } = await params;
+  const supabase = createServerClient();
+
+  const { data: existing } = await supabase
+    .from("questions")
+    .select("id, event_id")
+    .eq("id", id)
+    .limit(1)
+    .maybeSingle();
+
+  if (!existing) {
+    return NextResponse.json(
+      { error: { code: "NOT_FOUND", message: "Pergunta não encontrada." } },
+      { status: 404 },
+    );
+  }
+
+  const { error: deleteErr } = await supabase
+    .from("questions")
+    .delete()
+    .eq("id", id);
+
+  if (deleteErr) throw deleteErr;
+
+  try {
+    await supabase.channel(`event:${existing.event_id}:questions`).send({
+      type: "broadcast",
+      event: "question:deleted",
+      payload: { id },
+    });
+  } catch { /* non-fatal */ }
+
+  return new NextResponse(null, { status: 204 });
+}

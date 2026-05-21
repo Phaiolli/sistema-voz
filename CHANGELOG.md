@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — Módulo de Inscrições e Sorteio (#35–#36)
+- **DB**: Tabela `registrations` com campos: id, event_id, name, email, phone, document, checked_in, kit_delivered, drawn, lgpd_accepted, created_at. Unique index em (event_id, email)
+- **Types**: `Registration`, `RegistrationConfig` em `src/lib/types.ts`; `EventConfig.registration` como campo opcional
+- **Schemas Zod**: `createRegistrationSchema`, `patchRegistrationSchema` em `src/lib/schemas.ts`
+- **API `GET/POST /api/v1/events/[id]/registrations`**: listagem (admin+mediador) e inscrição pública com validação de período
+- **API `PATCH /api/v1/events/[id]/registrations/[regId]`**: atualização de check-in e entrega de kit (admin+mediador)
+- **API `POST /api/v1/events/[id]/draw`**: sorteio aleatório de inscrito com check-in, marca como drawn. Apenas inscritos com check-in participam
+- **API `DELETE /api/v1/events/[id]/draw`**: reset do sorteio (admin only)
+- **Página pública `GET /e/{slug}/inscricao`**: formulário de inscrição com validação de período (aberto/ainda-não-aberto/encerrado)
+- **Página pública `GET /e/{slug}/inscricao/confirmacao`**: confirmação com QR Code para credenciamento
+- **Admin editor**: abas "Inscrições" (config + lista) e "Sorteio" (countdown 5s + nome do sorteado) no editor de eventos
+- **Mediador**: nova página `/mediador/credenciamento` com abas "Credenciamento" (busca, check-in, kit) e "Sorteio"
+- **Testes**: 18 testes unitários para as rotas de registrations e draw (cobertura de auth, validação, happy path, edge cases)
+
+### Added — Ajustes de autenticação e header (#34–#35)
+- Redirect pós-login baseado em role: admin → `/admin/eventos`, mediador → `/mediador`
+- `HeaderControls` component: email do usuário logado, botão Sair, ThemeToggle — fixo no header de todas as páginas admin
+- Toggle dark/light removido do layout flutuante e integrado ao header
+
 ### Added — Admin + Mediador MVP (#19–#33)
 - Full REST API for event management: `GET/POST /api/v1/events`, `GET/PATCH/DELETE /api/v1/events/[id]`
 - Full REST API for user management: `GET/POST /api/v1/users`, `GET/PATCH/DELETE /api/v1/users/[id]`

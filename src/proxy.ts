@@ -28,5 +28,5 @@ export default auth((req) => {
 });
 
 export const config = {
-  matcher: ["/admin/:path*", "/mediador/:path*"],
+  matcher: ["/admin/:path*", "/mediador/:path*", "/mediador/credenciamento/:path*"],
 };

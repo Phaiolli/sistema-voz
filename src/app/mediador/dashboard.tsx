@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import type { RealtimeChannel } from "@supabase/supabase-js";
-import { MonitorPlay, StopCircle, ExternalLink, Mic, QrCode, ArrowLeft, ArrowRight, Check, EyeOff, RotateCcw, Trash2 } from "lucide-react";
+import { MonitorPlay, StopCircle, ExternalLink, QrCode, ArrowLeft, ArrowRight, Check, EyeOff, RotateCcw, Trash2 } from "lucide-react";
 import { VozLockup } from "@/components/voz/wordmark";
 import { StatusBadge } from "@/components/voz/status-badge";
 import { HeaderControls } from "@/components/voz/header-controls";
@@ -131,13 +131,15 @@ export function MediatorDashboard() {
   }, []);
 
   const startPresenting = useCallback(() => {
-    const queue = questions.filter((q) => q.status !== "hidden" && q.status !== "answered");
+    const queue = questions
+      .filter((q) => q.status !== "hidden" && q.status !== "answered")
+      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
     if (queue.length === 0) { toast("Nenhuma pergunta disponível para apresentar."); return; }
-    const sorted = [...queue.filter((q) => q.status === "next"), ...queue.filter((q) => q.status !== "next")];
-    setPresentQueue(sorted);
+    setPresentQueue(queue);
     setPresentingIdx(0);
     setIsPresenting(true);
-    broadcastApresentar({ phase: "showing", question: { id: sorted[0].id, text: sorted[0].text, authorName: sorted[0].authorName } });
+    setSelectedId(queue[0].id);
+    broadcastApresentar({ phase: "showing", question: { id: queue[0].id, text: queue[0].text, authorName: queue[0].authorName } });
   }, [questions, broadcastApresentar]);
 
   const stopPresenting = useCallback(() => {
@@ -150,6 +152,7 @@ export function MediatorDashboard() {
     if (next === presentingIdx) return;
     setPresentingIdx(next);
     const q = presentQueue[next];
+    setSelectedId(q.id);
     broadcastApresentar({ phase: "showing", question: { id: q.id, text: q.text, authorName: q.authorName } });
   }, [presentingIdx, presentQueue, broadcastApresentar]);
 
@@ -158,6 +161,7 @@ export function MediatorDashboard() {
     if (prev === presentingIdx) return;
     setPresentingIdx(prev);
     const q = presentQueue[prev];
+    setSelectedId(q.id);
     broadcastApresentar({ phase: "showing", question: { id: q.id, text: q.text, authorName: q.authorName } });
   }, [presentingIdx, presentQueue, broadcastApresentar]);
 
@@ -194,18 +198,13 @@ export function MediatorDashboard() {
     }
   }, []);
 
-  const applyAction = useCallback(async (id: string, action: "setNext" | "markAnswered" | "hide" | "restore") => {
+  const applyAction = useCallback(async (id: string, action: "markAnswered" | "hide" | "restore") => {
     const patchMap: Record<string, Partial<Question>> = {
-      setNext: { status: "next" as QuestionStatus },
       markAnswered: { status: "answered" as QuestionStatus, answeredAt: new Date().toISOString() },
       hide: { status: "hidden" as QuestionStatus, hiddenAt: new Date().toISOString() },
       restore: { status: "pending" as QuestionStatus },
     };
-    if (action === "setNext") {
-      setQuestions((qs) => qs.map((q) => ({ ...q, status: q.id === id ? "next" as QuestionStatus : q.status === "next" ? "pending" as QuestionStatus : q.status })));
-    } else {
-      setQuestions((qs) => qs.map((q) => q.id === id ? { ...q, ...patchMap[action] } : q));
-    }
+    setQuestions((qs) => qs.map((q) => q.id === id ? { ...q, ...patchMap[action] } : q));
     try {
       await fetch(`/api/v1/questions/${id}`, {
         method: "PATCH",
@@ -228,13 +227,12 @@ export function MediatorDashboard() {
       if ((e.target as HTMLElement).tagName === "INPUT" || (e.target as HTMLElement).tagName === "TEXTAREA") return;
       if (e.key === "j" || e.key === "ArrowDown") { e.preventDefault(); navigate(1); }
       if (e.key === "k" || e.key === "ArrowUp") { e.preventDefault(); navigate(-1); }
-      if (e.key === "r" && selected) { e.preventDefault(); applyAction(selected.id, "markAnswered"); }
-      if (e.key === "n" && selected) { e.preventDefault(); applyAction(selected.id, "setNext"); }
+      if (e.key === "r" && selected) { e.preventDefault(); applyAction(selected.id, "markAnswered"); if (isPresenting) presentNext(); }
       if (e.key === "p") { e.preventDefault(); startPresenting(); }
     };
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
-  }, [navigate, selected, applyAction, startPresenting]);
+  }, [navigate, selected, applyAction, startPresenting, isPresenting, presentNext]);
 
   const kbd: React.CSSProperties = {
     fontFamily: '"JetBrains Mono", monospace', fontSize: 11,
@@ -354,13 +352,12 @@ export function MediatorDashboard() {
           {selected ? (
             <QuestionDetail
               q={selected}
-              onPrev={() => navigate(-1)}
-              onNext={() => navigate(1)}
-              onMarkAnswered={() => applyAction(selected.id, "markAnswered")}
+              onPrev={() => isPresenting ? presentPrev() : navigate(-1)}
+              onNext={() => isPresenting ? presentNext() : navigate(1)}
+              onMarkAnswered={() => { applyAction(selected.id, "markAnswered"); if (isPresenting) presentNext(); }}
               onHide={() => applyAction(selected.id, "hide")}
               onRestore={() => applyAction(selected.id, "restore")}
               onDelete={() => deleteQuestion(selected.id)}
-              onPresent={() => applyAction(selected.id, "setNext")}
             />
           ) : (
             <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "hsl(var(--muted-foreground))" }}>
@@ -371,7 +368,7 @@ export function MediatorDashboard() {
       </div>
 
       <footer className="med-footer">
-        <span>Atalhos: <kbd style={kbd}>J</kbd>/<kbd style={kbd}>K</kbd> navegar · <kbd style={kbd}>R</kbd> respondida · <kbd style={kbd}>N</kbd> próxima · <kbd style={kbd}>P</kbd> apresentar</span>
+        <span>Atalhos: <kbd style={kbd}>J</kbd>/<kbd style={kbd}>K</kbd> navegar · <kbd style={kbd}>R</kbd> respondida · <kbd style={kbd}>P</kbd> apresentar</span>
       </footer>
 
       {qrOpen && <QRModal slug={eventSlug} eventName={eventName} theme={eventTheme} onClose={() => setQrOpen(false)} />}
@@ -432,15 +429,15 @@ function QuestionCard({ q, selected, onClick }: { q: Question; selected: boolean
       <p style={{ fontSize: 14, lineHeight: 1.45, margin: 0, display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden", color: q.status === "answered" || q.status === "hidden" ? "hsl(var(--muted-foreground))" : "hsl(var(--foreground))" }}>
         {q.text}
       </p>
-      {(q.status === "next" || q.status === "answered" || q.status === "hidden") && <StatusBadge status={q.status} />}
+      {(q.status === "answered" || q.status === "hidden") && <StatusBadge status={q.status} />}
     </article>
   );
 }
 
-function QuestionDetail({ q, onPrev, onNext, onMarkAnswered, onHide, onRestore, onDelete, onPresent }: {
+function QuestionDetail({ q, onPrev, onNext, onMarkAnswered, onHide, onRestore, onDelete }: {
   q: Question; onPrev: () => void; onNext: () => void;
   onMarkAnswered: () => void; onHide: () => void; onRestore: () => void;
-  onDelete: () => void; onPresent: () => void;
+  onDelete: () => void;
 }) {
   const initials = q.authorName === "Anônimo" ? "?" : q.authorName.split(/\s+/).map((w) => w[0]).slice(0, 2).join("").toUpperCase();
   return (
@@ -463,7 +460,7 @@ function QuestionDetail({ q, onPrev, onNext, onMarkAnswered, onHide, onRestore, 
         </p>
         <div style={{ padding: 16, background: "hsl(var(--muted))", borderRadius: 12, maxWidth: 720, display: "flex", gap: 12 }}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="hsl(var(--primary))" strokeWidth="1.75" strokeLinecap="round" style={{ flexShrink: 0 }} aria-hidden><circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/></svg>
-          <p style={{ fontSize: 13, margin: 0 }}>Use <strong>&quot;Levar ao palco&quot;</strong> para marcar como próxima. O Modo apresentação projeta automaticamente.</p>
+          <p style={{ fontSize: 13, margin: 0 }}>Durante a apresentação, <strong>&quot;Respondida&quot;</strong> e <strong>&quot;Próxima&quot;</strong> avançam automaticamente a projeção.</p>
         </div>
       </div>
 
@@ -477,10 +474,7 @@ function QuestionDetail({ q, onPrev, onNext, onMarkAnswered, onHide, onRestore, 
           ? <button onClick={onRestore} style={ghostBtnStyle}><RotateCcw size={14} aria-hidden /> Restaurar</button>
           : <button onClick={onHide} style={ghostBtnStyle}><EyeOff size={14} aria-hidden /> Ocultar</button>}
         {q.status !== "answered" && q.status !== "hidden" && (
-          <button onClick={onMarkAnswered} style={secondaryBtnStyle}><Check size={14} aria-hidden /> Respondida</button>
-        )}
-        {q.status !== "next" && q.status !== "answered" && q.status !== "hidden" && (
-          <button onClick={onPresent} style={primaryBtnStyle}><Mic size={14} aria-hidden /> Levar ao palco</button>
+          <button onClick={onMarkAnswered} style={primaryBtnStyle}><Check size={14} aria-hidden /> Respondida</button>
         )}
       </div>
     </div>

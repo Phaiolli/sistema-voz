@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase";
+import { submitQuestionSchema } from "@/lib/schemas";
+
+const RATE_LIMIT_MAX = 10;
+const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000; // 1 hour
 
 function questionId() {
   return `q_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
@@ -9,7 +13,6 @@ function error(code: string, message: string, status: number, details?: object) 
   return NextResponse.json({ error: { code, message, ...details } }, { status });
 }
 
-// Supabase returns snake_case; map to camelCase for client compatibility
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function mapQuestion(row: Record<string, any>) {
   return {
@@ -31,25 +34,23 @@ function mapQuestion(row: Record<string, any>) {
 export async function POST(req: NextRequest, { params }: { params: Promise<{ eventId: string }> }) {
   const { eventId } = await params;
 
-  const body = await req.json().catch(() => null);
-  if (!body) return error("VALIDATION_FAILED", "Corpo inválido.", 422);
-
-  const { authorName, authorContact, text, lgpdAccepted } = body;
-
-  if (!authorName || authorName.trim().length < 2)
-    return error("VALIDATION_FAILED", "Nome muito curto.", 422, { details: { field: "authorName" } });
-  if (!authorContact || authorContact.trim().length < 5)
-    return error("VALIDATION_FAILED", "Informe email ou telefone.", 422, { details: { field: "authorContact" } });
-  if (!text || text.trim().length < 10)
-    return error("VALIDATION_FAILED", "Pergunta muito curta.", 422, { details: { field: "text", min: 10 } });
-  if (text.length > 500)
-    return error("VALIDATION_FAILED", "Pergunta muito longa.", 422, { details: { field: "text", max: 500 } });
-  if (lgpdAccepted !== true)
-    return error("VALIDATION_FAILED", "É preciso aceitar os termos LGPD.", 422, { details: { field: "lgpdAccepted" } });
+  const parsed = submitQuestionSchema.safeParse(
+    await req.json().catch(() => null),
+  );
+  if (!parsed.success) {
+    const { fieldErrors } = parsed.error.flatten();
+    const [firstField, firstMessages] = Object.entries(fieldErrors)[0] ?? [];
+    return error(
+      "VALIDATION_FAILED",
+      firstMessages?.[0] ?? "Dados inválidos.",
+      422,
+      { details: { field: firstField } },
+    );
+  }
+  const { authorName, authorContact, text } = parsed.data;
 
   const supabase = createServerClient();
 
-  // Verify event exists and is active
   const { data: event } = await supabase
     .from("events")
     .select("id, status, config")
@@ -61,6 +62,19 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ eve
   if (event.status === "ended") return error("EVENT_ENDED", "Este evento foi encerrado.", 409);
 
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+
+  // Rate limiting: max 10 questions per IP per event per hour
+  const windowStart = new Date(Date.now() - RATE_LIMIT_WINDOW_MS).toISOString();
+  const { count: recentCount } = await supabase
+    .from("questions")
+    .select("*", { count: "exact", head: true })
+    .eq("event_id", eventId)
+    .eq("author_ip", ip)
+    .gte("created_at", windowStart);
+
+  if ((recentCount ?? 0) >= RATE_LIMIT_MAX) {
+    return error("RATE_LIMITED", "Muitas perguntas enviadas. Tente novamente em 1 hora.", 429);
+  }
 
   const { data: row, error: insertErr } = await supabase
     .from("questions")
@@ -79,16 +93,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ eve
   if (insertErr) throw insertErr;
   const question = mapQuestion(row);
 
-  // Broadcast via Supabase Realtime (best-effort)
   try {
     await supabase.channel(`event:${eventId}:questions`).send({
       type: "broadcast",
       event: "question:new",
       payload: question,
     });
-  } catch {
-    // non-fatal
-  }
+  } catch { /* non-fatal */ }
 
   return NextResponse.json(question, { status: 201 });
 }

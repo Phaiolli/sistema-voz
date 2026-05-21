@@ -167,12 +167,13 @@ export function MediatorDashboard() {
     hidden: questions.filter((q) => q.status === "hidden").length,
   };
 
+  const [loadedAt] = useState(() => Date.now());
   const newBadge = useMemo(() => {
-    const cutoff = new Date(Date.now() - 5 * 60000);
+    const cutoff = new Date(loadedAt - 5 * 60000);
     return questions.filter(
       (q) => q.status === "pending" && new Date(q.createdAt) > cutoff
     ).length;
-  }, [questions]);
+  }, [questions, loadedAt]);
 
   const listed =
     tab === "unread" ? questions.filter((q) => q.status === "pending" || q.status === "next")

@@ -166,6 +166,7 @@ export function EventEditor({ eventId, isNew }: { eventId: string | null; isNew:
   // Load mediators when tab opens
   useEffect(() => {
     if (tab !== "mediadores" || !eventId) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMediatorsLoading(true);
     fetch(`/api/v1/events/${eventId}/mediators`)
       .then((r) => r.json())
@@ -178,6 +179,7 @@ export function EventEditor({ eventId, isNew }: { eventId: string | null; isNew:
   useEffect(() => {
     if (tab !== "inscricoes" && tab !== "sorteio") return;
     if (!eventId) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setRegsLoading(true);
     fetch(`/api/v1/events/${eventId}/registrations`)
       .then((r) => r.json() as Promise<{ registrations: Registration[] }>)

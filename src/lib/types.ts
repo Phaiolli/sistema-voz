@@ -9,11 +9,36 @@ export interface EventTheme {
   fontDisplay?: string;
 }
 
+export interface EventPageSpeaker {
+  id: string;
+  name: string;
+  role: string;
+  bio?: string;
+  photoUrl?: string;
+}
+
+export interface EventPageScheduleItem {
+  id: string;
+  time: string;
+  title: string;
+  description?: string;
+}
+
+export interface EventPage {
+  logo?: string;
+  aboutText?: string;
+  organizer?: string;
+  organizerInstagram?: string;
+  speakers?: EventPageSpeaker[];
+  schedule?: EventPageScheduleItem[];
+}
+
 export interface EventConfig {
-  maxQuestionsPerParticipant: number;
-  manualModeration: boolean;
-  allowAnonymous: boolean;
-  lgpdRequired: boolean;
+  maxQuestionsPerParticipant?: number;
+  manualModeration?: boolean;
+  allowAnonymous?: boolean;
+  lgpdRequired?: boolean;
+  page?: EventPage;
 }
 
 export interface Event {

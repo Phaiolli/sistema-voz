@@ -23,7 +23,7 @@ interface UserForm {
   role: UserRole;
 }
 
-const emptyForm = (): UserForm => ({ name: "", email: "", password: "", role: "mediador" });
+const emptyForm = (): UserForm => ({ name: "", email: "", password: "", role: "admin" });
 
 export default function AdminUsuariosPage() {
   const [users, setUsers] = useState<UserPublic[]>([]);
@@ -47,7 +47,7 @@ export default function AdminUsuariosPage() {
 
   function loadUsers() {
     setLoading(true);
-    fetch("/api/v1/users")
+    fetch("/api/v1/users?role=admin")
       .then((r) => {
         if (!r.ok) throw new Error("Falha ao carregar usuários");
         return r.json();
@@ -134,12 +134,12 @@ export default function AdminUsuariosPage() {
           onClick={openCreate}
           style={{ display: "inline-flex", alignItems: "center", gap: 6, height: 36, padding: "0 14px", borderRadius: 8, border: "none", background: "hsl(var(--primary))", color: "hsl(var(--primary-foreground))", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
         >
-          <Plus size={14} aria-hidden /> Novo usuário
+          <Plus size={14} aria-hidden /> Novo administrador
         </button>
       </header>
 
       <main style={{ maxWidth: 800, margin: "0 auto", padding: "32px 24px" }}>
-        <h1 style={{ fontFamily: '"Archivo", sans-serif', fontWeight: 700, fontSize: 28, margin: "0 0 24px" }}>Usuários</h1>
+        <h1 style={{ fontFamily: '"Archivo", sans-serif', fontWeight: 700, fontSize: 28, margin: "0 0 24px" }}>Administradores</h1>
 
         {showForm && (
           <form
@@ -168,10 +168,7 @@ export default function AdminUsuariosPage() {
                 />
               </FormField>
               <FormField label="Função" htmlFor="u-role">
-                <select id="u-role" value={form.role} onChange={(e) => setForm((f) => ({ ...f, role: e.target.value as UserRole }))} style={inp}>
-                  <option value="mediador">mediador</option>
-                  <option value="admin">admin</option>
-                </select>
+                <input id="u-role" value="admin" readOnly style={{ ...inp, color: "hsl(var(--muted-foreground))" }} />
               </FormField>
             </div>
             <div style={{ display: "flex", gap: 8 }}>

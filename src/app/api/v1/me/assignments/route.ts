@@ -22,7 +22,7 @@ function mapEvent(row: Record<string, any>) {
   };
 }
 
-export async function GET() {
+export async function GET(_req?: Request) {
   const session = await auth();
 
   if (!session?.user) {

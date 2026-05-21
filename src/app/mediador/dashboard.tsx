@@ -255,12 +255,6 @@ export function MediatorDashboard() {
     return () => document.removeEventListener("keydown", handler);
   }, [goNext, goPrev, currentQ, applyAction, projectedId, projectQuestion, unprojectQuestion]);
 
-  const kbd: React.CSSProperties = {
-    fontFamily: '"JetBrains Mono", monospace', fontSize: 11,
-    padding: "1px 5px", border: "1px solid hsl(var(--border))",
-    borderRadius: 4, background: "hsl(var(--muted))",
-  };
-
   if (loading) {
     return (
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100dvh", background: "hsl(var(--background))", color: "hsl(var(--muted-foreground))", fontSize: 15 }}>
@@ -379,12 +373,6 @@ export function MediatorDashboard() {
         ))}
       </main>
 
-      {/* Footer */}
-      <footer style={{ height: 34, borderTop: "1px solid hsl(var(--border))", display: "flex", alignItems: "center", padding: "0 20px", gap: 16, fontSize: 12, color: "hsl(var(--muted-foreground))", flexShrink: 0 }}>
-        <span>Atalhos: <kbd style={kbd}>J</kbd>/<kbd style={kbd}>K</kbd> navegar · <kbd style={kbd}>P</kbd> projetar · <kbd style={kbd}>R</kbd> respondida</span>
-        {currentQ && <span style={{ marginLeft: "auto", fontVariantNumeric: "tabular-nums" }}>{currentIdx + 1} / {listed.length}</span>}
-      </footer>
-
       {qrOpen && <QRModal slug={eventSlug} eventName={eventName} theme={eventTheme} onClose={() => setQrOpen(false)} />}
 
       <style>{`
@@ -447,7 +435,6 @@ function QuestionSlot({ q, role, projectedId, onClick, onPrev, onNext, onProject
         opacity: isCurrent ? 1 : role === "prev" ? 0.5 : 0.65,
         cursor: isCurrent ? "default" : "pointer",
         position: "relative",
-        overflow: "hidden",
         outline: "none",
       }}
     >
@@ -500,47 +487,53 @@ function QuestionSlot({ q, role, projectedId, onClick, onPrev, onNext, onProject
         </p>
       </div>
 
-      {/* Action bar — current only */}
+      {/* Action bar — current only, two rows so buttons never clip */}
       {isCurrent && (
-        <div style={{ padding: "10px 16px 14px", borderTop: "1px solid hsl(var(--border))", display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-          <button onClick={onDelete} style={deleteBtnStyle} aria-label="Apagar pergunta permanentemente">
-            <Trash2 size={14} aria-hidden />
-          </button>
-          <div style={{ width: 1, height: 20, background: "hsl(var(--border))", flexShrink: 0 }} aria-hidden />
-          <button
-            onClick={onPrev}
-            disabled={!onPrev}
-            style={{ ...outlineBtnStyle, opacity: onPrev ? 1 : 0.35 }}
-            aria-label="Pergunta anterior"
-          >
-            <ArrowLeft size={14} aria-hidden /> Anterior
-          </button>
+        <div style={{ padding: "10px 16px 14px", borderTop: "1px solid hsl(var(--border))", display: "flex", flexDirection: "column", gap: 8 }}>
+          {/* Row 1: navigation + project */}
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <button
+              onClick={onPrev}
+              disabled={!onPrev}
+              style={{ ...outlineBtnStyle, opacity: onPrev ? 1 : 0.35, flex: "1 1 auto" }}
+              aria-label="Pergunta anterior"
+            >
+              <ArrowLeft size={14} aria-hidden /> Anterior
+            </button>
+            {q.status !== "hidden" && (
+              isProjected
+                ? <button onClick={onUnproject} style={{ ...projectedBtnStyle, flex: "2 1 auto", justifyContent: "center" }} aria-label="Retirar do projetor">
+                    <MonitorOff size={14} aria-hidden /> Retirar do Projetor
+                  </button>
+                : <button onClick={onProject} style={{ ...primaryBtnStyle, flex: "2 1 auto", justifyContent: "center" }} aria-label="Projetar esta pergunta">
+                    <MonitorPlay size={14} aria-hidden /> Projetar
+                  </button>
+            )}
+            <button
+              onClick={onNext}
+              disabled={!onNext}
+              style={{ ...outlineBtnStyle, opacity: onNext ? 1 : 0.35, flex: "1 1 auto", justifyContent: "center" }}
+              aria-label="Próxima pergunta"
+            >
+              Próxima <ArrowRight size={14} aria-hidden />
+            </button>
+          </div>
+          {/* Row 2: secondary actions */}
           {q.status !== "hidden" && (
-            isProjected
-              ? <button onClick={onUnproject} style={projectedBtnStyle} aria-label="Retirar do projetor">
-                  <MonitorOff size={14} aria-hidden /> Retirar do Projetor
-                </button>
-              : <button onClick={onProject} style={primaryBtnStyle} aria-label="Projetar esta pergunta">
-                  <MonitorPlay size={14} aria-hidden /> Projetar
-                </button>
-          )}
-          <button
-            onClick={onNext}
-            disabled={!onNext}
-            style={{ ...outlineBtnStyle, opacity: onNext ? 1 : 0.35 }}
-            aria-label="Próxima pergunta"
-          >
-            Próxima <ArrowRight size={14} aria-hidden />
-          </button>
-          <div style={{ flex: 1 }} />
-          {q.status !== "hidden" && (
-            q.status === "answered"
-              ? <button onClick={onRestore} style={{ ...secondaryBtnStyle, color: "hsl(var(--muted-foreground))" }} aria-label="Desmarcar respondida">
-                  <RotateCcw size={14} aria-hidden /> Desmarcar
-                </button>
-              : <button onClick={onMarkAnswered} style={secondaryBtnStyle} aria-label="Marcar como respondida">
-                  <Check size={14} aria-hidden /> Respondida
-                </button>
+            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              <button onClick={onDelete} style={deleteBtnStyle} aria-label="Apagar pergunta permanentemente">
+                <Trash2 size={14} aria-hidden />
+              </button>
+              <div style={{ flex: 1 }} />
+              {q.status === "answered"
+                ? <button onClick={onRestore} style={{ ...secondaryBtnStyle, color: "hsl(var(--muted-foreground))" }} aria-label="Desmarcar respondida">
+                    <RotateCcw size={14} aria-hidden /> Desmarcar
+                  </button>
+                : <button onClick={onMarkAnswered} style={secondaryBtnStyle} aria-label="Marcar como respondida">
+                    <Check size={14} aria-hidden /> Respondida
+                  </button>
+              }
+            </div>
           )}
         </div>
       )}

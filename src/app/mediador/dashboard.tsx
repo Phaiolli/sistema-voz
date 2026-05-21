@@ -199,7 +199,7 @@ export function MediatorDashboard() {
       restore: { status: "pending" as QuestionStatus },
     };
     setQuestions((qs) => qs.map((q) => q.id === id ? { ...q, ...patchMap[action] } : q));
-    if (projectedId === id && action !== "restore") {
+    if (projectedId === id && action === "hide") {
       unprojectQuestion();
     }
     try {
@@ -495,7 +495,7 @@ function QuestionSlot({ q, role, projectedId, onClick, onPrev, onNext, onProject
           >
             <ArrowLeft size={14} aria-hidden /> Anterior
           </button>
-          {q.status !== "answered" && q.status !== "hidden" && (
+          {q.status !== "hidden" && (
             isProjected
               ? <button onClick={onUnproject} style={projectedBtnStyle} aria-label="Retirar do projetor">
                   <MonitorOff size={14} aria-hidden /> Retirar do Projetor
@@ -513,10 +513,14 @@ function QuestionSlot({ q, role, projectedId, onClick, onPrev, onNext, onProject
             Próxima <ArrowRight size={14} aria-hidden />
           </button>
           <div style={{ flex: 1 }} />
-          {q.status !== "answered" && q.status !== "hidden" && (
-            <button onClick={onMarkAnswered} style={secondaryBtnStyle} aria-label="Marcar como respondida">
-              <Check size={14} aria-hidden /> Respondida
-            </button>
+          {q.status !== "hidden" && (
+            q.status === "answered"
+              ? <button onClick={onRestore} style={{ ...secondaryBtnStyle, color: "hsl(var(--muted-foreground))" }} aria-label="Desmarcar respondida">
+                  <RotateCcw size={14} aria-hidden /> Desmarcar
+                </button>
+              : <button onClick={onMarkAnswered} style={secondaryBtnStyle} aria-label="Marcar como respondida">
+                  <Check size={14} aria-hidden /> Respondida
+                </button>
           )}
         </div>
       )}

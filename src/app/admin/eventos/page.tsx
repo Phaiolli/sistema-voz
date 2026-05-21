@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Plus, Mic, Eye, Download } from "lucide-react";
+import { Plus, Mic, Eye, Download, Edit } from "lucide-react";
 import { VozWordmark } from "@/components/voz/wordmark";
 import { HeaderControls } from "@/components/voz/header-controls";
 import { toast } from "sonner";
@@ -128,6 +128,7 @@ export default function AdminEventosPage() {
                   <div style={{ display: "flex", gap: 6, position: "relative", zIndex: 1 }}>
                     <ActionBtn href="/mediador" icon={<Mic size={14} />} label="Abrir mediador" />
                     <ActionBtn href={`/e/${ev.slug}`} icon={<Eye size={14} />} label="Ver página do evento" />
+                    <ActionBtn href={`/admin/eventos/${ev.id}`} icon={<Edit size={14} />} label="Editar evento" />
                     <ActionBtn href="#" icon={<Download size={14} />} label="Exportar CSV" />
                   </div>
                 </div>

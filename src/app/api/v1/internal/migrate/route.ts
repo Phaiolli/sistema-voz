@@ -8,8 +8,19 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
-  await db().execute(sql`ALTER TABLE questions ADD COLUMN IF NOT EXISTS is_anonymous boolean DEFAULT false NOT NULL`);
-  await db().execute(sql`ALTER TABLE questions ADD COLUMN IF NOT EXISTS lgpd_accepted boolean DEFAULT false NOT NULL`);
+  const results: Record<string, string> = {};
+  try {
+    await db().execute(sql`ALTER TABLE questions ADD COLUMN IF NOT EXISTS is_anonymous boolean DEFAULT false NOT NULL`);
+    results["is_anonymous"] = "ok";
+  } catch (e) {
+    results["is_anonymous"] = String(e);
+  }
+  try {
+    await db().execute(sql`ALTER TABLE questions ADD COLUMN IF NOT EXISTS lgpd_accepted boolean DEFAULT false NOT NULL`);
+    results["lgpd_accepted"] = "ok";
+  } catch (e) {
+    results["lgpd_accepted"] = String(e);
+  }
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ results });
 }

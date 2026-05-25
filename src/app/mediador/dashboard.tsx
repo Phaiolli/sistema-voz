@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import { ExternalLink, QrCode, ArrowLeft, ArrowRight, EyeOff, RotateCcw, Trash2, MonitorPlay, MonitorOff, Download } from "lucide-react";
-import { VozLockup } from "@/components/voz/wordmark";
+import { VozWordmark } from "@/components/voz/wordmark";
 import { HeaderControls } from "@/components/voz/header-controls";
 import { EnvSwitcher } from "@/components/voz/env-switcher";
 import { createBrowserClient } from "@/lib/supabase";
@@ -306,10 +306,9 @@ export function MediatorDashboard() {
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100dvh", background: "hsl(var(--background))", color: "hsl(var(--foreground))" }}>
 
-      {/* Header */}
-      <header style={{ height: 56, borderBottom: "1px solid hsl(var(--border))", display: "flex", alignItems: "center", padding: "0 16px", gap: 10, flexShrink: 0, minWidth: 0, overflow: "hidden" }}>
-        <VozLockup eventName={eventName} size={18} />
-        <div style={{ width: 1, height: 24, background: "hsl(var(--border))", flexShrink: 0 }} aria-hidden />
+      {/* Header — mesmo padrão do admin */}
+      <header style={{ height: 56, borderBottom: "1px solid hsl(var(--border))", display: "flex", alignItems: "center", padding: "0 16px", gap: 10, flexShrink: 0, background: "hsl(var(--background))", zIndex: 10 }}>
+        <VozWordmark size={20} />
         <EnvSwitcher active="mediador" />
         <div style={{ flex: 1 }} />
         {newBadge > 0 && (
@@ -317,47 +316,38 @@ export function MediatorDashboard() {
             {newBadge} nova{newBadge > 1 ? "s" : ""}
           </span>
         )}
-        <div style={{ width: 1, height: 24, background: "hsl(var(--border))", flexShrink: 0 }} aria-hidden />
         <HeaderControls />
       </header>
 
-      {/* Toolbar: links + tab filter */}
-      <div style={{ borderBottom: "1px solid hsl(var(--border))", display: "flex", alignItems: "center", padding: "6px 12px", gap: 8, flexShrink: 0, overflowX: "auto", scrollbarWidth: "none" }}>
-        <button onClick={() => setQrOpen(true)} style={toolBtnStyle} aria-label="QR Code do evento">
-          <QrCode size={16} aria-hidden />
-          <span>QR Code</span>
-        </button>
-        <button onClick={() => eventId && window.open(`/apresentar/${eventId}`, "_blank")} style={toolBtnStyle} aria-label="Abrir link para projeção">
-          <ExternalLink size={16} aria-hidden />
-          <span>Link para Projeção</span>
-        </button>
-        <button
-          onClick={() => setExportModalOpen(true)}
-          style={toolBtnStyle}
-          aria-label="Exportar dados do evento"
-        >
-          <Download size={16} aria-hidden />
-          <span>Exportar</span>
-        </button>
+      {/* Sub-nav: tabs + ações — mesmo padrão do admin */}
+      <div style={{ borderBottom: "1px solid hsl(var(--border))", display: "flex", alignItems: "center", padding: "0 16px", flexShrink: 0, background: "hsl(var(--background))", overflowX: "auto", scrollbarWidth: "none", gap: 0 }}>
+        {/* Tabs de filtro */}
+        <MedTab label="Perguntas" count={counts.unread} active={tab === "unread"} onClick={() => setTab("unread")} />
+        <MedTab label="Todas" count={counts.all} active={tab === "all"} onClick={() => setTab("all")} />
+        <MedTab label="Ocultas" count={counts.hidden} active={tab === "hidden"} onClick={() => setTab("hidden")} />
+
         <div style={{ flex: 1 }} />
-        {/* Question summary */}
-        <div style={{ display: "flex", gap: 10, fontSize: 12, color: "hsl(var(--muted-foreground))", flexShrink: 0, alignItems: "center", padding: "0 4px" }} aria-live="polite" aria-atomic="true">
-          <span><strong style={{ color: "hsl(var(--foreground))", fontVariantNumeric: "tabular-nums" }}>{questions.length}</strong> perguntas</span>
+
+        {/* Botões de ação */}
+        <div style={{ display: "flex", gap: 6, padding: "8px 0", flexShrink: 0 }}>
+          {eventName && (
+            <span className="med-event-name" style={{ alignSelf: "center", fontSize: 13, color: "hsl(var(--muted-foreground))", fontWeight: 500, whiteSpace: "nowrap", maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis" }}>
+              {eventName}
+            </span>
+          )}
+          <button onClick={() => setQrOpen(true)} style={subnavBtnStyle} aria-label="QR Code do evento">
+            <QrCode size={15} aria-hidden />
+            <span className="med-btn-lbl">QR Code</span>
+          </button>
+          <button onClick={() => eventId && window.open(`/apresentar/${eventId}`, "_blank")} style={subnavBtnStyle} aria-label="Link de projeção">
+            <ExternalLink size={15} aria-hidden />
+            <span className="med-btn-lbl">Projetar</span>
+          </button>
+          <button onClick={() => setExportModalOpen(true)} style={subnavBtnStyle} aria-label="Exportar dados">
+            <Download size={15} aria-hidden />
+            <span className="med-btn-lbl">Exportar</span>
+          </button>
         </div>
-        <div style={{ width: 1, height: 20, background: "hsl(var(--border))", flexShrink: 0 }} aria-hidden />
-        <button
-          onClick={() => setTab(tab === "hidden" ? "unread" : "hidden")}
-          aria-pressed={tab === "hidden"}
-          style={{
-            padding: "6px 12px", borderRadius: 8, border: "1px solid",
-            cursor: "pointer", fontSize: 13, fontWeight: 500, whiteSpace: "nowrap", flexShrink: 0,
-            borderColor: tab === "hidden" ? "hsl(var(--border))" : "hsl(var(--border) / .4)",
-            background: tab === "hidden" ? "hsl(var(--muted))" : "transparent",
-            color: tab === "hidden" ? "hsl(var(--foreground))" : "hsl(var(--muted-foreground))",
-          }}
-        >
-          Ocultas <span style={{ fontSize: 12 }}>{counts.hidden}</span>
-        </button>
       </div>
 
       {/* Main: single column — up to 2 prev + current + up to 3 next */}
@@ -424,11 +414,14 @@ export function MediatorDashboard() {
       <style>{`
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
         .nav-lbl { display: inline; }
+        .med-btn-lbl { display: inline; }
+        .med-event-name { display: inline-block; }
         @media (max-width: 480px) {
           .nav-lbl { display: none; }
         }
         @media (max-width: 639px) {
-          .med-toolbar-label { display: none; }
+          .med-btn-lbl { display: none; }
+          .med-event-name { display: none; }
         }
       `}</style>
     </div>
@@ -587,6 +580,7 @@ function formatRelative(iso: string) {
   return `há ${Math.floor(diff / 60)}h`;
 }
 
+const subnavBtnStyle: React.CSSProperties = { display: "inline-flex", alignItems: "center", gap: 6, height: 36, padding: "0 12px", borderRadius: 8, border: "1px solid hsl(var(--border))", cursor: "pointer", fontSize: 13, fontWeight: 500, background: "transparent", color: "hsl(var(--foreground))", flexShrink: 0 };
 const primaryBtnStyle: React.CSSProperties = { display: "inline-flex", alignItems: "center", gap: 6, height: 44, padding: "0 16px", borderRadius: 9, border: "none", cursor: "pointer", fontSize: 14, fontWeight: 600, background: "hsl(var(--primary))", color: "hsl(var(--primary-foreground))", flexShrink: 0 };
 const projectedBtnStyle: React.CSSProperties = { ...primaryBtnStyle, background: "hsl(var(--primary) / .12)", color: "hsl(var(--primary))", border: "1px solid hsl(var(--primary) / .35)" };
 const secondaryBtnStyle: React.CSSProperties = { ...primaryBtnStyle, background: "hsl(var(--muted))", color: "hsl(var(--foreground))", border: "1px solid hsl(var(--border))" };
@@ -594,6 +588,34 @@ const outlineBtnStyle: React.CSSProperties = { ...primaryBtnStyle, background: "
 const ghostSmallStyle: React.CSSProperties = { display: "inline-flex", alignItems: "center", gap: 4, height: 32, padding: "0 10px", borderRadius: 7, border: "none", cursor: "pointer", fontSize: 13, fontWeight: 500, background: "transparent", color: "hsl(var(--muted-foreground))", flexShrink: 0 };
 const deleteBtnStyle: React.CSSProperties = { display: "inline-flex", alignItems: "center", justifyContent: "center", width: 44, height: 44, borderRadius: 9, border: "1px solid hsl(var(--destructive) / .3)", cursor: "pointer", background: "transparent", color: "hsl(var(--destructive))", flexShrink: 0 };
 const toolBtnStyle: React.CSSProperties = { display: "inline-flex", flexDirection: "column", alignItems: "center", gap: 2, padding: "7px 16px", borderRadius: 8, border: "1px solid hsl(var(--border))", cursor: "pointer", fontSize: 11, fontWeight: 500, background: "transparent", color: "hsl(var(--foreground))", minWidth: 64, flexShrink: 0 };
+
+function MedTab({ label, count, active, onClick }: { label: string; count: number; active: boolean; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      aria-pressed={active}
+      style={{
+        display: "inline-flex", alignItems: "center", gap: 6,
+        padding: "12px 14px", marginBottom: -1,
+        border: "none", borderBottom: active ? "2px solid hsl(var(--primary))" : "2px solid transparent",
+        background: "transparent", cursor: "pointer",
+        fontSize: 14, fontWeight: active ? 600 : 500,
+        color: active ? "hsl(var(--primary))" : "hsl(var(--muted-foreground))",
+        flexShrink: 0, whiteSpace: "nowrap",
+      }}
+    >
+      {label}
+      <span style={{
+        fontSize: 11, padding: "1px 6px", borderRadius: 10,
+        background: active ? "hsl(var(--primary) / .12)" : "hsl(var(--muted))",
+        color: active ? "hsl(var(--primary))" : "hsl(var(--muted-foreground))",
+        fontVariantNumeric: "tabular-nums",
+      }}>
+        {count}
+      </span>
+    </button>
+  );
+}
 
 function ExportModal({ eventId, eventSlug, onClose }: { eventId: string; eventSlug: string; onClose: () => void }) {
   const [tab, setTab] = useState<"participantes" | "inscritos">("participantes");

@@ -7,7 +7,9 @@ import { VozWordmark } from "@/components/voz/wordmark";
 import { HeaderControls } from "@/components/voz/header-controls";
 import { EnvSwitcher } from "@/components/voz/env-switcher";
 import { createBrowserClient } from "@/lib/supabase";
-import { signOut } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
+import Link from "next/link";
+import { Calendar, Mic } from "lucide-react";
 import type { Question, QuestionStatus } from "@/lib/types";
 import { QRModal } from "./qr-modal";
 import { toast } from "sonner";
@@ -303,6 +305,10 @@ export function MediatorDashboard() {
     );
   }
 
+  const { data: session } = useSession();
+  const userRole = (session?.user as { role?: string } | undefined)?.role;
+  const isAdmin = userRole === "admin" || userRole === "superadmin";
+
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100dvh", background: "hsl(var(--background))", color: "hsl(var(--foreground))" }}>
 
@@ -351,7 +357,7 @@ export function MediatorDashboard() {
       </div>
 
       {/* Main: single column — up to 2 prev + current + up to 3 next */}
-      <main style={{ flex: 1, overflowY: "auto", padding: "12px 16px", display: "flex", flexDirection: "column", gap: 6, width: "100%", boxSizing: "border-box" }}>
+      <main className="med-main-content" style={{ flex: 1, overflowY: "auto", padding: "12px 16px", display: "flex", flexDirection: "column", gap: 6, width: "100%", boxSizing: "border-box" }}>
         {listed.length === 0 && (
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", flex: 1, flexDirection: "column", gap: 8, color: "hsl(var(--muted-foreground))" }}>
             <p style={{ fontFamily: '"Archivo", sans-serif', fontWeight: 600, fontSize: 16, color: "hsl(var(--foreground))", margin: 0 }}>Sem perguntas aqui</p>
@@ -411,17 +417,33 @@ export function MediatorDashboard() {
         />
       )}
 
+      {/* Bottom nav — mobile only, só para admin/superadmin */}
+      {isAdmin && (
+        <nav
+          className="med-bottom-nav"
+          aria-label="Navegação"
+          style={{ position: "fixed", bottom: 0, left: 0, right: 0, height: 68, background: "hsl(var(--background))", borderTop: "1px solid hsl(var(--border))", display: "flex", zIndex: 20 }}
+        >
+          <BottomNavItem href="/admin/eventos" icon={<Calendar size={22} aria-hidden />} label="Eventos" />
+          <BottomNavItem href="/admin/usuarios" icon={<UsersIcon />} label="Usuários" />
+          <BottomNavItem href="/mediador" icon={<Mic size={22} aria-hidden />} label="Moderador" active />
+        </nav>
+      )}
+
       <style>{`
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
         .nav-lbl { display: inline; }
         .med-btn-lbl { display: inline; }
         .med-event-name { display: inline-block; }
+        .med-bottom-nav { display: none !important; }
         @media (max-width: 480px) {
           .nav-lbl { display: none; }
         }
         @media (max-width: 639px) {
           .med-btn-lbl { display: none; }
           .med-event-name { display: none; }
+          .med-bottom-nav { display: flex !important; }
+          .med-main-content { padding-bottom: 80px; }
         }
       `}</style>
     </div>
@@ -614,6 +636,27 @@ function MedTab({ label, count, active, onClick }: { label: string; count: numbe
         {count}
       </span>
     </button>
+  );
+}
+
+function BottomNavItem({ href, icon, label, active }: { href: string; icon: React.ReactNode; label: string; active?: boolean }) {
+  return (
+    <Link
+      href={href}
+      style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 3, textDecoration: "none", color: active ? "hsl(var(--primary))" : "hsl(var(--muted-foreground))", fontSize: 11, fontWeight: active ? 600 : 500 }}
+      aria-current={active ? "page" : undefined}
+    >
+      {icon}
+      {label}
+    </Link>
+  );
+}
+
+function UsersIcon() {
+  return (
+    <svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
+    </svg>
   );
 }
 

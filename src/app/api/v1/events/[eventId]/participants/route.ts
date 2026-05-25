@@ -21,7 +21,6 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ eve
     .from("questions")
     .select("author_name, author_contact, author_email, created_at")
     .eq("event_id", eventId)
-    .neq("author_name", "Anônimo")
     .order("created_at");
 
   if (error) throw error;

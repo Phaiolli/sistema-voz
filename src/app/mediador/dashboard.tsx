@@ -39,6 +39,14 @@ interface ParticipantRow {
   questionCount: number;
 }
 
+interface RegistrationRow {
+  name: string;
+  email: string;
+  phone: string | null;
+  checkedIn: boolean;
+  createdAt: string;
+}
+
 export function MediatorDashboard() {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [loading, setLoading] = useState(true);
@@ -47,7 +55,7 @@ export function MediatorDashboard() {
   const [projectedId, setProjectedId] = useState<string | null>(null);
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
   const [qrOpen, setQrOpen] = useState(false);
-  const [exportingParticipants, setExportingParticipants] = useState(false);
+  const [exportModalOpen, setExportModalOpen] = useState(false);
   const [eventId, setEventId] = useState<string | null>(null);
   const [eventName, setEventName] = useState<string>("");
   const [eventSlug, setEventSlug] = useState<string>("");
@@ -247,34 +255,6 @@ export function MediatorDashboard() {
     }
   }, [nextQ, prevQ]);
 
-  const exportParticipants = useCallback(async () => {
-    if (!eventId || exportingParticipants) return;
-    setExportingParticipants(true);
-    try {
-      const res = await fetch(`/api/v1/events/${eventId}/participants`);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = (await res.json()) as { participants: ParticipantRow[] };
-      const list = data.participants ?? [];
-      const header = "Nome,WhatsApp,E-mail,Perguntas";
-      const rows = list.map((p) =>
-        [p.name, p.whatsapp ?? "", p.email ?? "", p.questionCount]
-          .map((v) => `"${String(v).replace(/"/g, '""')}"`)
-          .join(",")
-      );
-      const csv = "﻿" + [header, ...rows].join("\n");
-      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = `participantes-${eventSlug || eventId}.csv`;
-      a.click();
-      URL.revokeObjectURL(a.href);
-    } catch {
-      toast.error("Erro ao exportar participantes.");
-    } finally {
-      setExportingParticipants(false);
-    }
-  }, [eventId, eventSlug, exportingParticipants]);
-
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if ((e.target as HTMLElement).tagName === "INPUT" || (e.target as HTMLElement).tagName === "TEXTAREA") return;
@@ -340,13 +320,12 @@ export function MediatorDashboard() {
           <span>Link para Projeção</span>
         </button>
         <button
-          onClick={exportParticipants}
-          disabled={exportingParticipants}
-          style={{ ...toolBtnStyle, opacity: exportingParticipants ? 0.5 : 1 }}
-          aria-label="Exportar lista de participantes em CSV"
+          onClick={() => setExportModalOpen(true)}
+          style={toolBtnStyle}
+          aria-label="Exportar dados do evento"
         >
           <Download size={16} aria-hidden />
-          <span>{exportingParticipants ? "…" : "Participantes"}</span>
+          <span>Exportar</span>
         </button>
         <div style={{ flex: 1 }} />
         {/* Question summary */}
@@ -415,6 +394,13 @@ export function MediatorDashboard() {
       </main>
 
       {qrOpen && <QRModal slug={eventSlug} eventName={eventName} theme={eventTheme} onClose={() => setQrOpen(false)} />}
+      {exportModalOpen && eventId && (
+        <ExportModal
+          eventId={eventId}
+          eventSlug={eventSlug}
+          onClose={() => setExportModalOpen(false)}
+        />
+      )}
 
       {deleteTargetId && (
         <DeleteModal
@@ -591,6 +577,175 @@ const outlineBtnStyle: React.CSSProperties = { ...primaryBtnStyle, background: "
 const ghostSmallStyle: React.CSSProperties = { display: "inline-flex", alignItems: "center", gap: 4, height: 28, padding: "0 8px", borderRadius: 6, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 500, background: "transparent", color: "hsl(var(--muted-foreground))", flexShrink: 0 };
 const deleteBtnStyle: React.CSSProperties = { display: "inline-flex", alignItems: "center", justifyContent: "center", width: 36, height: 36, borderRadius: 8, border: "1px solid hsl(var(--destructive) / .3)", cursor: "pointer", background: "transparent", color: "hsl(var(--destructive))", flexShrink: 0 };
 const toolBtnStyle: React.CSSProperties = { display: "inline-flex", flexDirection: "column", alignItems: "center", gap: 2, padding: "5px 14px", borderRadius: 8, border: "1px solid hsl(var(--border))", cursor: "pointer", fontSize: 11, fontWeight: 500, background: "transparent", color: "hsl(var(--foreground))", minWidth: 64, flexShrink: 0 };
+
+function ExportModal({ eventId, eventSlug, onClose }: { eventId: string; eventSlug: string; onClose: () => void }) {
+  const [tab, setTab] = useState<"participantes" | "inscritos">("participantes");
+  const [participants, setParticipants] = useState<ParticipantRow[]>([]);
+  const [registrations, setRegistrations] = useState<RegistrationRow[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    Promise.all([
+      fetch(`/api/v1/events/${eventId}/participants`).then((r) => r.json()),
+      fetch(`/api/v1/events/${eventId}/registrations`).then((r) => r.json()),
+    ])
+      .then(([pd, rd]) => {
+        setParticipants((pd as { participants: ParticipantRow[] }).participants ?? []);
+        setRegistrations(
+          ((rd as { registrations: RegistrationRow[] }).registrations ?? []).map((r) => ({
+            name: r.name, email: r.email, phone: r.phone ?? null, checkedIn: r.checkedIn, createdAt: r.createdAt,
+          }))
+        );
+      })
+      .catch(() => toast.error("Erro ao carregar dados do evento."))
+      .finally(() => setLoading(false));
+  }, [eventId]);
+
+  function downloadCsv(filename: string, lines: string[]) {
+    const csv = "﻿" + lines.join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    a.click();
+  }
+
+  function handleDownload() {
+    if (tab === "participantes") {
+      const header = "Nome,WhatsApp,E-mail,Perguntas";
+      const rows = participants.map((p) =>
+        [p.name, p.whatsapp ?? "", p.email ?? "", p.questionCount]
+          .map((v) => `"${String(v).replace(/"/g, '""')}"`)
+          .join(",")
+      );
+      downloadCsv(`participantes-${eventSlug || eventId}.csv`, [header, ...rows]);
+    } else {
+      const header = "Nome,E-mail,Telefone,Presença,Data de inscrição";
+      const rows = registrations.map((r) =>
+        [r.name, r.email, r.phone ?? "", r.checkedIn ? "Sim" : "Não", new Date(r.createdAt).toLocaleString("pt-BR")]
+          .map((v) => `"${String(v).replace(/"/g, '""')}"`)
+          .join(",")
+      );
+      downloadCsv(`inscritos-${eventSlug || eventId}.csv`, [header, ...rows]);
+    }
+  }
+
+  const isEmpty = tab === "participantes" ? participants.length === 0 : registrations.length === 0;
+
+  return (
+    <div
+      role="dialog"
+      aria-modal
+      aria-labelledby="export-modal-title"
+      style={{ position: "fixed", inset: 0, background: "hsl(var(--background) / .75)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50, backdropFilter: "blur(4px)" }}
+    >
+      <div style={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 14, padding: 24, maxWidth: 680, width: "calc(100% - 32px)", display: "flex", flexDirection: "column", gap: 16, maxHeight: "80dvh" }}>
+
+        {/* Header */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
+          <p id="export-modal-title" style={{ fontFamily: '"Archivo", sans-serif', fontWeight: 600, fontSize: 16, margin: 0 }}>Exportar dados</p>
+          <button onClick={onClose} style={{ ...ghostSmallStyle, padding: "0 10px", fontSize: 16 }} aria-label="Fechar">✕</button>
+        </div>
+
+        {/* Tabs */}
+        <div style={{ display: "flex", gap: 0, borderBottom: "1px solid hsl(var(--border))", flexShrink: 0 }}>
+          {(["participantes", "inscritos"] as const).map((t) => {
+            const count = t === "participantes" ? participants.length : registrations.length;
+            const isActive = tab === t;
+            return (
+              <button
+                key={t}
+                onClick={() => setTab(t)}
+                style={{
+                  padding: "8px 16px", marginBottom: -1,
+                  border: "1px solid",
+                  borderColor: isActive ? "hsl(var(--border))" : "transparent",
+                  borderBottom: isActive ? "1px solid hsl(var(--card))" : "1px solid transparent",
+                  borderRadius: "8px 8px 0 0",
+                  background: isActive ? "hsl(var(--card))" : "transparent",
+                  cursor: "pointer", fontSize: 13, fontWeight: isActive ? 600 : 400,
+                  color: isActive ? "hsl(var(--foreground))" : "hsl(var(--muted-foreground))",
+                }}
+              >
+                {t === "participantes" ? "Participantes" : "Inscritos"}
+                {!loading && (
+                  <span style={{ marginLeft: 6, fontSize: 11, padding: "1px 6px", borderRadius: 10, background: "hsl(var(--muted))", color: "hsl(var(--muted-foreground))" }}>
+                    {count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Table */}
+        <div style={{ flex: 1, overflowY: "auto", border: "1px solid hsl(var(--border))", borderRadius: 8, minHeight: 0 }}>
+          {loading ? (
+            <div style={{ padding: 32, textAlign: "center", color: "hsl(var(--muted-foreground))", fontSize: 13 }}>Carregando…</div>
+          ) : tab === "participantes" ? (
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+              <thead>
+                <tr style={{ background: "hsl(var(--muted))", borderBottom: "1px solid hsl(var(--border))" }}>
+                  {["Nome", "WhatsApp", "E-mail", "Perguntas"].map((h) => (
+                    <th key={h} style={{ padding: "8px 12px", textAlign: "left", fontWeight: 600, fontSize: 12 }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {participants.length === 0 ? (
+                  <tr><td colSpan={4} style={{ padding: "24px 12px", textAlign: "center", color: "hsl(var(--muted-foreground))" }}>Nenhum participante identificado.</td></tr>
+                ) : participants.map((p, i) => (
+                  <tr key={i} style={{ borderTop: i === 0 ? undefined : "1px solid hsl(var(--border) / .5)" }}>
+                    <td style={{ padding: "8px 12px", fontWeight: 500 }}>{p.name}</td>
+                    <td style={{ padding: "8px 12px", color: "hsl(var(--muted-foreground))" }}>{p.whatsapp ?? "—"}</td>
+                    <td style={{ padding: "8px 12px", color: "hsl(var(--muted-foreground))" }}>{p.email ?? "—"}</td>
+                    <td style={{ padding: "8px 12px", textAlign: "center", color: "hsl(var(--muted-foreground))" }}>{p.questionCount}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+              <thead>
+                <tr style={{ background: "hsl(var(--muted))", borderBottom: "1px solid hsl(var(--border))" }}>
+                  {["Nome", "E-mail", "Telefone", "Presença"].map((h) => (
+                    <th key={h} style={{ padding: "8px 12px", textAlign: "left", fontWeight: 600, fontSize: 12 }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {registrations.length === 0 ? (
+                  <tr><td colSpan={4} style={{ padding: "24px 12px", textAlign: "center", color: "hsl(var(--muted-foreground))" }}>Nenhum inscrito ainda.</td></tr>
+                ) : registrations.map((r, i) => (
+                  <tr key={i} style={{ borderTop: i === 0 ? undefined : "1px solid hsl(var(--border) / .5)" }}>
+                    <td style={{ padding: "8px 12px", fontWeight: 500 }}>{r.name}</td>
+                    <td style={{ padding: "8px 12px", color: "hsl(var(--muted-foreground))" }}>{r.email}</td>
+                    <td style={{ padding: "8px 12px", color: "hsl(var(--muted-foreground))" }}>{r.phone ?? "—"}</td>
+                    <td style={{ padding: "8px 12px", textAlign: "center", color: r.checkedIn ? "hsl(142 71% 45%)" : "hsl(var(--muted-foreground))" }}>
+                      {r.checkedIn ? "Sim" : "—"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", flexShrink: 0 }}>
+          <button onClick={onClose} style={outlineBtnStyle}>Fechar</button>
+          <button
+            onClick={handleDownload}
+            disabled={loading || isEmpty}
+            style={{ ...primaryBtnStyle, opacity: loading || isEmpty ? 0.5 : 1 }}
+          >
+            <Download size={14} aria-hidden /> Baixar CSV
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function DeleteModal({ onConfirm, onCancel }: { onConfirm: () => void; onCancel: () => void }) {
   return (

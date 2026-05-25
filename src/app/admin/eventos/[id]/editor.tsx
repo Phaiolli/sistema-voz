@@ -800,7 +800,6 @@ export function EventEditor({ eventId, isNew }: { eventId: string | null; isNew:
                   a.href = URL.createObjectURL(blob);
                   a.download = `participantes-${slug || eventId}.csv`;
                   a.click();
-                  URL.revokeObjectURL(a.href);
                 }}
                 style={{ display: "inline-flex", alignItems: "center", gap: 6, height: 36, padding: "0 14px", borderRadius: 8, border: "1px solid hsl(var(--border))", background: "transparent", fontSize: 13, cursor: "pointer" }}
               >

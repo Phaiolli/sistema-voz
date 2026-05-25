@@ -36,7 +36,7 @@ interface ParticipantRow {
   name: string;
   whatsapp: string | null;
   email: string | null;
-  questionCount: number;
+  questionText: string;
   isAnonymous: boolean;
   lgpdAccepted: boolean;
 }
@@ -621,9 +621,9 @@ function ExportModal({ eventId, eventSlug, onClose }: { eventId: string; eventSl
 
   function handleDownload() {
     if (tab === "participantes") {
-      const header = "Nome,WhatsApp,E-mail,Perguntas,Anônimo?,LGPD";
+      const header = "Nome,WhatsApp,E-mail,Pergunta,Anônimo?,LGPD";
       const rows = participants.map((p) =>
-        [p.name, p.whatsapp ?? "", p.email ?? "", p.questionCount, p.isAnonymous ? "Sim" : "Não", p.lgpdAccepted ? "Sim" : "Não"]
+        [p.name, p.whatsapp ?? "", p.email ?? "", p.questionText, p.isAnonymous ? "Sim" : "Não", p.lgpdAccepted ? "Sim" : "Não"]
           .map((v) => `"${String(v).replace(/"/g, '""')}"`)
           .join(",")
       );
@@ -695,7 +695,7 @@ function ExportModal({ eventId, eventSlug, onClose }: { eventId: string; eventSl
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
               <thead>
                 <tr style={{ background: "hsl(var(--muted))", borderBottom: "1px solid hsl(var(--border))" }}>
-                  {["Nome", "WhatsApp", "E-mail", "Perguntas", "Anônimo?", "LGPD"].map((h) => (
+                  {["Nome", "WhatsApp", "E-mail", "Pergunta", "Anônimo?", "LGPD"].map((h) => (
                     <th key={h} style={{ padding: "8px 12px", textAlign: "left", fontWeight: 600, fontSize: 12 }}>{h}</th>
                   ))}
                 </tr>
@@ -705,12 +705,12 @@ function ExportModal({ eventId, eventSlug, onClose }: { eventId: string; eventSl
                   <tr><td colSpan={6} style={{ padding: "24px 12px", textAlign: "center", color: "hsl(var(--muted-foreground))" }}>Nenhum participante identificado.</td></tr>
                 ) : participants.map((p, i) => (
                   <tr key={i} style={{ borderTop: i === 0 ? undefined : "1px solid hsl(var(--border) / .5)" }}>
-                    <td style={{ padding: "8px 12px", fontWeight: 500 }}>{p.name}</td>
-                    <td style={{ padding: "8px 12px", color: "hsl(var(--muted-foreground))" }}>{p.whatsapp ?? "—"}</td>
-                    <td style={{ padding: "8px 12px", color: "hsl(var(--muted-foreground))" }}>{p.email ?? "—"}</td>
-                    <td style={{ padding: "8px 12px", textAlign: "center", color: "hsl(var(--muted-foreground))" }}>{p.questionCount}</td>
-                    <td style={{ padding: "8px 12px", textAlign: "center", color: p.isAnonymous ? "hsl(var(--muted-foreground))" : "hsl(142 71% 45%)" }}>{p.isAnonymous ? "Sim" : "Não"}</td>
-                    <td style={{ padding: "8px 12px", textAlign: "center", color: p.lgpdAccepted ? "hsl(142 71% 45%)" : "hsl(var(--destructive))" }}>{p.lgpdAccepted ? "Sim" : "Não"}</td>
+                    <td style={{ padding: "8px 12px", fontWeight: 500, whiteSpace: "nowrap" }}>{p.name}</td>
+                    <td style={{ padding: "8px 12px", color: "hsl(var(--muted-foreground))", whiteSpace: "nowrap" }}>{p.whatsapp ?? "—"}</td>
+                    <td style={{ padding: "8px 12px", color: "hsl(var(--muted-foreground))", whiteSpace: "nowrap" }}>{p.email ?? "—"}</td>
+                    <td style={{ padding: "8px 12px", color: "hsl(var(--muted-foreground))", maxWidth: 280, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.questionText}</td>
+                    <td style={{ padding: "8px 12px", textAlign: "center", whiteSpace: "nowrap", color: p.isAnonymous ? "hsl(var(--muted-foreground))" : "hsl(142 71% 45%)" }}>{p.isAnonymous ? "Sim" : "Não"}</td>
+                    <td style={{ padding: "8px 12px", textAlign: "center", whiteSpace: "nowrap", color: p.lgpdAccepted ? "hsl(142 71% 45%)" : "hsl(var(--destructive))" }}>{p.lgpdAccepted ? "Sim" : "Não"}</td>
                   </tr>
                 ))}
               </tbody>

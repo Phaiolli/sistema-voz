@@ -790,15 +790,17 @@ export function EventEditor({ eventId, isNew }: { eventId: string | null; isNew:
               <button
                 onClick={() => {
                   if (participants.length === 0) return;
-                  const header = "Nome,WhatsApp,Email,Perguntas\n";
+                  const header = "Nome,WhatsApp,E-mail,Perguntas";
                   const rows = participants.map((p) =>
                     [p.name, p.whatsapp ?? "", p.email ?? "", p.questionCount].map((v) => `"${String(v).replace(/"/g, '""')}"`).join(",")
-                  ).join("\n");
-                  const blob = new Blob([header + rows], { type: "text/csv;charset=utf-8;" });
+                  );
+                  const csv = "﻿" + [header, ...rows].join("\n");
+                  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
                   const a = document.createElement("a");
                   a.href = URL.createObjectURL(blob);
-                  a.download = `participantes-${eventId}.csv`;
+                  a.download = `participantes-${slug || eventId}.csv`;
                   a.click();
+                  URL.revokeObjectURL(a.href);
                 }}
                 style={{ display: "inline-flex", alignItems: "center", gap: 6, height: 36, padding: "0 14px", borderRadius: 8, border: "1px solid hsl(var(--border))", background: "transparent", fontSize: 13, cursor: "pointer" }}
               >

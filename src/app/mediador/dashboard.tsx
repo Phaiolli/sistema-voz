@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import type { RealtimeChannel } from "@supabase/supabase-js";
-import { ExternalLink, QrCode, ArrowLeft, ArrowRight, EyeOff, RotateCcw, Trash2, MonitorPlay, MonitorOff } from "lucide-react";
+import { ExternalLink, QrCode, ArrowLeft, ArrowRight, EyeOff, RotateCcw, Trash2, MonitorPlay, MonitorOff, Download } from "lucide-react";
 import { VozLockup } from "@/components/voz/wordmark";
 import { HeaderControls } from "@/components/voz/header-controls";
 import { createBrowserClient } from "@/lib/supabase";
@@ -32,6 +32,13 @@ interface AssignmentsResponse {
   assignments?: Assignment[];
 }
 
+interface ParticipantRow {
+  name: string;
+  whatsapp: string | null;
+  email: string | null;
+  questionCount: number;
+}
+
 export function MediatorDashboard() {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [loading, setLoading] = useState(true);
@@ -40,6 +47,7 @@ export function MediatorDashboard() {
   const [projectedId, setProjectedId] = useState<string | null>(null);
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
   const [qrOpen, setQrOpen] = useState(false);
+  const [exportingParticipants, setExportingParticipants] = useState(false);
   const [eventId, setEventId] = useState<string | null>(null);
   const [eventName, setEventName] = useState<string>("");
   const [eventSlug, setEventSlug] = useState<string>("");
@@ -239,6 +247,34 @@ export function MediatorDashboard() {
     }
   }, [nextQ, prevQ]);
 
+  const exportParticipants = useCallback(async () => {
+    if (!eventId || exportingParticipants) return;
+    setExportingParticipants(true);
+    try {
+      const res = await fetch(`/api/v1/events/${eventId}/participants`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = (await res.json()) as { participants: ParticipantRow[] };
+      const list = data.participants ?? [];
+      const header = "Nome,WhatsApp,E-mail,Perguntas";
+      const rows = list.map((p) =>
+        [p.name, p.whatsapp ?? "", p.email ?? "", p.questionCount]
+          .map((v) => `"${String(v).replace(/"/g, '""')}"`)
+          .join(",")
+      );
+      const csv = "﻿" + [header, ...rows].join("\n");
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `participantes-${eventSlug || eventId}.csv`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    } catch {
+      toast.error("Erro ao exportar participantes.");
+    } finally {
+      setExportingParticipants(false);
+    }
+  }, [eventId, eventSlug, exportingParticipants]);
+
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if ((e.target as HTMLElement).tagName === "INPUT" || (e.target as HTMLElement).tagName === "TEXTAREA") return;
@@ -302,6 +338,15 @@ export function MediatorDashboard() {
         <button onClick={() => eventId && window.open(`/apresentar/${eventId}`, "_blank")} style={toolBtnStyle} aria-label="Abrir link para projeção">
           <ExternalLink size={16} aria-hidden />
           <span>Link para Projeção</span>
+        </button>
+        <button
+          onClick={exportParticipants}
+          disabled={exportingParticipants}
+          style={{ ...toolBtnStyle, opacity: exportingParticipants ? 0.5 : 1 }}
+          aria-label="Exportar lista de participantes em CSV"
+        >
+          <Download size={16} aria-hidden />
+          <span>{exportingParticipants ? "…" : "Participantes"}</span>
         </button>
         <div style={{ flex: 1 }} />
         {/* Question summary */}

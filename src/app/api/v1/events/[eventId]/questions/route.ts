@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase";
 import { submitQuestionSchema } from "@/lib/schemas";
+import { getOwnerPlan, getEventQuestionCount, FREE_QUESTION_LIMIT } from "@/lib/plan-limits";
 
 const RATE_LIMIT_MAX = 10;
 const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000; // 1 hour
@@ -55,13 +56,21 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ eve
 
   const { data: event } = await supabase
     .from("events")
-    .select("id, status, config")
+    .select("id, status, config, organizer_id")
     .eq("id", eventId)
     .limit(1)
     .maybeSingle();
 
   if (!event) return error("NOT_FOUND", "Evento não encontrado.", 404);
   if (event.status === "ended") return error("EVENT_ENDED", "Este evento foi encerrado.", 409);
+
+  const organizerPlan = await getOwnerPlan(event.organizer_id as string);
+  if (organizerPlan === "free") {
+    const questionCount = await getEventQuestionCount(eventId);
+    if (questionCount >= FREE_QUESTION_LIMIT) {
+      return error("QUESTION_LIMIT_REACHED", "Este evento atingiu o limite de perguntas do plano gratuito.", 403);
+    }
+  }
 
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
 

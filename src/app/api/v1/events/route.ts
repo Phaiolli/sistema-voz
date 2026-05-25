@@ -2,9 +2,27 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase";
 import { auth } from "@/lib/auth";
 import { createEventSchema } from "@/lib/schemas";
+import { getOwnerEventCount, FREE_EVENT_LIMIT } from "@/lib/plan-limits";
+import type { EventStatus, EventTheme, EventConfig } from "@/lib/types";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function mapEvent(row: Record<string, any>) {
+interface EventRow {
+  id: string;
+  slug: string;
+  name: string;
+  starts_at: string;
+  ends_at: string;
+  place: string;
+  address: string;
+  status: EventStatus;
+  about: string;
+  theme: EventTheme | null;
+  config: EventConfig | null;
+  organizer_id: string;
+  created_at: string;
+  updated_at: string;
+}
+
+function mapEvent(row: EventRow) {
   return {
     id: row.id,
     slug: row.slug,
@@ -23,7 +41,7 @@ function mapEvent(row: Record<string, any>) {
   };
 }
 
-async function requireAdmin() {
+async function requireAuth(roles: string[]) {
   const session = await auth();
   if (!session?.user) {
     return {
@@ -33,11 +51,11 @@ async function requireAdmin() {
       ),
     };
   }
-  const role = (session.user as { role?: string }).role;
-  if (role !== "admin") {
+  const role = (session.user as { role?: string }).role ?? "";
+  if (!roles.includes(role)) {
     return {
       err: NextResponse.json(
-        { error: { code: "FORBIDDEN", message: "Acesso restrito a administradores." } },
+        { error: { code: "FORBIDDEN", message: "Acesso negado." } },
         { status: 403 },
       ),
     };
@@ -46,23 +64,33 @@ async function requireAdmin() {
 }
 
 export async function GET() {
-  const guard = await requireAdmin();
+  const guard = await requireAuth(["admin", "owner"]);
   if (guard.err) return guard.err;
 
-  const supabase = createServerClient();
-  const { data: rows, error: fetchErr } = await supabase
-    .from("events")
-    .select("*")
-    .order("starts_at", { ascending: false });
+  const session = guard.session!;
+  const role = (session.user as { role?: string }).role ?? "";
+  const userId = (session.user as { id?: string }).id ?? "";
 
+  const supabase = createServerClient();
+  let query = supabase.from("events").select("*").order("starts_at", { ascending: false });
+
+  if (role === "owner") {
+    query = query.eq("organizer_id", userId);
+  }
+
+  const { data: rows, error: fetchErr } = await query;
   if (fetchErr) throw fetchErr;
 
   return NextResponse.json({ events: (rows ?? []).map(mapEvent) });
 }
 
 export async function POST(req: NextRequest) {
-  const guard = await requireAdmin();
+  const guard = await requireAuth(["admin", "owner"]);
   if (guard.err) return guard.err;
+
+  const session = guard.session!;
+  const role = (session.user as { role?: string }).role ?? "";
+  const userId = (session.user as { id?: string }).id ?? "";
 
   const parsed = createEventSchema.safeParse(
     await req.json().catch(() => null),
@@ -72,6 +100,22 @@ export async function POST(req: NextRequest) {
       { error: { code: "VALIDATION_FAILED", message: "Dados inválidos.", details: parsed.error.flatten() } },
       { status: 422 },
     );
+  }
+
+  if (role === "owner") {
+    const count = await getOwnerEventCount(userId);
+    if (count >= FREE_EVENT_LIMIT) {
+      return NextResponse.json(
+        {
+          error: {
+            code: "PAYMENT_REQUIRED",
+            message: "Você atingiu o limite do plano gratuito. Crie um checkout para adicionar mais eventos.",
+            checkoutRequired: true,
+          },
+        },
+        { status: 402 },
+      );
+    }
   }
 
   const body = parsed.data;
@@ -92,7 +136,7 @@ export async function POST(req: NextRequest) {
   }
 
   const id = crypto.randomUUID();
-  const organizerId = (guard.session!.user as { id: string }).id;
+  const organizerId = role === "owner" ? userId : (session.user as { id: string }).id;
 
   const { data: row, error: insertErr } = await supabase
     .from("events")

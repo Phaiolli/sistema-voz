@@ -2,6 +2,14 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
 import { GET, POST } from "./route";
 
+// plan-limits mock — values overridden per test via vi.mocked
+vi.mock("@/lib/plan-limits", () => ({
+  getOwnerEventCount: vi.fn().mockResolvedValue(0),
+  FREE_EVENT_LIMIT: 1,
+}));
+
+import { getOwnerEventCount } from "@/lib/plan-limits";
+
 const mockSupabase = { from: vi.fn() };
 
 vi.mock("@/lib/supabase", () => ({ createServerClient: () => mockSupabase }));
@@ -127,5 +135,75 @@ describe("POST /api/v1/events", () => {
     const json = await res.json();
     expect(json.id).toBe("evt_1");
     expect(json).not.toHaveProperty("password_hash");
+  });
+});
+
+describe("GET /api/v1/events — owner filtering", () => {
+  it("returns only owner events when role is owner", async () => {
+    vi.mocked(auth).mockResolvedValue({
+      user: { role: "owner", id: "usr_owner" },
+    } as never);
+    const ownerRow = { ...mockEventRow, organizer_id: "usr_owner" };
+    const chain = makeChain([ownerRow]);
+    mockSupabase.from.mockReturnValue(chain);
+    const res = await GET();
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json.events).toHaveLength(1);
+    // eq must have been called with organizer_id filter
+    expect(chain.eq).toHaveBeenCalledWith("organizer_id", "usr_owner");
+  });
+
+  it("does not apply organizer_id filter when role is admin", async () => {
+    vi.mocked(auth).mockResolvedValue({
+      user: { role: "admin", id: "usr_admin" },
+    } as never);
+    const chain = makeChain([mockEventRow]);
+    mockSupabase.from.mockReturnValue(chain);
+    const res = await GET();
+    expect(res.status).toBe(200);
+    expect(chain.eq).not.toHaveBeenCalledWith("organizer_id", expect.anything());
+  });
+});
+
+describe("POST /api/v1/events — owner plan limits", () => {
+  const ownerValidBody = {
+    name: "Evento Owner",
+    slug: "evento-owner",
+    startsAt: "2025-07-01T10:00",
+    endsAt: "2025-07-01T16:00",
+    place: "Salão",
+  };
+
+  function makeOwnerRequest(body: unknown) {
+    return new NextRequest("http://localhost/api/v1/events", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+  }
+
+  it("creates event (201) when owner has 0 events", async () => {
+    vi.mocked(auth).mockResolvedValue({
+      user: { role: "owner", id: "usr_owner" },
+    } as never);
+    vi.mocked(getOwnerEventCount).mockResolvedValue(0);
+    const chain = makeChain(mockEventRow);
+    chain.maybeSingle.mockResolvedValue({ data: null });
+    mockSupabase.from.mockReturnValue(chain);
+    const res = await POST(makeOwnerRequest(ownerValidBody));
+    expect(res.status).toBe(201);
+  });
+
+  it("returns 402 PAYMENT_REQUIRED when owner already has 1 event on free plan", async () => {
+    vi.mocked(auth).mockResolvedValue({
+      user: { role: "owner", id: "usr_owner" },
+    } as never);
+    vi.mocked(getOwnerEventCount).mockResolvedValue(1);
+    const res = await POST(makeOwnerRequest(ownerValidBody));
+    expect(res.status).toBe(402);
+    const json = await res.json();
+    expect(json.error.code).toBe("PAYMENT_REQUIRED");
+    expect(json.error.checkoutRequired).toBe(true);
   });
 });

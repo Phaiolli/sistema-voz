@@ -53,7 +53,31 @@ Acesse [http://localhost:3000](http://localhost:3000).
 | `SUPABASE_SERVICE_ROLE_KEY` | Chave de service role (somente servidor) |
 | `AUTH_SECRET` | Secret para assinar JWT do NextAuth (`openssl rand -base64 32`) |
 | `SEED_SECRET` | Secret para proteger o endpoint `/api/seed` |
-| `NEXT_PUBLIC_APP_URL` | URL pública da aplicação |
+| `NEXT_PUBLIC_APP_URL` | URL pública da aplicação (ex.: `https://seudominio.com`) |
+| `STRIPE_SECRET_KEY` | Chave secreta do Stripe (`sk_live_...` ou `sk_test_...`) |
+| `STRIPE_WEBHOOK_SECRET` | Secret do webhook Stripe (`whsec_...`) |
+| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Chave publicável do Stripe (`pk_live_...` ou `pk_test_...`) |
+
+## Setup Stripe
+
+1. **Criar produto no Stripe Dashboard**
+   - Acesse [dashboard.stripe.com/products](https://dashboard.stripe.com/products) e crie um produto "voz. — Evento pago" com preço único de R$ 59,90.
+
+2. **Copiar as chaves para `.env.local`**
+   ```
+   STRIPE_SECRET_KEY=sk_live_...
+   STRIPE_WEBHOOK_SECRET=whsec_...
+   NEXT_PUBLIC_APP_URL=https://seudominio.com
+   NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_live_...
+   ```
+
+3. **Configurar o webhook**
+   - No Stripe Dashboard → Developers → Webhooks → Add endpoint.
+   - URL: `https://seudominio.com/api/webhooks/stripe`
+   - Evento: `checkout.session.completed`
+
+4. **Copiar o Signing Secret**
+   - Após criar o webhook, copie o valor de **Signing secret** (`whsec_...`) para `STRIPE_WEBHOOK_SECRET` no `.env.local`.
 
 ## Rotas
 
@@ -126,6 +150,7 @@ src/
 |-------|-----------|
 | `admin` | Acesso total — gerencia eventos, usuários e modera perguntas |
 | `mediador` | Seleciona, apresenta e modera perguntas de eventos atribuídos |
+| `owner` | Organizer SaaS — cria e gerencia seus próprios eventos; sujeito a limites de plano |
 
 ## Desenvolvimento
 

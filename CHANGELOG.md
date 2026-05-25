@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] — 2026-05-25
+
+### Added
+- **SaaS multi-tenant**: múltiplas contas com plano gratuito (1 evento, 15 perguntas) e eventos pagos via Stripe (R$ 59,90/evento)
+- Registro público de organizers em `/cadastro`
+- Dashboard do organizer em `/dashboard`
+- Pagamento por evento via Stripe Checkout
+- Webhook Stripe para processamento de pagamentos (`/api/webhooks/stripe`)
+- Portabilidade de dados LGPD (`GET /api/v1/me/data-export`)
+- Direito ao esquecimento LGPD (`DELETE /api/v1/me/data`)
+- Página de privacidade em `/dashboard/conta`
+- Páginas de retorno pós-pagamento (`/pagamento/sucesso`, `/pagamento/cancelado`)
+
+### Changed
+- `POST /api/v1/events`: owners com 1+ evento no plano free recebem `402 PAYMENT_REQUIRED`
+- `GET /api/v1/events`: owners veem apenas seus próprios eventos
+- `GET|PATCH|DELETE /api/v1/events/:id`: verificação de ownership para owners
+- `POST /api/v1/events/:id/questions`: limite de 15 perguntas para eventos no plano free
+- Login redireciona owners para `/dashboard`, admins para `/admin/eventos`
+
+### Schema
+- Adicionado role `owner` ao enum `user_role`
+- Adicionada coluna `plan` (`free`|`paid`) em `users`
+- Nova tabela `event_payments`
+
 ## [Unreleased]
 
 ### Added — Pendências de produção (#45)

@@ -11,6 +11,13 @@ vi.mock("@/lib/supabase", () => ({
   createServerClient: () => mockSupabase,
 }));
 
+// Bypass plan-limits checks — tested separately in plan-limits.test.ts
+vi.mock("@/lib/plan-limits", () => ({
+  getOwnerPlan: vi.fn().mockResolvedValue("paid"),
+  getEventQuestionCount: vi.fn().mockResolvedValue(0),
+  FREE_QUESTION_LIMIT: 15,
+}));
+
 const mockEvent = { id: "evt_1", status: "active", config: {} };
 const mockQuestion = {
   id: "q_123",

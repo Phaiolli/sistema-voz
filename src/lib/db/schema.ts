@@ -2,7 +2,7 @@ import { pgTable, text, timestamp, boolean, integer, jsonb, pgEnum, uniqueIndex,
 
 export const eventStatusEnum = pgEnum("event_status", ["draft", "active", "ended"]);
 export const questionStatusEnum = pgEnum("question_status", ["pending", "next", "answered", "hidden"]);
-export const userRoleEnum = pgEnum("user_role", ["admin", "mediador"]);
+export const userRoleEnum = pgEnum("user_role", ["admin", "mediador", "owner"]);
 
 export const events = pgTable("events", {
   id: text("id").primaryKey(),
@@ -44,6 +44,7 @@ export const users = pgTable("users", {
   name: text("name").notNull(),
   email: text("email").notNull().unique(),
   role: userRoleEnum("role").notNull().default("mediador"),
+  plan: text("plan").notNull().default("free"),
   passwordHash: text("password_hash").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   lastSeenAt: timestamp("last_seen_at", { withTimezone: true }),
@@ -86,4 +87,20 @@ export const registrations = pgTable("registrations", {
 }, (t) => [
   uniqueIndex("registrations_event_email_idx").on(t.eventId, t.email),
   index("registrations_event_id_idx").on(t.eventId),
+]);
+
+export const eventPayments = pgTable("event_payments", {
+  id: text("id").primaryKey(),
+  eventId: text("event_id").references(() => events.id),
+  ownerId: text("owner_id").notNull().references(() => users.id),
+  stripeSessionId: text("stripe_session_id").notNull().unique(),
+  stripePaymentIntentId: text("stripe_payment_intent_id"),
+  amount: integer("amount").notNull(),
+  currency: text("currency").notNull().default("brl"),
+  status: text("status").notNull().default("pending"),
+  eventData: jsonb("event_data"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  paidAt: timestamp("paid_at", { withTimezone: true }),
+}, (t) => [
+  index("event_payments_owner_id_idx").on(t.ownerId),
 ]);

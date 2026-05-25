@@ -2,9 +2,27 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase";
 import { auth } from "@/lib/auth";
 import { patchEventSchema } from "@/lib/schemas";
+import { isEventOwnedBy } from "@/lib/plan-limits";
+import type { EventStatus, EventTheme, EventConfig } from "@/lib/types";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function mapEvent(row: Record<string, any>) {
+interface EventRow {
+  id: string;
+  slug: string;
+  name: string;
+  starts_at: string;
+  ends_at: string;
+  place: string;
+  address: string;
+  status: EventStatus;
+  about: string;
+  theme: EventTheme | null;
+  config: EventConfig | null;
+  organizer_id: string;
+  created_at: string;
+  updated_at: string;
+}
+
+function mapEvent(row: EventRow) {
   return {
     id: row.id,
     slug: row.slug,
@@ -23,7 +41,7 @@ function mapEvent(row: Record<string, any>) {
   };
 }
 
-async function requireAdmin() {
+async function requireAuth(roles: string[]) {
   const session = await auth();
   if (!session?.user) {
     return {
@@ -33,11 +51,11 @@ async function requireAdmin() {
       ),
     };
   }
-  const role = (session.user as { role?: string }).role;
-  if (role !== "admin") {
+  const role = (session.user as { role?: string }).role ?? "";
+  if (!roles.includes(role)) {
     return {
       err: NextResponse.json(
-        { error: { code: "FORBIDDEN", message: "Acesso restrito a administradores." } },
+        { error: { code: "FORBIDDEN", message: "Acesso negado." } },
         { status: 403 },
       ),
     };
@@ -45,11 +63,31 @@ async function requireAdmin() {
   return { session };
 }
 
+type SessionUser = { role?: string; id?: string };
+
+async function checkOwnership(eventId: string, sessionUser: SessionUser) {
+  if (sessionUser.role === "owner") {
+    const owned = await isEventOwnedBy(eventId, sessionUser.id ?? "");
+    if (!owned) {
+      return NextResponse.json(
+        { error: { code: "FORBIDDEN", message: "Acesso negado." } },
+        { status: 403 },
+      );
+    }
+  }
+  return null;
+}
+
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const guard = await requireAdmin();
+  const guard = await requireAuth(["admin", "owner"]);
   if (guard.err) return guard.err;
 
   const { id } = await params;
+  const sessionUser = guard.session!.user as SessionUser;
+
+  const ownershipErr = await checkOwnership(id, sessionUser);
+  if (ownershipErr) return ownershipErr;
+
   const supabase = createServerClient();
 
   const { data: row } = await supabase
@@ -70,10 +108,14 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const guard = await requireAdmin();
+  const guard = await requireAuth(["admin", "owner"]);
   if (guard.err) return guard.err;
 
   const { id } = await params;
+  const sessionUser = guard.session!.user as SessionUser;
+
+  const ownershipErr = await checkOwnership(id, sessionUser);
+  if (ownershipErr) return ownershipErr;
 
   const parsed = patchEventSchema.safeParse(
     await req.json().catch(() => null),
@@ -139,10 +181,15 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const guard = await requireAdmin();
+  const guard = await requireAuth(["admin", "owner"]);
   if (guard.err) return guard.err;
 
   const { id } = await params;
+  const sessionUser = guard.session!.user as SessionUser;
+
+  const ownershipErr = await checkOwnership(id, sessionUser);
+  if (ownershipErr) return ownershipErr;
+
   const supabase = createServerClient();
 
   const { error: deleteErr } = await supabase

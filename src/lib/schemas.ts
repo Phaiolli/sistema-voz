@@ -53,14 +53,26 @@ export const createUserSchema = z.object({
     .min(8, "Senha mínima: 8 caracteres.")
     .regex(/[A-Z]/, "Senha: ao menos uma letra maiúscula.")
     .regex(/[0-9]/, "Senha: ao menos um número."),
-  role: z.enum(["admin", "mediador"]),
+  role: z.enum(["admin", "mediador", "owner"]),
 });
 export const patchUserSchema = z.object({
   name: z.string().min(2).max(100).optional(),
   email: z.string().email().optional(),
   password: z.string().min(8).regex(/[A-Z]/).regex(/[0-9]/).optional(),
-  role: z.enum(["admin", "mediador"]).optional(),
+  role: z.enum(["admin", "mediador", "owner"]).optional(),
 });
+
+export const registerSchema = z.object({
+  name: z.string().min(2, "Nome muito curto.").max(100),
+  email: z.string().email("E-mail inválido."),
+  password: z
+    .string()
+    .min(8, "Senha mínima: 8 caracteres.")
+    .regex(/[A-Z]/, "Ao menos uma letra maiúscula.")
+    .regex(/[0-9]/, "Ao menos um número."),
+  lgpdAccepted: z.boolean().refine((v) => v === true, "Aceite os termos LGPD para continuar."),
+});
+export type RegisterBody = z.infer<typeof registerSchema>;
 
 export const assignMediatorSchema = z.object({
   userId: z.string().min(1, "userId obrigatório."),

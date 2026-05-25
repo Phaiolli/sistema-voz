@@ -1,17 +1,25 @@
 "use client";
 
 import { useState } from "react";
-import { signIn, getSession } from "next-auth/react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { VozWordmark } from "@/components/voz/wordmark";
 import { AlertCircle, CheckCircle2 } from "lucide-react";
 
-export default function EntrarPage() {
+interface FormState {
+  name: string;
+  email: string;
+  password: string;
+  lgpdAccepted: boolean;
+}
+
+export default function CadastroPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const registered = searchParams.get("registered") === "1";
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [form, setForm] = useState<FormState>({
+    name: "",
+    email: "",
+    password: "",
+    lgpdAccepted: false,
+  });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -19,20 +27,34 @@ export default function EntrarPage() {
     e.preventDefault();
     setError("");
     setBusy(true);
-    const res = await signIn("credentials", { email, password, redirect: false });
-    setBusy(false);
-    if (res?.error) {
-      setError("Email ou senha incorretos.");
-    } else {
-      const params = new URLSearchParams(window.location.search);
-      const callbackUrl = params.get("callbackUrl");
-      if (callbackUrl?.startsWith("/")) {
-        router.push(callbackUrl);
+
+    try {
+      const res = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+
+      if (res.status === 201) {
+        router.push("/entrar?registered=1");
         return;
       }
-      const session = await getSession();
-      const role = (session?.user as { role?: string })?.role;
-      router.push(role === "admin" ? "/admin/eventos" : "/mediador");
+
+      if (res.status === 422) {
+        const data = (await res.json()) as { message?: string; errors?: Record<string, string[]> };
+        const firstError =
+          data.message ??
+          Object.values(data.errors ?? {}).flat()[0] ??
+          "Dados inválidos.";
+        setError(firstError);
+        return;
+      }
+
+      setError("Erro ao criar conta. Tente novamente.");
+    } catch {
+      setError("Erro de conexão. Verifique sua internet.");
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -52,12 +74,12 @@ export default function EntrarPage() {
             <div style={{ flex: 1 }} />
             <div>
               <p className="lo-hero">
-                Pergunte<span className="lo-dot">.</span><br />
-                Ouça<span className="lo-dot">.</span><br />
-                Conecte<span className="lo-dot">.</span>
+                Crie<span className="lo-dot">.</span><br />
+                Gerencie<span className="lo-dot">.</span><br />
+                Engaje<span className="lo-dot">.</span>
               </p>
               <p className="lo-sub">
-                Painel do mediador. Receba perguntas da plateia em tempo real e decida quais vão ao palco.
+                Crie sua conta de organizador e comece a gerenciar eventos com Q&amp;A ao vivo em minutos.
               </p>
             </div>
             <p className="lo-version">v1.0 · INCLUIR 2025</p>
@@ -68,15 +90,9 @@ export default function EntrarPage() {
           <div className="lo-form-wrap">
             <form onSubmit={submit} className="lo-form" noValidate>
               <div>
-                <h1 className="lo-title">Entrar</h1>
-                <p className="lo-caption">Para mediadores e administradores.</p>
+                <h1 className="lo-title">Criar conta</h1>
+                <p className="lo-caption">Comece gratuitamente.</p>
               </div>
-
-              {registered && (
-                <div role="status" className="lo-success">
-                  <CheckCircle2 size={16} aria-hidden /> Conta criada com sucesso! Faça login.
-                </div>
-              )}
 
               {error && (
                 <div role="alert" className="lo-error">
@@ -85,35 +101,71 @@ export default function EntrarPage() {
               )}
 
               <div className="lo-field">
-                <label htmlFor="lo-email">Email</label>
+                <label htmlFor="ca-name">Nome</label>
                 <input
-                  id="lo-email"
-                  type="email"
-                  autoComplete="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  id="ca-name"
+                  type="text"
+                  autoComplete="name"
+                  value={form.name}
+                  onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
                   required
                 />
               </div>
 
               <div className="lo-field">
-                <label htmlFor="lo-pass">Senha</label>
+                <label htmlFor="ca-email">E-mail</label>
                 <input
-                  id="lo-pass"
-                  type="password"
-                  autoComplete="current-password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  id="ca-email"
+                  type="email"
+                  autoComplete="email"
+                  value={form.email}
+                  onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
                   required
                 />
               </div>
 
-              <button type="submit" disabled={busy} className="lo-btn">
-                {busy ? "Entrando…" : "Entrar"}
+              <div className="lo-field">
+                <label htmlFor="ca-password">Senha</label>
+                <input
+                  id="ca-password"
+                  type="password"
+                  autoComplete="new-password"
+                  value={form.password}
+                  onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
+                  required
+                />
+                <span className="lo-hint-field">
+                  Mínimo 8 caracteres, uma maiúscula e um número.
+                </span>
+              </div>
+
+              <div className="lo-checkbox-wrap">
+                <input
+                  id="ca-lgpd"
+                  type="checkbox"
+                  className="lo-checkbox"
+                  checked={form.lgpdAccepted}
+                  onChange={(e) => setForm((f) => ({ ...f, lgpdAccepted: e.target.checked }))}
+                  required
+                />
+                <label htmlFor="ca-lgpd" className="lo-checkbox-label">
+                  Li e aceito os termos de uso e a política de privacidade (LGPD).
+                </label>
+              </div>
+
+              <button
+                type="submit"
+                disabled={busy || !form.lgpdAccepted}
+                className="lo-btn"
+              >
+                {busy ? "Criando conta…" : "Criar conta"}
               </button>
 
               <p className="lo-hint">
-                Sem cadastro público. Peça acesso ao organizador do evento.
+                Já tem uma conta?{" "}
+                <a href="/entrar" className="lo-link">
+                  Entrar
+                </a>
               </p>
             </form>
           </div>
@@ -181,17 +233,6 @@ export default function EntrarPage() {
           margin: 0;
         }
 
-        .lo-success {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          padding: 10px 14px;
-          background: hsl(142 71% 45% / .12);
-          border-radius: 10px;
-          color: hsl(142 71% 32%);
-          font-size: 14px;
-        }
-
         .lo-error {
           display: flex;
           align-items: center;
@@ -233,6 +274,34 @@ export default function EntrarPage() {
           border-color: hsl(var(--primary));
         }
 
+        .lo-hint-field {
+          font-size: 12px;
+          color: hsl(var(--muted-foreground));
+          line-height: 1.4;
+        }
+
+        .lo-checkbox-wrap {
+          display: flex;
+          align-items: flex-start;
+          gap: 10px;
+        }
+
+        .lo-checkbox {
+          width: 18px;
+          height: 18px;
+          flex-shrink: 0;
+          margin-top: 2px;
+          accent-color: hsl(var(--primary));
+          cursor: pointer;
+        }
+
+        .lo-checkbox-label {
+          font-size: 13px;
+          color: hsl(var(--muted-foreground));
+          line-height: 1.5;
+          cursor: pointer;
+        }
+
         .lo-btn {
           height: 52px;
           border-radius: 12px;
@@ -256,6 +325,16 @@ export default function EntrarPage() {
           color: hsl(var(--muted-foreground));
           margin: 0;
           line-height: 1.5;
+        }
+
+        .lo-link {
+          color: hsl(var(--primary));
+          text-decoration: none;
+          font-weight: 500;
+        }
+
+        .lo-link:hover {
+          text-decoration: underline;
         }
 
         /* ─── Desktop (≥ 768px) ─── */

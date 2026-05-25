@@ -89,13 +89,32 @@ export interface Question {
   participantId?: string;
 }
 
-export type UserRole = "admin" | "mediador";
+export type UserRole = "admin" | "mediador" | "owner";
+
+export type UserPlan = "free" | "paid";
+
+export type EventPaymentStatus = "pending" | "paid" | "refunded";
+
+export interface EventPayment {
+  id: string;
+  eventId: string | null;
+  ownerId: string;
+  stripeSessionId: string;
+  stripePaymentIntentId?: string | null;
+  amount: number;
+  currency: string;
+  status: EventPaymentStatus;
+  eventData?: unknown;
+  createdAt: string;
+  paidAt?: string | null;
+}
 
 export interface User {
   id: string;
   name: string;
   email: string;
   role: UserRole;
+  plan?: UserPlan;
   passwordHash: string;
   createdAt: string;
   lastSeenAt?: string;

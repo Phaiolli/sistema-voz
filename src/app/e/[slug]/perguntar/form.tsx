@@ -45,7 +45,7 @@ export function QuestionForm({ slug, eventId, eventName }: Props) {
       const res = await fetch(`/api/v1/events/${eventId}/questions`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ authorName: name.trim(), authorContact: contact.trim(), authorEmail: email.trim() || undefined, text: text.trim(), lgpdAccepted: true, anonymous }),
+        body: JSON.stringify({ authorName: name.trim(), authorContact: contact.trim(), authorEmail: email.trim() || undefined, text: text.trim(), lgpdAccepted: lgpd, anonymous }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -238,15 +238,21 @@ export function QuestionForm({ slug, eventId, eventName }: Props) {
 
           <div style={{ flex: 1, minHeight: 8 }} />
 
+          {!lgpd && (
+            <p style={{ textAlign: "center", color: "hsl(var(--muted-foreground))", fontSize: 13, margin: "-4px 0 0" }}>
+              Aceite os termos acima para enviar.
+            </p>
+          )}
+
           <button
             type="submit"
-            disabled={sending}
+            disabled={sending || !lgpd}
             style={{
-              height: 52, width: "100%", borderRadius: 10, border: "none", cursor: sending ? "not-allowed" : "pointer",
+              height: 52, width: "100%", borderRadius: 10, border: "none", cursor: (sending || !lgpd) ? "not-allowed" : "pointer",
               display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
               fontSize: 16, fontWeight: 700,
               background: "hsl(var(--accent))", color: "hsl(var(--accent-foreground))",
-              opacity: sending ? 0.7 : 1, transition: "opacity .15s",
+              opacity: (sending || !lgpd) ? 0.4 : 1, transition: "opacity .15s",
             }}
           >
             {sending ? "Enviando…" : <><Send size={18} aria-hidden /> Enviar pergunta</>}

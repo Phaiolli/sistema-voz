@@ -53,6 +53,11 @@ interface RegistrationRow {
 }
 
 export function MediatorDashboard() {
+  // Todos os hooks devem vir antes de qualquer return antecipado
+  const { data: session } = useSession();
+  const userRole = (session?.user as { role?: string } | undefined)?.role;
+  const isAdmin = userRole === "admin" || userRole === "superadmin";
+
   const [questions, setQuestions] = useState<Question[]>([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<Tab>("unread");
@@ -304,10 +309,6 @@ export function MediatorDashboard() {
       </div>
     );
   }
-
-  const { data: session } = useSession();
-  const userRole = (session?.user as { role?: string } | undefined)?.role;
-  const isAdmin = userRole === "admin" || userRole === "superadmin";
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100dvh", background: "hsl(var(--background))", color: "hsl(var(--foreground))" }}>

@@ -3,9 +3,14 @@ import { createClient } from "@supabase/supabase-js";
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
-// Browser/client-side Supabase client (for Realtime subscriptions)
+// Singleton browser client — evita múltiplas instâncias GoTrueClient no mesmo contexto
+let _browserClient: ReturnType<typeof createClient> | null = null;
+
 export function createBrowserClient() {
-  return createClient(url, anonKey);
+  if (!_browserClient) {
+    _browserClient = createClient(url, anonKey);
+  }
+  return _browserClient;
 }
 
 // Server-side Supabase client (for server actions / API routes)

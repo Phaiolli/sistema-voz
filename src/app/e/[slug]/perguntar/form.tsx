@@ -146,7 +146,6 @@ export function QuestionForm({ slug, eventId, eventName }: Props) {
 
           <Field
             label="WhatsApp"
-            labelSuffix="· só para o mediador entrar em contato se necessário"
             htmlFor="f-contact"
             error={showErr(contactOk) ? "Informe seu WhatsApp." : undefined}
           >

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Plus, Calendar, Mic } from "lucide-react";
+import { Plus } from "lucide-react";
 import { VozWordmark } from "@/components/voz/wordmark";
 import { HeaderControls } from "@/components/voz/header-controls";
 import { EnvSwitcher } from "@/components/voz/env-switcher";
@@ -277,19 +277,11 @@ export default function AdminUsuariosPage() {
         )}
       </main>
 
-      {/* Bottom nav — mobile only */}
-      <nav className="bottom-nav" aria-label="Navegação admin" style={{ position: "fixed", bottom: 0, left: 0, right: 0, height: 68, background: "hsl(var(--background))", borderTop: "1px solid hsl(var(--border))", display: "flex", zIndex: 20 }}>
-        <BottomNavItem href="/admin/eventos" icon={<Calendar size={22} aria-hidden />} label="Eventos" />
-        <BottomNavItem href="/admin/usuarios" icon={<UsersIcon />} label="Usuários" active />
-        <BottomNavItem href="/mediador" icon={<Mic size={22} aria-hidden />} label="Moderador" />
-      </nav>
-
       <style>{`
         .admin-subnav { display: flex; }
         .btn-label { display: inline; }
         .users-table { display: block; }
         .users-cards { display: none; }
-        .bottom-nav { display: none; }
         .form-grid { grid-template-columns: 1fr 1fr; }
 
         @media (max-width: 639px) {
@@ -297,7 +289,6 @@ export default function AdminUsuariosPage() {
           .btn-label { display: none; }
           .users-table { display: none; }
           .users-cards { display: flex !important; }
-          .bottom-nav { display: flex; }
           .form-grid { grid-template-columns: 1fr !important; }
         }
       `}</style>
@@ -329,19 +320,6 @@ function NavLink({ href, children, active }: { href: string; children: React.Rea
       style={{ padding: "12px 14px", fontSize: 14, fontWeight: 500, textDecoration: "none", borderBottom: active ? "2px solid hsl(var(--primary))" : "2px solid transparent", color: active ? "hsl(var(--primary))" : "hsl(var(--muted-foreground))", marginBottom: -1 }}
     >
       {children}
-    </Link>
-  );
-}
-
-function BottomNavItem({ href, icon, label, active }: { href: string; icon: React.ReactNode; label: string; active?: boolean }) {
-  return (
-    <Link
-      href={href}
-      style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 3, textDecoration: "none", color: active ? "hsl(var(--primary))" : "hsl(var(--muted-foreground))", fontSize: 11, fontWeight: active ? 600 : 500 }}
-      aria-current={active ? "page" : undefined}
-    >
-      {icon}
-      {label}
     </Link>
   );
 }

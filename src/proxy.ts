@@ -33,6 +33,12 @@ export default auth((req) => {
     }
   }
 
+  if (pathname.startsWith("/conta")) {
+    if (!user) {
+      return NextResponse.redirect(new URL(`/entrar?callbackUrl=${encodeURIComponent(pathname)}`, req.url));
+    }
+  }
+
   if (pathname.startsWith("/dashboard")) {
     if (!user) {
       return NextResponse.redirect(new URL(`/entrar?callbackUrl=${encodeURIComponent(pathname)}`, req.url));
@@ -46,5 +52,5 @@ export default auth((req) => {
 });
 
 export const config = {
-  matcher: ["/admin/:path*", "/mediador/:path*", "/mediador/credenciamento/:path*", "/dashboard/:path*", "/plataforma/:path*"],
+  matcher: ["/admin/:path*", "/mediador/:path*", "/mediador/credenciamento/:path*", "/dashboard/:path*", "/plataforma/:path*", "/conta/:path*", "/conta"],
 };

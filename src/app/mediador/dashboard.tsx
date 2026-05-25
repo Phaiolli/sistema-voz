@@ -8,8 +8,6 @@ import { HeaderControls } from "@/components/voz/header-controls";
 import { EnvSwitcher } from "@/components/voz/env-switcher";
 import { createBrowserClient } from "@/lib/supabase";
 import { signOut, useSession } from "next-auth/react";
-import Link from "next/link";
-import { Calendar, Mic } from "lucide-react";
 import type { Question, QuestionStatus } from "@/lib/types";
 import { QRModal } from "./qr-modal";
 import { toast } from "sonner";
@@ -54,9 +52,7 @@ interface RegistrationRow {
 
 export function MediatorDashboard() {
   // Todos os hooks devem vir antes de qualquer return antecipado
-  const { data: session } = useSession();
-  const userRole = (session?.user as { role?: string } | undefined)?.role;
-  const isAdmin = userRole === "admin" || userRole === "superadmin";
+  useSession();
 
   const [questions, setQuestions] = useState<Question[]>([]);
   const [loading, setLoading] = useState(true);
@@ -418,32 +414,17 @@ export function MediatorDashboard() {
         />
       )}
 
-      {/* Bottom nav — mobile only, só para admin/superadmin */}
-      {isAdmin && (
-        <nav
-          className="med-bottom-nav"
-          aria-label="Navegação"
-          style={{ position: "fixed", bottom: 0, left: 0, right: 0, height: 68, background: "hsl(var(--background))", borderTop: "1px solid hsl(var(--border))", display: "flex", zIndex: 20 }}
-        >
-          <BottomNavItem href="/admin/eventos" icon={<Calendar size={22} aria-hidden />} label="Eventos" />
-          <BottomNavItem href="/admin/usuarios" icon={<UsersIcon />} label="Usuários" />
-          <BottomNavItem href="/mediador" icon={<Mic size={22} aria-hidden />} label="Moderador" active />
-        </nav>
-      )}
-
       <style>{`
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
         .nav-lbl { display: inline; }
         .med-btn-lbl { display: inline; }
         .med-event-name { display: inline-block; }
-        .med-bottom-nav { display: none !important; }
         @media (max-width: 480px) {
           .nav-lbl { display: none; }
         }
         @media (max-width: 639px) {
           .med-btn-lbl { display: none; }
           .med-event-name { display: none; }
-          .med-bottom-nav { display: flex !important; }
           .med-main-content { padding-bottom: 80px; }
         }
       `}</style>
@@ -640,26 +621,6 @@ function MedTab({ label, count, active, onClick }: { label: string; count: numbe
   );
 }
 
-function BottomNavItem({ href, icon, label, active }: { href: string; icon: React.ReactNode; label: string; active?: boolean }) {
-  return (
-    <Link
-      href={href}
-      style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 3, textDecoration: "none", color: active ? "hsl(var(--primary))" : "hsl(var(--muted-foreground))", fontSize: 11, fontWeight: active ? 600 : 500 }}
-      aria-current={active ? "page" : undefined}
-    >
-      {icon}
-      {label}
-    </Link>
-  );
-}
-
-function UsersIcon() {
-  return (
-    <svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
-    </svg>
-  );
-}
 
 function ExportModal({ eventId, eventSlug, onClose }: { eventId: string; eventSlug: string; onClose: () => void }) {
   const [tab, setTab] = useState<"participantes" | "inscritos">("participantes");

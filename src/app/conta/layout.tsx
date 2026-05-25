@@ -4,7 +4,7 @@ import { AdminThemeProvider } from "@/components/voz/admin-theme-provider"
 import { BottomNav } from "@/components/voz/bottom-nav"
 import { Toaster } from "@/components/ui/sonner"
 
-export default function MediadorLayout({ children }: { children: ReactNode }) {
+export default function ContaLayout({ children }: { children: ReactNode }) {
   return (
     <SessionProvider>
       <AdminThemeProvider>

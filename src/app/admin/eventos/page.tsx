@@ -178,18 +178,10 @@ export default function AdminEventosPage() {
         <Plus size={24} aria-hidden />
       </Link>
 
-      {/* Bottom nav — mobile only */}
-      <nav className="bottom-nav" aria-label="Navegação admin" style={{ position: "fixed", bottom: 0, left: 0, right: 0, height: 68, background: "hsl(var(--background))", borderTop: "1px solid hsl(var(--border))", display: "flex", zIndex: 20 }}>
-        <BottomNavItem href="/admin/eventos" icon={<CalendarIcon />} label="Eventos" active />
-        <BottomNavItem href="/admin/usuarios" icon={<UsersIcon />} label="Usuários" />
-        <BottomNavItem href="/mediador" icon={<MicIcon />} label="Moderador" />
-      </nav>
-
       <style>{`
         .admin-subnav { display: flex; }
         .btn-new-desktop { display: inline-flex; }
         .fab { display: none; }
-        .bottom-nav { display: none; }
         .ev-actions { display: flex; }
         .ev-card {
           position: relative;
@@ -209,7 +201,6 @@ export default function AdminEventosPage() {
           .admin-subnav { display: none; }
           .btn-new-desktop { display: none; }
           .fab { display: flex; }
-          .bottom-nav { display: flex; }
           .ev-actions { display: none; }
         }
       `}</style>
@@ -241,29 +232,3 @@ function ActionBtn({ href, icon, label }: { href: string; icon: React.ReactNode;
   );
 }
 
-function BottomNavItem({ href, icon, label, active }: { href: string; icon: React.ReactNode; label: string; active?: boolean }) {
-  return (
-    <Link
-      href={href}
-      style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 3, textDecoration: "none", color: active ? "hsl(var(--primary))" : "hsl(var(--muted-foreground))", fontSize: 11, fontWeight: active ? 600 : 500 }}
-      aria-current={active ? "page" : undefined}
-    >
-      {icon}
-      {label}
-    </Link>
-  );
-}
-
-function CalendarIcon() {
-  return <Calendar size={22} aria-hidden />;
-}
-function UsersIcon() {
-  return (
-    <svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
-    </svg>
-  );
-}
-function MicIcon() {
-  return <Mic size={22} aria-hidden />;
-}

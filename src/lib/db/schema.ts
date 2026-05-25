@@ -2,7 +2,7 @@ import { pgTable, text, timestamp, boolean, integer, jsonb, pgEnum, uniqueIndex,
 
 export const eventStatusEnum = pgEnum("event_status", ["draft", "active", "ended"]);
 export const questionStatusEnum = pgEnum("question_status", ["pending", "next", "answered", "hidden"]);
-export const userRoleEnum = pgEnum("user_role", ["admin", "mediador", "owner"]);
+export const userRoleEnum = pgEnum("user_role", ["admin", "mediador", "owner", "superadmin"]);
 
 export const events = pgTable("events", {
   id: text("id").primaryKey(),

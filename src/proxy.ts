@@ -6,11 +6,20 @@ export default auth((req) => {
   const session = req.auth;
   const user = session?.user as { role?: string } | undefined;
 
+  if (pathname.startsWith("/plataforma")) {
+    if (!user) {
+      return NextResponse.redirect(new URL(`/entrar?callbackUrl=${encodeURIComponent(pathname)}`, req.url));
+    }
+    if (user.role !== "superadmin") {
+      return NextResponse.redirect(new URL("/entrar", req.url));
+    }
+  }
+
   if (pathname.startsWith("/admin")) {
     if (!user) {
       return NextResponse.redirect(new URL(`/entrar?callbackUrl=${encodeURIComponent(pathname)}`, req.url));
     }
-    if (user.role !== "admin") {
+    if (user.role !== "admin" && user.role !== "superadmin") {
       return NextResponse.redirect(new URL("/entrar", req.url));
     }
   }
@@ -19,7 +28,7 @@ export default auth((req) => {
     if (!user) {
       return NextResponse.redirect(new URL(`/entrar?callbackUrl=${encodeURIComponent(pathname)}`, req.url));
     }
-    if (user.role !== "admin" && user.role !== "mediador") {
+    if (user.role !== "admin" && user.role !== "mediador" && user.role !== "superadmin") {
       return NextResponse.redirect(new URL("/entrar", req.url));
     }
   }
@@ -28,7 +37,7 @@ export default auth((req) => {
     if (!user) {
       return NextResponse.redirect(new URL(`/entrar?callbackUrl=${encodeURIComponent(pathname)}`, req.url));
     }
-    if (user.role !== "owner" && user.role !== "admin") {
+    if (user.role !== "owner" && user.role !== "admin" && user.role !== "superadmin") {
       return NextResponse.redirect(new URL("/entrar", req.url));
     }
   }
@@ -37,5 +46,5 @@ export default auth((req) => {
 });
 
 export const config = {
-  matcher: ["/admin/:path*", "/mediador/:path*", "/mediador/credenciamento/:path*", "/dashboard/:path*"],
+  matcher: ["/admin/:path*", "/mediador/:path*", "/mediador/credenciamento/:path*", "/dashboard/:path*", "/plataforma/:path*"],
 };

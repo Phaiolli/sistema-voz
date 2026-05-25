@@ -89,7 +89,7 @@ export interface Question {
   participantId?: string;
 }
 
-export type UserRole = "admin" | "mediador" | "owner";
+export type UserRole = "admin" | "mediador" | "owner" | "superadmin";
 
 export type UserPlan = "free" | "paid";
 

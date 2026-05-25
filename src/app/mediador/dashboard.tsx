@@ -5,6 +5,7 @@ import type { RealtimeChannel } from "@supabase/supabase-js";
 import { ExternalLink, QrCode, ArrowLeft, ArrowRight, EyeOff, RotateCcw, Trash2, MonitorPlay, MonitorOff, Download } from "lucide-react";
 import { VozLockup } from "@/components/voz/wordmark";
 import { HeaderControls } from "@/components/voz/header-controls";
+import { EnvSwitcher } from "@/components/voz/env-switcher";
 import { createBrowserClient } from "@/lib/supabase";
 import { signOut } from "next-auth/react";
 import type { Question, QuestionStatus } from "@/lib/types";
@@ -308,6 +309,8 @@ export function MediatorDashboard() {
       {/* Header */}
       <header style={{ height: 56, borderBottom: "1px solid hsl(var(--border))", display: "flex", alignItems: "center", padding: "0 16px", gap: 10, flexShrink: 0, minWidth: 0, overflow: "hidden" }}>
         <VozLockup eventName={eventName} size={18} />
+        <div style={{ width: 1, height: 24, background: "hsl(var(--border))", flexShrink: 0 }} aria-hidden />
+        <EnvSwitcher active="mediador" />
         <div style={{ flex: 1 }} />
         {newBadge > 0 && (
           <span aria-live="polite" aria-atomic="true" style={{ display: "inline-block", padding: "4px 10px", borderRadius: 999, background: "hsl(var(--accent) / .15)", color: "hsl(38 85% 32%)", fontSize: 13, fontWeight: 600, animation: "pulse 2s infinite", flexShrink: 0 }}>
@@ -358,7 +361,7 @@ export function MediatorDashboard() {
       </div>
 
       {/* Main: single column — up to 2 prev + current + up to 3 next */}
-      <main style={{ flex: 1, overflowY: "auto", padding: "12px 16px", display: "flex", flexDirection: "column", gap: 6, maxWidth: 800, width: "100%", margin: "0 auto", boxSizing: "border-box" }}>
+      <main style={{ flex: 1, overflowY: "auto", padding: "12px 16px", display: "flex", flexDirection: "column", gap: 6, width: "100%", boxSizing: "border-box" }}>
         {listed.length === 0 && (
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", flex: 1, flexDirection: "column", gap: 8, color: "hsl(var(--muted-foreground))" }}>
             <p style={{ fontFamily: '"Archivo", sans-serif', fontWeight: 600, fontSize: 16, color: "hsl(var(--foreground))", margin: 0 }}>Sem perguntas aqui</p>
@@ -421,7 +424,12 @@ export function MediatorDashboard() {
       <style>{`
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
         .nav-lbl { display: inline; }
-        @media (max-width: 480px) { .nav-lbl { display: none; } }
+        @media (max-width: 480px) {
+          .nav-lbl { display: none; }
+        }
+        @media (max-width: 639px) {
+          .med-toolbar-label { display: none; }
+        }
       `}</style>
     </div>
   );
@@ -526,7 +534,7 @@ function QuestionSlot({ q, role, projectedId, onClick, onPrev, onNext, onProject
         <p style={{
           fontFamily: '"Archivo", sans-serif',
           fontWeight: isCurrent ? 500 : 400,
-          fontSize: isCurrent ? 22 : 13,
+          fontSize: isCurrent ? "clamp(18px, 2.2vw, 28px)" : 13,
           lineHeight: 1.35,
           margin: 0,
           color: q.status === "answered" || q.status === "hidden" ? "hsl(var(--muted-foreground))" : "hsl(var(--foreground))",
@@ -579,13 +587,13 @@ function formatRelative(iso: string) {
   return `há ${Math.floor(diff / 60)}h`;
 }
 
-const primaryBtnStyle: React.CSSProperties = { display: "inline-flex", alignItems: "center", gap: 6, height: 36, padding: "0 14px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 13, fontWeight: 600, background: "hsl(var(--primary))", color: "hsl(var(--primary-foreground))", flexShrink: 0 };
+const primaryBtnStyle: React.CSSProperties = { display: "inline-flex", alignItems: "center", gap: 6, height: 44, padding: "0 16px", borderRadius: 9, border: "none", cursor: "pointer", fontSize: 14, fontWeight: 600, background: "hsl(var(--primary))", color: "hsl(var(--primary-foreground))", flexShrink: 0 };
 const projectedBtnStyle: React.CSSProperties = { ...primaryBtnStyle, background: "hsl(var(--primary) / .12)", color: "hsl(var(--primary))", border: "1px solid hsl(var(--primary) / .35)" };
 const secondaryBtnStyle: React.CSSProperties = { ...primaryBtnStyle, background: "hsl(var(--muted))", color: "hsl(var(--foreground))", border: "1px solid hsl(var(--border))" };
 const outlineBtnStyle: React.CSSProperties = { ...primaryBtnStyle, background: "transparent", color: "hsl(var(--foreground))", border: "1px solid hsl(var(--border))" };
-const ghostSmallStyle: React.CSSProperties = { display: "inline-flex", alignItems: "center", gap: 4, height: 28, padding: "0 8px", borderRadius: 6, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 500, background: "transparent", color: "hsl(var(--muted-foreground))", flexShrink: 0 };
-const deleteBtnStyle: React.CSSProperties = { display: "inline-flex", alignItems: "center", justifyContent: "center", width: 36, height: 36, borderRadius: 8, border: "1px solid hsl(var(--destructive) / .3)", cursor: "pointer", background: "transparent", color: "hsl(var(--destructive))", flexShrink: 0 };
-const toolBtnStyle: React.CSSProperties = { display: "inline-flex", flexDirection: "column", alignItems: "center", gap: 2, padding: "5px 14px", borderRadius: 8, border: "1px solid hsl(var(--border))", cursor: "pointer", fontSize: 11, fontWeight: 500, background: "transparent", color: "hsl(var(--foreground))", minWidth: 64, flexShrink: 0 };
+const ghostSmallStyle: React.CSSProperties = { display: "inline-flex", alignItems: "center", gap: 4, height: 32, padding: "0 10px", borderRadius: 7, border: "none", cursor: "pointer", fontSize: 13, fontWeight: 500, background: "transparent", color: "hsl(var(--muted-foreground))", flexShrink: 0 };
+const deleteBtnStyle: React.CSSProperties = { display: "inline-flex", alignItems: "center", justifyContent: "center", width: 44, height: 44, borderRadius: 9, border: "1px solid hsl(var(--destructive) / .3)", cursor: "pointer", background: "transparent", color: "hsl(var(--destructive))", flexShrink: 0 };
+const toolBtnStyle: React.CSSProperties = { display: "inline-flex", flexDirection: "column", alignItems: "center", gap: 2, padding: "7px 16px", borderRadius: 8, border: "1px solid hsl(var(--border))", cursor: "pointer", fontSize: 11, fontWeight: 500, background: "transparent", color: "hsl(var(--foreground))", minWidth: 64, flexShrink: 0 };
 
 function ExportModal({ eventId, eventSlug, onClose }: { eventId: string; eventSlug: string; onClose: () => void }) {
   const [tab, setTab] = useState<"participantes" | "inscritos">("participantes");

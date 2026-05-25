@@ -13,23 +13,34 @@ export default function Icon() {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          background: "hsl(240, 80%, 58%)",
+          background: "hsl(268, 62%, 36%)",
           borderRadius: "7px",
+          position: "relative",
         }}
       >
         <span
           style={{
             color: "white",
-            fontSize: 22,
+            fontSize: 20,
             fontWeight: 900,
             fontFamily: "Arial Black, Arial, sans-serif",
             letterSpacing: "-1px",
             lineHeight: 1,
-            marginTop: "1px",
           }}
         >
-          V
+          v
         </span>
+        <span
+          style={{
+            position: "absolute",
+            bottom: 5,
+            right: 5,
+            width: 7,
+            height: 7,
+            borderRadius: "50%",
+            background: "hsl(44, 92%, 54%)",
+          }}
+        />
       </div>
     ),
     { ...size },

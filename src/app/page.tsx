@@ -7,7 +7,7 @@ export default function LandingPage() {
       {/* ── NAV ───────────────────────────────────────────── */}
       <header style={{
         position: "sticky", top: 0, zIndex: 50,
-        background: "hsl(190 47% 14% / .92)",
+        background: "hsl(268 45% 12% / .92)",
         backdropFilter: "blur(12px)",
         borderBottom: "1px solid rgba(255,255,255,.08)",
       }}>
@@ -21,7 +21,7 @@ export default function LandingPage() {
 
       {/* ── HERO ──────────────────────────────────────────── */}
       <section style={{
-        background: "linear-gradient(160deg, hsl(190 47% 14%) 0%, hsl(190 47% 20%) 100%)",
+        background: "linear-gradient(160deg, hsl(268 45% 12%) 0%, hsl(268 45% 20%) 100%)",
         color: "#fff",
         padding: "96px 24px 112px",
         position: "relative",
@@ -31,7 +31,7 @@ export default function LandingPage() {
         <div aria-hidden style={{
           position: "absolute", bottom: 48, right: -60,
           width: 320, height: 10,
-          background: "hsl(38 92% 50%)",
+          background: "hsl(44 92% 54%)",
           transform: "rotate(-28deg)",
           opacity: .7,
         }} />
@@ -41,8 +41,8 @@ export default function LandingPage() {
             display: "inline-block",
             padding: "4px 14px",
             borderRadius: 999,
-            background: "hsl(38 92% 50% / .15)",
-            color: "hsl(38 92% 65%)",
+            background: "hsl(44 92% 54% / .15)",
+            color: "hsl(44 92% 72%)",
             fontSize: 13,
             fontWeight: 600,
             letterSpacing: ".04em",
@@ -60,7 +60,7 @@ export default function LandingPage() {
             margin: "0 0 28px",
           }}>
             Sua plateia<br />
-            tem voz<span style={{ color: "hsl(38 92% 50%)" }}>.</span>
+            tem voz<span style={{ color: "hsl(44 92% 54%)" }}>.</span>
           </h1>
 
           <p style={{
@@ -197,7 +197,7 @@ export default function LandingPage() {
 
       {/* ── CTA FINAL ─────────────────────────────────────── */}
       <section style={{
-        background: "linear-gradient(160deg, hsl(190 47% 14%) 0%, hsl(190 47% 22%) 100%)",
+        background: "linear-gradient(160deg, hsl(268 45% 12%) 0%, hsl(268 45% 20%) 100%)",
         padding: "80px 24px",
         textAlign: "center",
         color: "#fff",
@@ -209,7 +209,7 @@ export default function LandingPage() {
           letterSpacing: "-0.03em",
           margin: "0 0 16px",
         }}>
-          Pronto para o próximo evento<span style={{ color: "hsl(38 92% 50%)" }}>?</span>
+          Pronto para o próximo evento<span style={{ color: "hsl(44 92% 54%)" }}>?</span>
         </h2>
         <p style={{ color: "rgba(255,255,255,.65)", fontSize: 18, margin: "0 0 40px" }}>
           Cadastre-se agora e crie seu primeiro evento gratuitamente.
@@ -221,7 +221,7 @@ export default function LandingPage() {
 
       {/* ── FOOTER ────────────────────────────────────────── */}
       <footer style={{
-        background: "hsl(190 47% 10%)",
+        background: "hsl(268 45% 8%)",
         padding: "32px 24px",
         color: "rgba(255,255,255,.45)",
         fontSize: 13,

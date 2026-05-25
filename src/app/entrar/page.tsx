@@ -32,7 +32,8 @@ function EntrarForm() {
       }
       const session = await getSession();
       const role = (session?.user as { role?: string })?.role;
-      if (role === "admin") router.push("/admin/eventos");
+      if (role === "superadmin") router.push("/plataforma");
+      else if (role === "admin") router.push("/admin/eventos");
       else if (role === "owner") router.push("/dashboard");
       else router.push("/mediador");
     }
@@ -125,7 +126,7 @@ function EntrarForm() {
       <style>{`
         .lo-root {
           min-height: 100dvh;
-          background: hsl(190 47% 18%);
+          background: hsl(268 45% 14%);
           display: flex;
           flex-direction: column;
         }
@@ -280,7 +281,7 @@ function EntrarForm() {
             flex-direction: column;
             flex: 1;
             padding: 56px 64px;
-            background: hsl(190 47% 20%);
+            background: hsl(268 45% 18%);
             color: #fff;
             position: relative;
             overflow: hidden;
@@ -297,7 +298,7 @@ function EntrarForm() {
           }
 
           .lo-dot {
-            color: hsl(38 85% 56%);
+            color: hsl(44 92% 58%);
           }
 
           .lo-sub {
@@ -320,7 +321,7 @@ function EntrarForm() {
             top: 220px;
             width: 260px;
             height: 8px;
-            background: hsl(38 85% 56%);
+            background: hsl(44 92% 58%);
             transform: rotate(-28deg);
           }
 

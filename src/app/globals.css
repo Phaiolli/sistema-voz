@@ -59,13 +59,13 @@
     --muted-foreground:  25 5% 45%;
     --border:            20 6% 90%;
     --input:             20 6% 90%;
-    --primary:           240 80% 58%;
+    --primary:           268 62% 52%;
     --primary-foreground: 0 0% 100%;
-    --accent:            38 92% 50%;
+    --accent:            44 92% 54%;
     --accent-foreground: 20 14% 4%;
     --destructive:       0 72% 51%;
     --success:           142 71% 45%;
-    --ring:              240 80% 58%;
+    --ring:              268 62% 52%;
   }
 
   .dark {
@@ -75,13 +75,13 @@
     --muted-foreground:  25 5% 65%;
     --border:            20 6% 18%;
     --input:             20 6% 18%;
-    --primary:           240 80% 65%;
+    --primary:           268 62% 62%;
     --primary-foreground: 20 14% 4%;
-    --accent:            38 92% 55%;
+    --accent:            44 92% 58%;
     --accent-foreground: 20 14% 4%;
     --destructive:       0 72% 55%;
     --success:           142 65% 50%;
-    --ring:              240 80% 65%;
+    --ring:              268 62% 62%;
   }
 
   .theme-incluir {

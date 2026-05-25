@@ -45,7 +45,7 @@ export function QuestionForm({ slug, eventId, eventName }: Props) {
       const res = await fetch(`/api/v1/events/${eventId}/questions`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ authorName: anonymous ? "Anônimo" : name.trim(), authorContact: contact.trim(), authorEmail: email.trim() || undefined, text: text.trim(), lgpdAccepted: true }),
+        body: JSON.stringify({ authorName: name.trim(), authorContact: contact.trim(), authorEmail: email.trim() || undefined, text: text.trim(), lgpdAccepted: true, anonymous }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));

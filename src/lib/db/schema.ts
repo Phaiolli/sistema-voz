@@ -30,6 +30,8 @@ export const questions = pgTable("questions", {
   authorIp: text("author_ip"), // PII — used for rate limiting only; never returned by public API
   text: text("text").notNull(),
   status: questionStatusEnum("status").notNull().default("pending"),
+  isAnonymous: boolean("is_anonymous").notNull().default(false),
+  lgpdAccepted: boolean("lgpd_accepted").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   presentedAt: timestamp("presented_at", { withTimezone: true }),
   answeredAt: timestamp("answered_at", { withTimezone: true }),

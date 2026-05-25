@@ -103,6 +103,8 @@ export const sampleQuestions: Omit<Question, "eventId">[] = [
     authorContact: "marina@exemplo.com",
     text: "Como vocês recomendam abordar a comunicação com colegas neurodivergentes em ambientes corporativos onde ainda existe muito estigma?",
     status: "next",
+    isAnonymous: false,
+    lgpdAccepted: true,
     createdAt: new Date(Date.now() - 2 * 60000).toISOString(),
   },
   {
@@ -111,6 +113,8 @@ export const sampleQuestions: Omit<Question, "eventId">[] = [
     authorContact: "pedro.lima@gmail.com",
     text: "Existe alguma diferença entre o diagnóstico de AH/SD em adultos e em crianças? Como o adulto que nunca foi diagnosticado pode iniciar esse processo?",
     status: "pending",
+    isAnonymous: false,
+    lgpdAccepted: true,
     createdAt: new Date(Date.now() - 3 * 60000).toISOString(),
   },
   {
@@ -119,6 +123,8 @@ export const sampleQuestions: Omit<Question, "eventId">[] = [
     authorContact: "ju.costa@outlook.com",
     text: "Como conciliar a fé cristã com terapias e medicações? Vejo muita resistência na comunidade.",
     status: "pending",
+    isAnonymous: false,
+    lgpdAccepted: true,
     createdAt: new Date(Date.now() - 4 * 60000).toISOString(),
   },
   {
@@ -126,6 +132,8 @@ export const sampleQuestions: Omit<Question, "eventId">[] = [
     authorName: "Anônimo",
     text: "Meu filho de 8 anos foi diagnosticado com TEA nível 1. O que muda no acolhimento na escola dominical?",
     status: "pending",
+    isAnonymous: true,
+    lgpdAccepted: true,
     createdAt: new Date(Date.now() - 6 * 60000).toISOString(),
   },
   {
@@ -134,6 +142,8 @@ export const sampleQuestions: Omit<Question, "eventId">[] = [
     authorContact: "rafa@exemplo.com",
     text: "Quais sinais de AH/SD em adolescentes a igreja deveria saber identificar?",
     status: "pending",
+    isAnonymous: false,
+    lgpdAccepted: true,
     createdAt: new Date(Date.now() - 8 * 60000).toISOString(),
   },
   {
@@ -142,6 +152,8 @@ export const sampleQuestions: Omit<Question, "eventId">[] = [
     authorContact: "clara.m@exemplo.com",
     text: "Como apoiar pais que acabaram de receber o diagnóstico dos filhos?",
     status: "answered",
+    isAnonymous: false,
+    lgpdAccepted: true,
     createdAt: new Date(Date.now() - 11 * 60000).toISOString(),
   },
   {
@@ -149,6 +161,8 @@ export const sampleQuestions: Omit<Question, "eventId">[] = [
     authorName: "Anônimo",
     text: "Pergunta fora de contexto.",
     status: "hidden",
+    isAnonymous: true,
+    lgpdAccepted: true,
     createdAt: new Date(Date.now() - 16 * 60000).toISOString(),
   },
 ];

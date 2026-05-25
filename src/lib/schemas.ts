@@ -22,6 +22,7 @@ export const submitQuestionSchema = z.object({
   lgpdAccepted: z
     .boolean()
     .refine((v) => v === true, "É preciso aceitar os termos LGPD."),
+  anonymous: z.boolean().optional(),
 });
 
 export const patchQuestionSchema = z.object({

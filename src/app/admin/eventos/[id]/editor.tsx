@@ -108,7 +108,7 @@ export function EventEditor({ eventId, isNew }: { eventId: string | null; isNew:
   const [regsLoading, setRegsLoading] = useState(false);
 
   // Participantes
-  const [participants, setParticipants] = useState<{ name: string; whatsapp: string | null; email: string | null; questionCount: number; firstSeen: string }[]>([]);
+  const [participants, setParticipants] = useState<{ name: string; whatsapp: string | null; email: string | null; questionCount: number; firstSeen: string; isAnonymous: boolean; lgpdAccepted: boolean }[]>([]);
   const [participantsLoading, setParticipantsLoading] = useState(false);
 
   // Sorteio
@@ -197,7 +197,7 @@ export function EventEditor({ eventId, isNew }: { eventId: string | null; isNew:
     if (!eventId) return;
     setParticipantsLoading(true);
     fetch(`/api/v1/events/${eventId}/participants`)
-      .then((r) => r.json() as Promise<{ participants: { name: string; whatsapp: string | null; email: string | null; questionCount: number; firstSeen: string }[] }>)
+      .then((r) => r.json() as Promise<{ participants: { name: string; whatsapp: string | null; email: string | null; questionCount: number; firstSeen: string; isAnonymous: boolean; lgpdAccepted: boolean }[] }>)
       .then((d) => setParticipants(d.participants ?? []))
       .catch(() => toast.error("Erro ao carregar participantes."))
       .finally(() => setParticipantsLoading(false));
@@ -790,9 +790,9 @@ export function EventEditor({ eventId, isNew }: { eventId: string | null; isNew:
               <button
                 onClick={() => {
                   if (participants.length === 0) return;
-                  const header = "Nome,WhatsApp,E-mail,Perguntas";
+                  const header = "Nome,WhatsApp,E-mail,Perguntas,Anônimo?,LGPD";
                   const rows = participants.map((p) =>
-                    [p.name, p.whatsapp ?? "", p.email ?? "", p.questionCount].map((v) => `"${String(v).replace(/"/g, '""')}"`).join(",")
+                    [p.name, p.whatsapp ?? "", p.email ?? "", p.questionCount, p.isAnonymous ? "Sim" : "Não", p.lgpdAccepted ? "Sim" : "Não"].map((v) => `"${String(v).replace(/"/g, '""')}"`).join(",")
                   );
                   const csv = "﻿" + [header, ...rows].join("\n");
                   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
@@ -810,17 +810,17 @@ export function EventEditor({ eventId, isNew }: { eventId: string | null; isNew:
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
                 <thead>
                   <tr style={{ background: "hsl(var(--muted))", borderBottom: "1px solid hsl(var(--border))" }}>
-                    {["Nome", "WhatsApp", "E-mail", "Perguntas"].map((h) => (
+                    {["Nome", "WhatsApp", "E-mail", "Perguntas", "Anônimo?", "LGPD"].map((h) => (
                       <th key={h} style={{ padding: "10px 16px", textAlign: "left", fontWeight: 600, fontSize: 13 }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {participantsLoading && (
-                    <tr><td colSpan={4} style={{ padding: "24px 16px", textAlign: "center", color: "hsl(var(--muted-foreground))", fontSize: 13 }}>Carregando…</td></tr>
+                    <tr><td colSpan={6} style={{ padding: "24px 16px", textAlign: "center", color: "hsl(var(--muted-foreground))", fontSize: 13 }}>Carregando…</td></tr>
                   )}
                   {!participantsLoading && participants.length === 0 && (
-                    <tr><td colSpan={4} style={{ padding: "24px 16px", textAlign: "center", color: "hsl(var(--muted-foreground))", fontSize: 13 }}>Nenhum participante ainda.</td></tr>
+                    <tr><td colSpan={6} style={{ padding: "24px 16px", textAlign: "center", color: "hsl(var(--muted-foreground))", fontSize: 13 }}>Nenhum participante ainda.</td></tr>
                   )}
                   {!participantsLoading && participants.map((p, i) => (
                     <tr key={i} style={{ borderTop: i === 0 ? undefined : "1px solid hsl(var(--border))" }}>
@@ -828,6 +828,8 @@ export function EventEditor({ eventId, isNew }: { eventId: string | null; isNew:
                       <td style={{ padding: "10px 16px", color: "hsl(var(--muted-foreground))" }}>{p.whatsapp ?? "—"}</td>
                       <td style={{ padding: "10px 16px", color: "hsl(var(--muted-foreground))" }}>{p.email ?? "—"}</td>
                       <td style={{ padding: "10px 16px", color: "hsl(var(--muted-foreground))", textAlign: "center" }}>{p.questionCount}</td>
+                      <td style={{ padding: "10px 16px", textAlign: "center", color: p.isAnonymous ? "hsl(var(--muted-foreground))" : "hsl(142 71% 45%)" }}>{p.isAnonymous ? "Sim" : "Não"}</td>
+                      <td style={{ padding: "10px 16px", textAlign: "center", color: p.lgpdAccepted ? "hsl(142 71% 45%)" : "hsl(var(--destructive))" }}>{p.lgpdAccepted ? "Sim" : "Não"}</td>
                     </tr>
                   ))}
                 </tbody>

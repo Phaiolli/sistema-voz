@@ -79,6 +79,8 @@ export interface Question {
   authorEmail?: string;
   text: string;
   status: QuestionStatus;
+  isAnonymous: boolean;
+  lgpdAccepted: boolean;
   createdAt: string;
   presentedAt?: string;
   answeredAt?: string;

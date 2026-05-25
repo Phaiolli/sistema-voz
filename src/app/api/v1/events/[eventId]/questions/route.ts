@@ -23,6 +23,8 @@ function mapQuestion(row: Record<string, any>) {
     authorEmail: row.author_email ?? null,
     text: row.text,
     status: row.status,
+    isAnonymous: row.is_anonymous ?? false,
+    lgpdAccepted: row.lgpd_accepted ?? false,
     createdAt: row.created_at,
     presentedAt: row.presented_at ?? null,
     answeredAt: row.answered_at ?? null,
@@ -47,7 +49,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ eve
       { details: { field: firstField } },
     );
   }
-  const { authorName, authorContact, authorEmail, text } = parsed.data;
+  const { authorName, authorContact, authorEmail, text, anonymous, lgpdAccepted } = parsed.data;
 
   const supabase = createServerClient();
 
@@ -87,6 +89,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ eve
       author_ip: ip,
       text: text.trim(),
       status: "pending",
+      is_anonymous: anonymous ?? false,
+      lgpd_accepted: lgpdAccepted,
     })
     .select()
     .single();

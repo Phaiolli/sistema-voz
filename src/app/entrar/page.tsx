@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { signIn, getSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { VozWordmark } from "@/components/voz/wordmark";
 import { AlertCircle, CheckCircle2 } from "lucide-react";
 
-export default function EntrarPage() {
+function EntrarForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const registered = searchParams.get("registered") === "1";
@@ -32,7 +32,9 @@ export default function EntrarPage() {
       }
       const session = await getSession();
       const role = (session?.user as { role?: string })?.role;
-      router.push(role === "admin" ? "/admin/eventos" : "/mediador");
+      if (role === "admin") router.push("/admin/eventos");
+      else if (role === "owner") router.push("/dashboard");
+      else router.push("/mediador");
     }
   }
 
@@ -336,5 +338,13 @@ export default function EntrarPage() {
         }
       `}</style>
     </>
+  );
+}
+
+export default function EntrarPage() {
+  return (
+    <Suspense>
+      <EntrarForm />
+    </Suspense>
   );
 }

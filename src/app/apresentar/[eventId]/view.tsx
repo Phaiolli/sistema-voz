@@ -82,12 +82,6 @@ export function ProjectionView({ eventId, eventName, eventSlug, accent, bg }: Pr
               Faça sua<br />
               <span style={{ color: accent }}>pergunta.</span>
             </p>
-            <p style={{ fontFamily: '"Archivo", sans-serif', fontSize: "clamp(14px, 1.5vw, 18px)", color: `${accent}cc`, margin: 0 }}>
-              Escaneie o QR code ou acesse{" "}
-              <span style={{ fontFamily: '"JetBrains Mono", monospace', fontWeight: 600 }}>
-                {window.location.origin}/e/{eventSlug}
-              </span>
-            </p>
           </div>
         </div>
 

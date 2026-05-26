@@ -1,13 +1,28 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSession, signOut } from "next-auth/react";
 import { VozWordmark } from "@/components/voz/wordmark";
 import { EnvSwitcher } from "@/components/voz/env-switcher";
 import { toast } from "sonner";
-import { LogOut, KeyRound, User } from "lucide-react";
+import { LogOut, KeyRound, User, CreditCard, CheckCircle, Clock, ExternalLink } from "lucide-react";
 
 export const dynamic = "force-dynamic";
+
+interface PlanData {
+  plan: string;
+  totalEvents: number;
+  totalSpent: number;
+  payments: {
+    id: string;
+    status: string;
+    amount: number;
+    currency: string;
+    eventName: string | null;
+    createdAt: string;
+    paidAt: string | null;
+  }[];
+}
 
 const inp: React.CSSProperties = {
   padding: "10px 12px",
@@ -35,9 +50,17 @@ function roleLabel(role: string | undefined) {
   return role ?? "—";
 }
 
+function fmtBRL(cents: number) {
+  return (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
+
+function fmtDate(iso: string) {
+  return new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" });
+}
+
 export default function ContaPage() {
   const { data: session, update } = useSession();
-  const u = session?.user as { id?: string; name?: string | null; email?: string | null; role?: string } | undefined;
+  const u = session?.user as { id?: string; name?: string | null; email?: string | null; role?: string; plan?: string } | undefined;
 
   const [name, setName] = useState(u?.name ?? "");
   const [savingName, setSavingName] = useState(false);
@@ -47,12 +70,23 @@ export default function ContaPage() {
   const [confirmPwd, setConfirmPwd] = useState("");
   const [savingPwd, setSavingPwd] = useState(false);
 
+  const [planData, setPlanData] = useState<PlanData | null>(null);
+  const [planLoading, setPlanLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/v1/me/plan")
+      .then((r) => r.ok ? r.json() : null)
+      .then((d: PlanData | null) => setPlanData(d))
+      .catch(() => null)
+      .finally(() => setPlanLoading(false));
+  }, []);
+
   async function handleSaveName(e: React.FormEvent) {
     e.preventDefault();
     if (!u?.id || !name.trim()) return;
     setSavingName(true);
     try {
-      const res = await fetch(`/api/v1/me/profile`, {
+      const res = await fetch("/api/v1/me/profile", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: name.trim() }),
@@ -77,7 +111,7 @@ export default function ContaPage() {
     if (newPwd.length < 8) { toast.error("A senha deve ter pelo menos 8 caracteres."); return; }
     setSavingPwd(true);
     try {
-      const res = await fetch(`/api/v1/me/profile`, {
+      const res = await fetch("/api/v1/me/profile", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ currentPassword: currentPwd, password: newPwd }),
@@ -97,6 +131,7 @@ export default function ContaPage() {
   }
 
   const abbr = initials(u?.name, u?.email);
+  const isPaid = (planData?.plan ?? u?.plan) === "paid";
 
   return (
     <div style={{ minHeight: "100dvh", background: "hsl(var(--background))", color: "hsl(var(--foreground))", paddingBottom: 88 }}>
@@ -125,23 +160,89 @@ export default function ContaPage() {
           <div style={{ flex: 1, minWidth: 0 }}>
             <p style={{ fontWeight: 600, fontSize: 16, margin: "0 0 4px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{u?.name ?? "—"}</p>
             <p style={{ fontSize: 13, color: "hsl(var(--muted-foreground))", margin: "0 0 6px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{u?.email ?? "—"}</p>
-            <span style={{ padding: "3px 8px", borderRadius: 999, fontSize: 12, fontWeight: 600, background: "hsl(var(--primary) / .12)", color: "hsl(var(--primary))" }}>
-              {roleLabel(u?.role)}
-            </span>
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+              <span style={{ padding: "3px 8px", borderRadius: 999, fontSize: 12, fontWeight: 600, background: "hsl(var(--primary) / .12)", color: "hsl(var(--primary))" }}>
+                {roleLabel(u?.role)}
+              </span>
+              {!planLoading && (
+                <span style={{ padding: "3px 8px", borderRadius: 999, fontSize: 12, fontWeight: 600, background: isPaid ? "hsl(142 71% 45% / .12)" : "hsl(var(--muted))", color: isPaid ? "hsl(142 71% 32%)" : "hsl(var(--muted-foreground))" }}>
+                  {isPaid ? "Plano pago" : "Plano gratuito"}
+                </span>
+              )}
+            </div>
           </div>
         </div>
 
-        {/* Editar nome */}
+        {/* Plano e pagamentos */}
+        <Section icon={<CreditCard size={16} />} title="Plano e pagamentos">
+          {planLoading ? (
+            <p style={{ fontSize: 13, color: "hsl(var(--muted-foreground))", margin: 0 }}>Carregando…</p>
+          ) : planData ? (
+            <>
+              {/* Resumo */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                <StatCard label="Eventos realizados" value={String(planData.totalEvents)} />
+                <StatCard label="Total investido" value={fmtBRL(planData.totalSpent)} />
+              </div>
+
+              {/* Modelo de preço */}
+              <div style={{ padding: "12px 16px", borderRadius: 10, border: "1px solid hsl(var(--border))", background: "hsl(var(--background))", display: "flex", alignItems: "center", gap: 12 }}>
+                <div style={{ flex: 1 }}>
+                  <p style={{ fontWeight: 600, fontSize: 14, margin: "0 0 2px" }}>R$ 59,90 por evento</p>
+                  <p style={{ fontSize: 12, color: "hsl(var(--muted-foreground))", margin: 0 }}>Pagamento único · Sem assinatura mensal</p>
+                </div>
+                <ExternalLink size={14} style={{ color: "hsl(var(--muted-foreground))", flexShrink: 0 }} aria-hidden />
+              </div>
+
+              {/* Histórico */}
+              {planData.payments.length > 0 && (
+                <div>
+                  <p style={{ fontSize: 13, fontWeight: 600, margin: "0 0 10px" }}>Histórico</p>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    {planData.payments.map((p) => (
+                      <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", background: "hsl(var(--background))", border: "1px solid hsl(var(--border))", borderRadius: 9 }}>
+                        <div style={{ flexShrink: 0 }}>
+                          {p.status === "paid"
+                            ? <CheckCircle size={16} style={{ color: "hsl(142 71% 45%)" }} aria-hidden />
+                            : <Clock size={16} style={{ color: "hsl(var(--muted-foreground))" }} aria-hidden />
+                          }
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <p style={{ fontSize: 13, fontWeight: 500, margin: "0 0 2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            {p.eventName ?? "Evento"}
+                          </p>
+                          <p style={{ fontSize: 11, color: "hsl(var(--muted-foreground))", margin: 0 }}>
+                            {fmtDate(p.paidAt ?? p.createdAt)}
+                          </p>
+                        </div>
+                        <div style={{ textAlign: "right", flexShrink: 0 }}>
+                          <p style={{ fontSize: 13, fontWeight: 600, margin: "0 0 2px" }}>{fmtBRL(p.amount)}</p>
+                          <p style={{ fontSize: 11, margin: 0, color: p.status === "paid" ? "hsl(142 71% 32%)" : "hsl(var(--muted-foreground))" }}>
+                            {p.status === "paid" ? "Pago" : "Pendente"}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {planData.payments.length === 0 && (
+                <p style={{ fontSize: 13, color: "hsl(var(--muted-foreground))", margin: 0, textAlign: "center", padding: "8px 0" }}>
+                  Nenhum evento pago ainda. Crie seu primeiro evento no painel Admin.
+                </p>
+              )}
+            </>
+          ) : (
+            <p style={{ fontSize: 13, color: "hsl(var(--muted-foreground))", margin: 0 }}>Não foi possível carregar os dados do plano.</p>
+          )}
+        </Section>
+
+        {/* Dados pessoais */}
         <Section icon={<User size={16} />} title="Dados pessoais">
           <form onSubmit={handleSaveName} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             <FormField label="Nome" htmlFor="c-name">
-              <input
-                id="c-name"
-                required
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                style={inp}
-              />
+              <input id="c-name" required value={name} onChange={(e) => setName(e.target.value)} style={inp} />
             </FormField>
             <FormField label="E-mail" htmlFor="c-email">
               <input id="c-email" value={u?.email ?? ""} readOnly style={{ ...inp, color: "hsl(var(--muted-foreground))" }} />
@@ -198,6 +299,15 @@ export default function ContaPage() {
         .conta-logout-lbl { display: inline; }
         @media (max-width: 639px) { .conta-logout-lbl { display: none; } }
       `}</style>
+    </div>
+  );
+}
+
+function StatCard({ label, value }: { label: string; value: string }) {
+  return (
+    <div style={{ padding: "14px 16px", background: "hsl(var(--background))", border: "1px solid hsl(var(--border))", borderRadius: 10 }}>
+      <p style={{ fontSize: 20, fontWeight: 700, fontFamily: '"Archivo", sans-serif', margin: "0 0 4px", fontVariantNumeric: "tabular-nums" }}>{value}</p>
+      <p style={{ fontSize: 12, color: "hsl(var(--muted-foreground))", margin: 0 }}>{label}</p>
     </div>
   );
 }

@@ -5,7 +5,6 @@ import type { RealtimeChannel } from "@supabase/supabase-js";
 import { ExternalLink, QrCode, ArrowLeft, ArrowRight, EyeOff, RotateCcw, Trash2, MonitorPlay, MonitorOff, Download } from "lucide-react";
 import { VozWordmark } from "@/components/voz/wordmark";
 import { HeaderControls } from "@/components/voz/header-controls";
-import { EnvSwitcher } from "@/components/voz/env-switcher";
 import { createBrowserClient } from "@/lib/supabase";
 import { signOut, useSession } from "next-auth/react";
 import type { Question, QuestionStatus } from "@/lib/types";
@@ -312,7 +311,6 @@ export function MediatorDashboard() {
       {/* Header — mesmo padrão do admin */}
       <header style={{ height: 56, borderBottom: "1px solid hsl(var(--border))", display: "flex", alignItems: "center", padding: "0 16px", gap: 10, flexShrink: 0, background: "hsl(var(--background))", zIndex: 10 }}>
         <VozWordmark size={20} />
-        <EnvSwitcher active="mediador" />
         <div style={{ flex: 1 }} />
         {newBadge > 0 && (
           <span aria-live="polite" aria-atomic="true" style={{ display: "inline-block", padding: "4px 10px", borderRadius: 999, background: "hsl(var(--accent) / .15)", color: "hsl(38 85% 32%)", fontSize: 13, fontWeight: 600, animation: "pulse 2s infinite", flexShrink: 0 }}>

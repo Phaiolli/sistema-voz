@@ -1,6 +1,6 @@
 # ADR 009 — SaaS Multi-Tenant com Stripe e LGPD
 
-**Status:** Proposed  
+**Status:** Accepted  
 **Date:** 2026-05-25  
 **Issue:** [#47](https://github.com/Phaiolli/sistema-voz/issues/47)  
 **Impact:** HIGH — mudança arquitetural de single-tenant para multi-tenant SaaS

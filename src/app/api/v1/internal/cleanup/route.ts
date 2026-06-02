@@ -13,11 +13,15 @@ function isAuthorized(req: NextRequest): boolean {
   return timingSafeEqual(Buffer.from(auth), Buffer.from(expected));
 }
 
-export async function DELETE(req: NextRequest) {
-  if (!isAuthorized(req)) {
-    return NextResponse.json({ error: { code: "UNAUTHORIZED" } }, { status: 401 });
-  }
-
+/**
+ * Anula `author_ip` de perguntas e inscrições com mais de 30 dias (LGPD).
+ *
+ * Cada execução também serve de keep-alive: o acesso ao banco impede que o
+ * projeto Supabase (free tier) seja pausado por inatividade (~7 dias).
+ *
+ * @returns Contagem de registros anonimizados por tabela e o cutoff aplicado.
+ */
+async function runCleanup() {
   const cutoff = new Date(Date.now() - THIRTY_DAYS_MS).toISOString();
   const supabase = createServerClient();
 
@@ -40,9 +44,29 @@ export async function DELETE(req: NextRequest) {
   const qCount = questionsResult.count ?? 0;
   const rCount = registrationsResult.count ?? 0;
 
-  return NextResponse.json({
+  return {
     deleted: qCount + rCount,
     cutoff,
     tables: { questions: qCount, registrations: rCount },
-  });
+  };
+}
+
+/**
+ * Disparado pelo Vercel Cron (que sempre usa GET) — roda a limpeza LGPD diária.
+ */
+export async function GET(req: NextRequest) {
+  if (!isAuthorized(req)) {
+    return NextResponse.json({ error: { code: "UNAUTHORIZED" } }, { status: 401 });
+  }
+  return NextResponse.json(await runCleanup());
+}
+
+/**
+ * Mantido para invocação manual da limpeza via API.
+ */
+export async function DELETE(req: NextRequest) {
+  if (!isAuthorized(req)) {
+    return NextResponse.json({ error: { code: "UNAUTHORIZED" } }, { status: 401 });
+  }
+  return NextResponse.json(await runCleanup());
 }

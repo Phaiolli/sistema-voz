@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
-import { DELETE } from "./route";
+import { DELETE, GET } from "./route";
 
 vi.mock("@/lib/supabase", () => ({ createServerClient: () => mockSupabase }));
 
@@ -17,10 +17,10 @@ const mockSupabase = {
   })),
 };
 
-function makeReq(authHeader?: string): NextRequest {
+function makeReq(authHeader?: string, method: string = "DELETE"): NextRequest {
   const headers: HeadersInit = authHeader ? { authorization: authHeader } : {};
   return new NextRequest("http://localhost/api/v1/internal/cleanup", {
-    method: "DELETE",
+    method,
     headers,
   });
 }
@@ -81,5 +81,21 @@ describe("DELETE /api/v1/internal/cleanup", () => {
   it("returns 500 when supabase returns error", async () => {
     mockNotQ.mockResolvedValue({ error: new Error("db error"), count: null });
     await expect(DELETE(makeReq(`Bearer ${SECRET}`))).rejects.toThrow("db error");
+  });
+});
+
+describe("GET /api/v1/internal/cleanup (Vercel Cron)", () => {
+  it("returns 401 when no Authorization header", async () => {
+    const res = await GET(makeReq(undefined, "GET"));
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 200 and runs cleanup when authorized", async () => {
+    const res = await GET(makeReq(`Bearer ${SECRET}`, "GET"));
+    expect(res.status).toBe(200);
+    const body = await res.json() as { deleted: number; tables: { questions: number; registrations: number } };
+    expect(body.deleted).toBe(8);
+    expect(body.tables.questions).toBe(3);
+    expect(body.tables.registrations).toBe(5);
   });
 });

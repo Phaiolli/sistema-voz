@@ -32,6 +32,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Cron de cleanup/keep-alive não executava**: o Vercel Cron dispara `GET`, mas a rota `/api/v1/internal/cleanup` só expunha `DELETE` (405) e `CRON_SECRET` não estava no projeto Vercel (apenas no GitHub Actions). Resultado: a limpeza LGPD nunca rodou e o projeto Supabase free pausava por inatividade. Adicionado handler `GET` (mantendo `DELETE` para uso manual) e `CRON_SECRET` setado no Vercel. A execução diária agora também mantém o banco ativo.
+
 ### Added — Pendências de produção (#45)
 - **Supabase Storage**: migration `20260521000003_storage_voz_assets.sql` cria bucket `voz-assets` (público, 3 MB, tipos de imagem) com policies de leitura pública e escrita autenticada
 - **LGPD Cleanup Cron**: `DELETE /api/v1/internal/cleanup` — anula `author_ip` de perguntas e inscrições com mais de 30 dias; protegido por `Bearer CRON_SECRET` com `timingSafeEqual`; Vercel Cron configurado para rodar diariamente às 03:00 UTC

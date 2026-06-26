@@ -1,4 +1,5 @@
 import { createServerClient } from "@/lib/supabase";
+import { logError } from "@/lib/log";
 
 /** Maximum number of events an owner on the free plan can create. */
 export const FREE_EVENT_LIMIT = 1;
@@ -17,7 +18,7 @@ export async function getOwnerEventCount(ownerId: string): Promise<number> {
     .select("id", { count: "exact", head: true })
     .eq("organizer_id", ownerId);
   if (error) {
-    console.error("[plan-limits] getOwnerEventCount failed:", error);
+    logError("[plan-limits] getOwnerEventCount failed", error);
     throw error;
   }
   return count ?? 0;
@@ -33,7 +34,7 @@ export async function isEventOwnedBy(eventId: string, userId: string): Promise<b
     .eq("organizer_id", userId)
     .maybeSingle();
   if (error) {
-    console.error("[plan-limits] isEventOwnedBy failed:", error);
+    logError("[plan-limits] isEventOwnedBy failed", error);
     throw error;
   }
   return data !== null;
@@ -47,7 +48,7 @@ export async function getEventQuestionCount(eventId: string): Promise<number> {
     .select("id", { count: "exact", head: true })
     .eq("event_id", eventId);
   if (error) {
-    console.error("[plan-limits] getEventQuestionCount failed:", error);
+    logError("[plan-limits] getEventQuestionCount failed", error);
     throw error;
   }
   return count ?? 0;
@@ -62,7 +63,7 @@ export async function getOwnerPlan(ownerId: string): Promise<"free" | "paid"> {
     .eq("id", ownerId)
     .maybeSingle();
   if (error) {
-    console.error("[plan-limits] getOwnerPlan failed:", error);
+    logError("[plan-limits] getOwnerPlan failed", error);
     throw error;
   }
   return (data?.plan === "paid" ? "paid" : "free");

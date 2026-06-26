@@ -39,7 +39,7 @@ export function InscricaoForm({ event }: { event: Event }) {
   const reg = event.config?.registration;
   const status = getRegistrationStatus(reg);
 
-  const [form, setForm] = useState({ name: "", email: "", phone: "", document: "", lgpdAccepted: false });
+  const [form, setForm] = useState({ name: "", email: "", phone: "", lgpdAccepted: false });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -57,7 +57,7 @@ export function InscricaoForm({ event }: { event: Event }) {
       const res = await fetch(`/api/v1/events/${event.id}/registrations`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: form.name, email: form.email, phone: form.phone || undefined, document: form.document || undefined, lgpdAccepted: form.lgpdAccepted }),
+        body: JSON.stringify({ name: form.name, email: form.email, phone: form.phone || undefined, lgpdAccepted: form.lgpdAccepted }),
       });
       const data = await res.json() as { id?: string; error?: { message?: string } };
       if (!res.ok) { setError(data.error?.message ?? "Erro ao realizar inscrição."); return; }
@@ -96,9 +96,6 @@ export function InscricaoForm({ event }: { event: Event }) {
             </Field>
             <Field label="Telefone" htmlFor="reg-phone">
               <input id="reg-phone" type="tel" value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} style={inp} autoComplete="tel" placeholder="(00) 00000-0000" />
-            </Field>
-            <Field label="CPF" htmlFor="reg-doc">
-              <input id="reg-doc" value={form.document} onChange={(e) => setForm((f) => ({ ...f, document: e.target.value }))} style={inp} placeholder="000.000.000-00" />
             </Field>
 
             <label style={{ display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer", fontSize: 13, color: "hsl(var(--muted-foreground))", lineHeight: 1.5 }}>

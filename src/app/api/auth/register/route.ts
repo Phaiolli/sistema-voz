@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import { createServerClient } from "@/lib/supabase";
 import { registerSchema } from "@/lib/schemas";
 import { rateLimit } from "@/lib/api/rate-limit";
+import { logError } from "@/lib/log";
 import { randomUUID } from "crypto";
 
 export async function POST(req: NextRequest) {
@@ -61,7 +62,7 @@ export async function POST(req: NextRequest) {
   });
 
   if (error) {
-    console.error("[register] insert failed:", error);
+    logError("[register] insert failed", error);
     return NextResponse.json({ message: "Erro ao criar conta." }, { status: 500 });
   }
 

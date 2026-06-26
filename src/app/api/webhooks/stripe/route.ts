@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe";
 import { createServerClient } from "@/lib/supabase";
 import { createEventSchema } from "@/lib/schemas";
+import { logError } from "@/lib/log";
 import type Stripe from "stripe";
 
 export async function POST(req: NextRequest) {
@@ -38,7 +39,7 @@ export async function POST(req: NextRequest) {
   const { metadata } = checkoutSession;
 
   if (!metadata?.ownerId || !metadata?.eventData) {
-    console.error("Stripe webhook: metadata incompleta no evento", event.id);
+    logError(`stripe.webhook.metadata event=${event.id}`, "metadata incompleta");
     return NextResponse.json(
       { error: "Metadata incompleta." },
       { status: 400 },
@@ -64,18 +65,15 @@ export async function POST(req: NextRequest) {
     const raw: unknown = JSON.parse(metadata.eventData);
     const result = createEventSchema.safeParse(raw);
     if (!result.success) {
-      console.error(
-        "Stripe webhook: eventData inválido",
-        result.error.flatten(),
-      );
+      logError("Stripe webhook: eventData inválido", result.error);
       return NextResponse.json(
         { error: "Dados do evento inválidos." },
         { status: 422 },
       );
     }
     parsedEventData = result.data;
-  } catch {
-    console.error("Stripe webhook: falha ao parsear eventData", event.id);
+  } catch (err) {
+    logError(`stripe.webhook.parse event=${event.id}`, err);
     return NextResponse.json(
       { error: "Falha ao processar dados do evento." },
       { status: 400 },
@@ -100,7 +98,7 @@ export async function POST(req: NextRequest) {
   });
 
   if (insertErr) {
-    console.error("Stripe webhook: falha ao criar evento", insertErr);
+    logError("Stripe webhook: falha ao criar evento", insertErr);
     return NextResponse.json(
       { error: "Falha ao criar evento." },
       { status: 500 },
@@ -121,10 +119,7 @@ export async function POST(req: NextRequest) {
     .eq("stripe_session_id", checkoutSession.id);
 
   if (updateErr) {
-    console.error(
-      "Stripe webhook: falha ao atualizar event_payments",
-      updateErr,
-    );
+    logError("Stripe webhook: falha ao atualizar event_payments", updateErr);
   }
 
   return NextResponse.json({ received: true });

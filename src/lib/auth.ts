@@ -33,13 +33,22 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         email: { label: "Email", type: "email" },
         password: { label: "Senha", type: "password" },
       },
-      async authorize(credentials) {
+      async authorize(credentials, request) {
         if (!credentials?.email || !credentials?.password) return null;
-        // Throttle login attempts per email. Returns null when blocked so the
-        // caller cannot distinguish "rate limited" from "wrong credentials"
-        // (no information leak). Limit is per-process — see ADR 011.
-        const limit = rateLimit(`login:${credentials.email as string}`, { max: 5, windowMs: 15 * 60 * 1000 });
+        // Throttle login attempts. Returns null when blocked so the caller
+        // cannot distinguish "rate limited" from "wrong credentials" (no
+        // information leak). See ADR 011 for the store/fallback details.
+        //
+        // Per-email limit: stops password brute force against one account.
+        const limit = await rateLimit(`login:${credentials.email as string}`, { max: 5, windowMs: 15 * 60 * 1000 });
         if (!limit.ok) return null;
+        // Per-IP limit: caps credential-stuffing (many emails, one source).
+        // `x-forwarded-for` is trusted behind the Vercel edge (see ADR 011);
+        // without a trusted proxy it is spoofable, so this is a complementary
+        // layer, not the primary control.
+        const ip = request?.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+        const ipLimit = await rateLimit(`login-ip:${ip}`, { max: 20, windowMs: 15 * 60 * 1000 });
+        if (!ipLimit.ok) return null;
         const supabase = createServerClient();
         const { data: user } = await supabase
           .from("users")

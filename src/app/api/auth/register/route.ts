@@ -8,7 +8,7 @@ import { randomUUID } from "crypto";
 
 export async function POST(req: NextRequest) {
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
-  const limit = rateLimit(`register:${ip}`, { max: 5, windowMs: 60 * 60 * 1000 });
+  const limit = await rateLimit(`register:${ip}`, { max: 5, windowMs: 60 * 60 * 1000 });
   if (!limit.ok) {
     return NextResponse.json(
       { error: { code: "RATE_LIMITED", message: "Muitas tentativas. Tente novamente mais tarde." } },

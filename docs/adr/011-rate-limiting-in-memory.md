@@ -1,8 +1,9 @@
-# ADR-011: Rate limiting in-memory para auth (register/login)
+# ADR-011: Rate limiting com store plugável para auth (register/login)
 
 **Status:** Accepted  
 **Date:** 2026-06-25  
-**Issue:** audit 2026-06-25 (H3)
+**Updated:** 2026-06-26 (store distribuído opcional via Upstash)  
+**Issue:** audit 2026-06-25 (H3); follow-up de segurança FU2
 
 ## Context
 
@@ -14,9 +15,25 @@ tabela), mas auth não tem tabela equivalente nem deve gravar tentativas.
 
 ## Decision
 
-Implementar um limitador **sliding-window in-memory, zero-dependência**
-(`src/lib/api/rate-limit.ts`): `Map<string, number[]>` com limpeza preguiçosa
-das timestamps fora da janela.
+Implementar um limitador **sliding-window com store plugável**
+(`src/lib/api/rate-limit.ts`). A interface pública permanece
+`rateLimit(key, { max, windowMs })`, agora **assíncrona** (necessário para o
+backend distribuído via `fetch`); os callers (`register`, `login`) aguardam com
+`await`. O store é selecionado uma vez por processo:
+
+- **In-memory (default):** `Map<string, number[]>` com limpeza preguiçosa das
+  timestamps fora da janela. Zero-dependência, por processo.
+- **Upstash Redis (REST), opcional:** ativado automaticamente quando
+  `UPSTASH_REDIS_REST_URL` **e** `UPSTASH_REDIS_REST_TOKEN` estão definidas.
+  Sliding window via sorted set (`ZREMRANGEBYSCORE` + `ZADD` + `ZCARD` +
+  `PEXPIRE`) usando a API REST por `fetch` — **sem dependência npm**. Estado
+  compartilhado entre instâncias serverless e resiliente a reinícios.
+
+Sem as env vars o comportamento é **idêntico** ao in-memory original. Se o store
+distribuído falhar (rede/Upstash fora), o limitador faz **fallback para um
+limitador in-memory por instância** (proteção parcial contra brute force)
+em vez de fail-open total — a função nunca lança, preservando a disponibilidade
+do auth, mas a proteção degrada graciosamente em vez de desaparecer.
 
 - `register`: máx. 5 tentativas/hora por IP → `429` com header `Retry-After`.
 - `login` (`authorize`): máx. 5 tentativas/15 min por e-mail → retorna `null`
@@ -24,11 +41,13 @@ das timestamps fora da janela.
 
 ## Consequences
 
-- **Map por instância (não compartilhado):** o estado é por processo e **não**
-  é compartilhado entre instâncias serverless; reinícios zeram a contagem. Em
-  deploy single-instance é eficaz; ao escalar horizontalmente, a proteção fica
-  proporcional ao número de instâncias. O Map agora descarta chaves cuja janela
-  expirou totalmente, evitando crescimento ilimitado.
+- **Map por instância (não compartilhado) — modo default:** sem Upstash, o
+  estado é por processo e **não** é compartilhado entre instâncias serverless;
+  reinícios zeram a contagem. Em deploy single-instance é eficaz; ao escalar
+  horizontalmente, a proteção fica proporcional ao número de instâncias. O Map
+  descarta chaves cuja janela expirou totalmente, evitando crescimento
+  ilimitado. **Mitigação disponível:** definir as env vars Upstash para um store
+  compartilhado entre instâncias sem mudança de código.
 - **Premissa de proxy confiável:** a chave por IP do `register` deriva de
   `x-forwarded-for`. Atrás do edge da Vercel esse header é confiável; sem um
   proxy confiável à frente, ele é spoofável e o limite por IP pode ser burlado.
@@ -41,7 +60,8 @@ das timestamps fora da janela.
 - **Decisão de privacidade relacionada:** em perguntas não anônimas o
   `author_name` é público por design (aparece no telão do Q&A ao vivo); e-mail,
   contato e IP nunca são expostos. Ver `src/lib/api/question-mappers.ts`.
-- **Caminho de evolução:** migrar para store compartilhado (Redis/Upstash) ou
-  rate limiting na borda (middleware/WAF) quando houver mais de uma instância.
-  A abordagem in-memory é o mínimo viável aceito para fechar o bloqueador H3,
-  sujeita a revisão na fase de arquitetura.
+- **Store distribuído já implementado (FU2):** o caminho de evolução para store
+  compartilhado (Upstash via REST) está disponível e é ativado por env vars; não
+  requer novo deploy de código, só configuração. Rate limiting na borda
+  (proxy/WAF) continua sendo a defesa complementar recomendada sob alta
+  concorrência.

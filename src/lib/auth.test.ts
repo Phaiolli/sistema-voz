@@ -126,9 +126,12 @@ describe("auth — Credentials.authorize", () => {
   });
 });
 
+type JwtCb = (p: { token: Record<string, unknown>; user?: Record<string, unknown> }) => Record<string, unknown>;
+type SessionCb = (p: { session: Record<string, unknown>; token: Record<string, unknown> }) => Record<string, unknown>;
+
 describe("auth — jwt/session callbacks", () => {
   function callbacks() {
-    return (capturedConfig.current as { callbacks: { jwt: Function; session: Function } }).callbacks;
+    return (capturedConfig.current as { callbacks: { jwt: JwtCb; session: SessionCb } }).callbacks;
   }
 
   it("jwt callback copies role/userId/plan from user onto the token", () => {

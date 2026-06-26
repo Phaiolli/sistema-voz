@@ -62,6 +62,18 @@ Acesse [http://localhost:3000](http://localhost:3000).
 | `SEED_SECRET` | Secret para proteger `/api/seed` | (desabilitado se não definido) |
 | `NEXT_PUBLIC_APP_URL` | URL pública da aplicação | `http://localhost:3000` |
 
+### Rate limiting distribuído (Upstash)
+
+O rate limiting de autenticação (`register`/`login`) usa um store in-memory por
+padrão. Definindo **ambas** as variáveis abaixo, ele passa a usar um store
+compartilhado via Upstash Redis (REST), eficaz em deploy com múltiplas
+instâncias. Sem elas, o comportamento é idêntico ao in-memory. Ver ADR 011.
+
+| Variável | Descrição | Padrão |
+|----------|-----------|--------|
+| `UPSTASH_REDIS_REST_URL` | URL REST do banco Upstash Redis | (in-memory se ausente) |
+| `UPSTASH_REDIS_REST_TOKEN` | Token REST do banco Upstash Redis | (in-memory se ausente) |
+
 ### Stripe (Pagamentos)
 
 | Variável | Descrição | Obrigatório |

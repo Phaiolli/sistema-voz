@@ -1,3 +1,14 @@
+/**
+ * Bottom navigation bar for mobile-first navigation.
+ *
+ * Fixed navigation shown on mobile (<= 639px) with links to:
+ * - Events (admin only)
+ * - Users (admin only)
+ * - Moderador dashboard
+ * - Minha conta
+ *
+ * Responsively hides on larger screens. Uses role-based visibility.
+ */
 "use client";
 
 import Link from "next/link";
@@ -5,6 +16,9 @@ import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { Calendar, Mic, User } from "lucide-react";
 
+/**
+ * @internal Individual navigation item component.
+ */
 function NavItem({ href, icon, label, active }: { href: string; icon: React.ReactNode; label: string; active?: boolean }) {
   return (
     <Link
@@ -31,6 +45,9 @@ function NavItem({ href, icon, label, active }: { href: string; icon: React.Reac
   );
 }
 
+/**
+ * @internal Users/people icon (custom SVG).
+ */
 function UsersIcon() {
   return (
     <svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
@@ -41,6 +58,14 @@ function UsersIcon() {
   );
 }
 
+/**
+ * Renders the bottom navigation bar with role-based links.
+ *
+ * Visible only on mobile (<= 639px). Admin users see "Eventos" and "Usuários" tabs.
+ * All users see "Moderador" and "Minha conta" tabs.
+ *
+ * @returns Fixed bottom navigation bar
+ */
 export function BottomNav() {
   const pathname = usePathname();
   const { data: session } = useSession();

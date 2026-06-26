@@ -1,3 +1,11 @@
+/**
+ * Scoped dark/light theme provider for admin and mediador layouts.
+ *
+ * Manages theme state separately from the public event pages theme.
+ * Persists preference in localStorage with key "theme-admin".
+ *
+ * Used in `/admin/eventos`, `/admin/usuarios`, and `/mediador` routes.
+ */
 "use client"
 
 import { createContext, useContext, useState, type ReactNode } from "react"
@@ -14,7 +22,15 @@ const AdminThemeContext = createContext<AdminThemeContextValue>({
   toggleTheme: () => {},
 })
 
-/** Returns the current admin theme and a toggle function. Must be used inside AdminThemeProvider. */
+/**
+ * Hook to access the admin theme context (current theme + toggle function).
+ *
+ * @returns Theme context value (theme and toggleTheme function)
+ * @throws If used outside AdminThemeProvider
+ *
+ * @example
+ * const { theme, toggleTheme } = useAdminTheme();
+ */
 export function useAdminTheme(): AdminThemeContextValue {
   return useContext(AdminThemeContext)
 }
@@ -22,9 +38,22 @@ export function useAdminTheme(): AdminThemeContextValue {
 const STORAGE_KEY = "theme-admin"
 
 /**
- * Scoped theme provider for /admin and /mediador routes.
- * Defaults to dark mode; persists preference in localStorage.
- * Applies `.dark` class to a wrapper div — does NOT touch `<html>`.
+ * Scoped theme provider component for /admin and /mediador routes.
+ *
+ * Features:
+ * - Defaults to dark mode
+ * - Persists user preference in localStorage
+ * - Applies `.dark` class to wrapper div (does NOT touch `<html>`)
+ * - Prevents hydration mismatch with `suppressHydrationWarning`
+ *
+ * @param props - Component props
+ * @param props.children - Child components to wrap
+ * @returns Theme provider wrapper element
+ *
+ * @example
+ * <AdminThemeProvider>
+ *   <AdminLayout />
+ * </AdminThemeProvider>
  */
 export function AdminThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setTheme] = useState<Theme>(() => {

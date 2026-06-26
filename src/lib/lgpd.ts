@@ -1,9 +1,26 @@
+/**
+ * LGPD compliance utilities for data portability and deletion rights.
+ *
+ * Implements the right to access (exportOwnerData) and right to erasure (anonymizeOwnerData)
+ * as required by LGPD Article 18.
+ *
+ * See `docs/privacy/direitos-do-titular.md` for the end-user flow.
+ */
 import { createServerClient } from "@/lib/supabase";
 
 /**
- * Exporta todos os dados PII do owner e seus eventos/participantes.
- * @param ownerId - ID do usuário owner
- * @returns JSON estruturado com todos os dados PII do owner
+ * Exports all PII of an owner and their events/participants (data portability right).
+ *
+ * Returns a structured JSON containing:
+ * - User profile (name, email, dates)
+ * - All events owned
+ * - All participants (authors) in those events
+ * - All registrations in those events
+ *
+ * Used by `/api/v1/me/data-export` endpoint.
+ *
+ * @param ownerId - UUID of the owner
+ * @returns Structured object with all user PII (ready for JSON export)
  */
 export async function exportOwnerData(ownerId: string): Promise<object> {
   const supabase = createServerClient();
@@ -47,9 +64,22 @@ export async function exportOwnerData(ownerId: string): Promise<object> {
 }
 
 /**
- * Anonimiza PII de participantes de todos os eventos do owner.
- * Mantém dados fiscais (pagamentos) intactos.
- * @param ownerId - ID do usuário owner
+ * Anonymizes all PII of an owner and their participants (right to erasure).
+ *
+ * Replaces:
+ * - User name → "Conta Removida", email → "removed_<id>@voz.app"
+ * - Participant names/contacts → "Anônimo", ""
+ * - Registration names/emails/phones/documents → "Anônimo", "removed_<regId>@voz.app", null
+ * - Question author data → "Anônimo", null (including IP)
+ *
+ * Preserves:
+ * - Event records (owner may want audit trail)
+ * - Payment/financial records (required by law)
+ * - IDs (foreign keys must remain to avoid referential integrity issues)
+ *
+ * Used by `/api/v1/me/data` (DELETE handler).
+ *
+ * @param ownerId - UUID of the owner
  */
 export async function anonymizeOwnerData(ownerId: string): Promise<void> {
   const supabase = createServerClient();

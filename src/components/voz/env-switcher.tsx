@@ -1,12 +1,33 @@
+/**
+ * Environment switcher for admin/superadmin users.
+ *
+ * Allows quick navigation between `/admin/eventos` and `/mediador` environments.
+ * Only visible to users with admin or superadmin roles.
+ *
+ * Styled as a segmented control (tabs).
+ */
 "use client";
 
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 
+/**
+ * Props for EnvSwitcher component.
+ */
 interface EnvSwitcherProps {
+  /** Currently active environment */
   active: "admin" | "mediador";
 }
 
+/**
+ * Renders environment switcher (admin/mediador tabs).
+ *
+ * @param props - Component props
+ * @returns Tabbed switcher element or null if user is not admin
+ *
+ * @example
+ * <EnvSwitcher active="admin" />  // Shows admin/mediador tabs, admin is highlighted
+ */
 export function EnvSwitcher({ active }: EnvSwitcherProps) {
   const { data: session } = useSession();
   const role = session?.user?.role;

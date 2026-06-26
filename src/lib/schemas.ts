@@ -1,5 +1,9 @@
 import { z } from "zod";
 
+/**
+ * Validates payload when a participant submits a question to an event.
+ * Enforces LGPD acceptance and basic content rules.
+ */
 export const submitQuestionSchema = z.object({
   authorName: z
     .string()
@@ -25,6 +29,9 @@ export const submitQuestionSchema = z.object({
   anonymous: z.boolean().optional(),
 });
 
+/**
+ * Validates moderation action on a question (mediator/admin only).
+ */
 export const patchQuestionSchema = z.object({
   action: z.enum(["setNext", "markAnswered", "hide", "restore"]),
 });
@@ -32,6 +39,10 @@ export const patchQuestionSchema = z.object({
 export type SubmitQuestionBody = z.infer<typeof submitQuestionSchema>;
 export type PatchQuestionBody = z.infer<typeof patchQuestionSchema>;
 
+/**
+ * Validates payload when creating a new event.
+ * Owners and admins can create events; subjects to plan limits.
+ */
 export const createEventSchema = z.object({
   name: z.string().min(2, "Nome muito curto.").max(120, "Nome muito longo."),
   slug: z.string().min(2).max(60).regex(/^[a-z0-9-]+$/, "Slug: apenas letras minúsculas, números e hífens."),
@@ -44,12 +55,19 @@ export const createEventSchema = z.object({
   theme: z.record(z.string(), z.unknown()).default({}),
   config: z.record(z.string(), z.unknown()).default({}),
 });
+/**
+ * Validates partial event update payload (all fields optional).
+ */
 export const patchEventSchema = createEventSchema.partial();
 
-// `superadmin` é o papel de plataforma de maior privilégio e NÃO pode ser
-// criado/atribuído via API de usuários (mitiga escalonamento de privilégio —
-// BFLA). O tipo `UserRole` em `@/lib/types` inclui `superadmin` para leitura,
-// mas a criação fica restrita a provisionamento controlado (seed/manual).
+/**
+ * Validates payload when creating a new user (admin endpoint).
+ *
+ * Note: `superadmin` is intentionally NOT allowed here — it can only be set
+ * through seed or manual database operations (see ADR 007 for the security rationale).
+ * The `UserRole` type includes `superadmin` for type safety when *reading* users,
+ * but creation is restricted to prevent privilege escalation (BFLA mitigation).
+ */
 export const createUserSchema = z.object({
   name: z.string().min(2, "Nome muito curto.").max(100),
   email: z.string().email("E-mail inválido."),
@@ -59,6 +77,9 @@ export const createUserSchema = z.object({
     .regex(/[0-9]/, "Senha: ao menos um número."),
   role: z.enum(["admin", "mediador", "owner"]),
 });
+/**
+ * Validates partial user update payload (all fields optional).
+ */
 export const patchUserSchema = z.object({
   name: z.string().min(2).max(100).optional(),
   email: z.string().email().optional(),
@@ -66,6 +87,10 @@ export const patchUserSchema = z.object({
   role: z.enum(["admin", "mediador", "owner"]).optional(),
 });
 
+/**
+ * Validates payload when a new owner registers via public registration form.
+ * Creates a user with role "owner" (not "admin" or "mediador").
+ */
 export const registerSchema = z.object({
   name: z.string().min(2, "Nome muito curto.").max(100),
   email: z.string().email("E-mail inválido."),
@@ -78,10 +103,16 @@ export const registerSchema = z.object({
 });
 export type RegisterBody = z.infer<typeof registerSchema>;
 
+/**
+ * Validates payload when assigning a mediator to an event.
+ */
 export const assignMediatorSchema = z.object({
   userId: z.string().min(1, "userId obrigatório."),
 });
 
+/**
+ * Validates payload when a participant registers/inscribes in an event.
+ */
 export const createRegistrationSchema = z.object({
   name: z.string().min(2, "Nome muito curto.").max(120, "Nome muito longo."),
   email: z.string().email("E-mail inválido."),
@@ -90,6 +121,9 @@ export const createRegistrationSchema = z.object({
   lgpdAccepted: z.boolean().refine((v) => v === true, "É preciso aceitar os termos LGPD."),
 });
 
+/**
+ * Validates payload when updating a registration (check-in, kit delivery, etc.).
+ */
 export const patchRegistrationSchema = z.object({
   checkedIn: z.boolean().optional(),
   kitDelivered: z.boolean().optional(),

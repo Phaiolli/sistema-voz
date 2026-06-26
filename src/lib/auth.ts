@@ -1,3 +1,13 @@
+/**
+ * NextAuth v5 configuration with JWT strategy and Credentials provider.
+ *
+ * - Session strategy: JWT (stateless, suitable for serverless)
+ * - Provider: Credentials (email/password with bcrypt verification)
+ * - Rate limiting: 5 attempts per email per 15 minutes (prevents brute force)
+ * - Session augmentation: `Session.user` enriched with `id`, `role`, `plan`
+ *
+ * See `types/next-auth.d.ts` for `Session` interface augmentation.
+ */
 import NextAuth from "next-auth";
 import type { Session } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
@@ -7,6 +17,14 @@ import { rateLimit } from "./api/rate-limit";
 import type { UserRole, UserPlan } from "./types";
 import type { JWT } from "next-auth/jwt";
 
+/**
+ * NextAuth singleton instance exported for use in API routes and server actions.
+ *
+ * @example
+ * // In a route handler
+ * const session = await auth();
+ * if (!session) return res.status(401).json({ error: "Unauthorized" });
+ */
 export const { handlers, signIn, signOut, auth } = NextAuth({
   session: { strategy: "jwt" },
   providers: [

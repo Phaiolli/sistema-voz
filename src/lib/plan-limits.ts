@@ -1,3 +1,11 @@
+/**
+ * Plan limits, pricing, and quota checks for SaaS multi-tenant model.
+ *
+ * Free plan: 1 event + 15 questions per event.
+ * Paid plan: unlimited events and questions (per paid event).
+ *
+ * See ADR 009 (SaaS multi-tenant) for design rationale.
+ */
 import { createServerClient } from "@/lib/supabase";
 import { logError } from "@/lib/log";
 
@@ -10,7 +18,13 @@ export const FREE_QUESTION_LIMIT = 15;
 /** Price of a single paid event, in BRL cents. */
 export const EVENT_PRICE_CENTS = 5990;
 
-/** Returns the total number of events owned by the given owner. */
+/**
+ * Returns the total number of events owned by the given owner.
+ *
+ * @param ownerId - UUID of the owner
+ * @returns Total event count
+ * @throws On database error
+ */
 export async function getOwnerEventCount(ownerId: string): Promise<number> {
   const supabase = createServerClient();
   const { count, error } = await supabase
@@ -24,7 +38,16 @@ export async function getOwnerEventCount(ownerId: string): Promise<number> {
   return count ?? 0;
 }
 
-/** Returns true if the given event is owned by the given user. */
+/**
+ * Checks if a specific event is owned by a specific user.
+ *
+ * Used in auth-guard for ownership verification (returns 404 on mismatch to avoid enumeration).
+ *
+ * @param eventId - UUID of the event
+ * @param userId - UUID of the potential owner
+ * @returns true if user owns the event; false otherwise
+ * @throws On database error
+ */
 export async function isEventOwnedBy(eventId: string, userId: string): Promise<boolean> {
   const supabase = createServerClient();
   const { data, error } = await supabase
@@ -40,7 +63,15 @@ export async function isEventOwnedBy(eventId: string, userId: string): Promise<b
   return data !== null;
 }
 
-/** Returns the total number of questions submitted for the given event. */
+/**
+ * Returns the total number of questions submitted for a given event.
+ *
+ * Used to enforce the free plan limit (`FREE_QUESTION_LIMIT`).
+ *
+ * @param eventId - UUID of the event
+ * @returns Total question count
+ * @throws On database error
+ */
 export async function getEventQuestionCount(eventId: string): Promise<number> {
   const supabase = createServerClient();
   const { count, error } = await supabase
@@ -54,7 +85,15 @@ export async function getEventQuestionCount(eventId: string): Promise<number> {
   return count ?? 0;
 }
 
-/** Returns the plan ("free" | "paid") of the given owner. */
+/**
+ * Returns the plan of the given owner.
+ *
+ * Determines which rate limits and quota restrictions apply.
+ *
+ * @param ownerId - UUID of the owner
+ * @returns "free" or "paid"
+ * @throws On database error
+ */
 export async function getOwnerPlan(ownerId: string): Promise<"free" | "paid"> {
   const supabase = createServerClient();
   const { data, error } = await supabase

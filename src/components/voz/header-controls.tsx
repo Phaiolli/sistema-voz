@@ -1,9 +1,20 @@
+/**
+ * Header user menu and logout control.
+ *
+ * Displays authenticated user's initials, name, and email in a dropdown-like header area.
+ * Provides logout button and theme toggle.
+ *
+ * Used in `/admin/eventos`, `/admin/usuarios`, and `/mediador` layouts.
+ */
 "use client"
 
 import { signOut, useSession } from "next-auth/react"
 import { LogOut } from "lucide-react"
 import { ThemeToggle } from "@/components/voz/theme-toggle"
 
+/**
+ * @internal Derives user initials from name or email for avatar badge.
+ */
 function initials(name: string | null | undefined, email: string | null | undefined): string {
   if (name) {
     return name.split(" ").map((w) => w[0]).filter(Boolean).slice(0, 2).join("").toUpperCase();
@@ -11,6 +22,13 @@ function initials(name: string | null | undefined, email: string | null | undefi
   return email?.[0]?.toUpperCase() ?? "?";
 }
 
+/**
+ * Renders header user controls: avatar with name/email and logout button.
+ *
+ * Responsive: hides text on mobile, shows only avatar and logout button.
+ *
+ * @returns Header controls component (or null if not authenticated)
+ */
 export function HeaderControls() {
   const { data: session } = useSession();
   const u = session?.user as { name?: string | null; email?: string | null } | undefined;

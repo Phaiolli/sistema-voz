@@ -59,24 +59,24 @@ export default function PlataformaPage() {
   const maxMonthly = Math.max(...(stats?.monthlyRevenue.map(m => m.amount) ?? [1]));
 
   return (
-    <div style={{ minHeight: "100dvh", background: "hsl(var(--background))", color: "hsl(var(--foreground))" }}>
+    <div className="bg-background text-foreground" style={{ minHeight: "100dvh" }}>
       <PlataformaHeader active="dashboard" />
 
-      <main style={{ maxWidth: 1200, margin: "0 auto", padding: "32px 24px" }}>
-        <div style={{ marginBottom: 32 }}>
-          <p style={{ fontSize: 13, fontWeight: 600, color: "hsl(var(--primary))", textTransform: "uppercase", letterSpacing: ".08em", margin: "0 0 6px" }}>
+      <main className="mx-auto px-6 py-8" style={{ maxWidth: 1200 }}>
+        <div className="mb-8">
+          <p className="font-semibold text-primary uppercase" style={{ fontSize: 13, letterSpacing: ".08em", margin: "0 0 6px" }}>
             Plataforma VOZ
           </p>
-          <h1 style={{ fontFamily: '"Archivo", sans-serif', fontWeight: 700, fontSize: 28, margin: "0 0 4px" }}>
+          <h1 className="font-bold" style={{ fontFamily: '"Archivo", sans-serif', fontSize: 28, margin: "0 0 4px" }}>
             Dashboard
           </h1>
-          <p style={{ fontSize: 13, color: "hsl(var(--muted-foreground))", margin: 0 }}>
+          <p className="text-muted-foreground" style={{ fontSize: 13, margin: 0 }}>
             {loading ? "Carregando…" : "Visão geral em tempo real da plataforma."}
           </p>
         </div>
 
         {/* KPI grid */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 16, marginBottom: 32 }}>
+        <div className="grid gap-4 mb-8" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}>
           <KpiCard
             label="Usuários"
             value={loading ? "—" : String(stats?.users.total ?? 0)}
@@ -129,25 +129,25 @@ export default function PlataformaPage() {
           />
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, marginBottom: 32 }}>
+        <div className="grid gap-6 mb-8" style={{ gridTemplateColumns: "1fr 1fr" }}>
           {/* Monthly revenue chart */}
-          <div style={{ background: "hsl(var(--muted))", border: "1px solid hsl(var(--border))", borderRadius: 16, padding: 24 }}>
-            <p style={{ fontFamily: '"Archivo", sans-serif', fontWeight: 600, fontSize: 15, margin: "0 0 20px" }}>
+          <div className="bg-muted border border-border rounded-2xl p-6">
+            <p className="font-semibold" style={{ fontFamily: '"Archivo", sans-serif', fontSize: 15, margin: "0 0 20px" }}>
               Receita mensal (últimos 6 meses)
             </p>
             {loading ? (
-              <p style={{ fontSize: 13, color: "hsl(var(--muted-foreground))" }}>Carregando…</p>
+              <p className="text-muted-foreground" style={{ fontSize: 13 }}>Carregando…</p>
             ) : (
-              <div style={{ display: "flex", alignItems: "flex-end", gap: 10, height: 120 }}>
+              <div className="flex items-end gap-2.5" style={{ height: 120 }}>
                 {stats?.monthlyRevenue.map(m => {
                   const h = maxMonthly > 0 ? Math.max(4, Math.round((m.amount / maxMonthly) * 100)) : 4;
                   return (
-                    <div key={m.month} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
-                      <span style={{ fontSize: 10, color: "hsl(var(--muted-foreground))" }}>
+                    <div key={m.month} className="flex-1 flex flex-col items-center gap-1.5">
+                      <span className="text-muted-foreground" style={{ fontSize: 10 }}>
                         {m.amount > 0 ? brl(m.amount).replace("R$ ", "") : ""}
                       </span>
-                      <div style={{ width: "100%", height: h, borderRadius: 4, background: m.amount > 0 ? "hsl(var(--primary))" : "hsl(var(--border))" }} />
-                      <span style={{ fontSize: 11, color: "hsl(var(--muted-foreground))", whiteSpace: "nowrap" }}>{m.label}</span>
+                      <div className="w-full rounded" style={{ height: h, background: m.amount > 0 ? "hsl(var(--primary))" : "hsl(var(--border))" }} />
+                      <span className="text-muted-foreground whitespace-nowrap" style={{ fontSize: 11 }}>{m.label}</span>
                     </div>
                   );
                 })}
@@ -156,20 +156,20 @@ export default function PlataformaPage() {
           </div>
 
           {/* Users breakdown */}
-          <div style={{ background: "hsl(var(--muted))", border: "1px solid hsl(var(--border))", borderRadius: 16, padding: 24 }}>
-            <p style={{ fontFamily: '"Archivo", sans-serif', fontWeight: 600, fontSize: 15, margin: "0 0 20px" }}>
+          <div className="bg-muted border border-border rounded-2xl p-6">
+            <p className="font-semibold" style={{ fontFamily: '"Archivo", sans-serif', fontSize: 15, margin: "0 0 20px" }}>
               Distribuição de usuários
             </p>
             {loading || !stats ? (
-              <p style={{ fontSize: 13, color: "hsl(var(--muted-foreground))" }}>Carregando…</p>
+              <p className="text-muted-foreground" style={{ fontSize: 13 }}>Carregando…</p>
             ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              <div className="flex flex-col gap-4">
                 <UserBar label="Gratuito" count={stats.users.free} total={stats.users.total} color="hsl(var(--muted-foreground))" />
                 <UserBar label="Pagante" count={stats.users.paid} total={stats.users.total} color="hsl(var(--primary))" />
-                <div style={{ marginTop: 8, paddingTop: 16, borderTop: "1px solid hsl(var(--border))" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: "hsl(var(--muted-foreground))" }}>
+                <div className="mt-2 pt-4 border-t border-border">
+                  <div className="flex justify-between text-muted-foreground" style={{ fontSize: 13 }}>
                     <span>Taxa de conversão</span>
-                    <span style={{ fontWeight: 600, color: "hsl(var(--foreground))" }}>
+                    <span className="font-semibold text-foreground">
                       {stats.users.total > 0 ? ((stats.users.paid / stats.users.total) * 100).toFixed(1) : "0"}%
                     </span>
                   </div>
@@ -180,45 +180,45 @@ export default function PlataformaPage() {
         </div>
 
         {/* Recent payments */}
-        <div style={{ background: "hsl(var(--muted))", border: "1px solid hsl(var(--border))", borderRadius: 16, padding: 24 }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
-            <p style={{ fontFamily: '"Archivo", sans-serif', fontWeight: 600, fontSize: 15, margin: 0 }}>
+        <div className="bg-muted border border-border rounded-2xl p-6">
+          <div className="flex items-center justify-between mb-5">
+            <p className="font-semibold m-0" style={{ fontFamily: '"Archivo", sans-serif', fontSize: 15 }}>
               Pagamentos recentes
             </p>
-            <Link href="/plataforma/financeiro" style={{ fontSize: 13, fontWeight: 500, color: "hsl(var(--primary))", textDecoration: "none", display: "flex", alignItems: "center", gap: 4 }}>
+            <Link href="/plataforma/financeiro" className="flex items-center gap-1 font-medium text-primary no-underline" style={{ fontSize: 13 }}>
               Ver todos <ArrowUpRight size={13} />
             </Link>
           </div>
 
           {loading ? (
-            <p style={{ fontSize: 13, color: "hsl(var(--muted-foreground))" }}>Carregando…</p>
+            <p className="text-muted-foreground" style={{ fontSize: 13 }}>Carregando…</p>
           ) : recentPayments.length === 0 ? (
-            <p style={{ fontSize: 13, color: "hsl(var(--muted-foreground))", textAlign: "center", padding: "24px 0" }}>
+            <p className="text-center text-muted-foreground py-6" style={{ fontSize: 13 }}>
               Nenhum pagamento registrado ainda.
             </p>
           ) : (
             <div style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+              <table className="w-full" style={{ borderCollapse: "collapse", fontSize: 13 }}>
                 <thead>
-                  <tr style={{ borderBottom: "1px solid hsl(var(--border))" }}>
+                  <tr className="border-b border-border">
                     {["Usuário", "Evento", "Valor", "Status", "Data"].map(h => (
-                      <th key={h} style={{ padding: "0 12px 12px 0", textAlign: "left", fontWeight: 600, color: "hsl(var(--muted-foreground))", fontSize: 12, textTransform: "uppercase", letterSpacing: ".05em" }}>{h}</th>
+                      <th key={h} className="text-left font-semibold text-muted-foreground uppercase" style={{ padding: "0 12px 12px 0", fontSize: 12, letterSpacing: ".05em" }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {recentPayments.map(p => (
-                    <tr key={p.id} style={{ borderBottom: "1px solid hsl(var(--border))" }}>
+                    <tr key={p.id} className="border-b border-border">
                       <td style={{ padding: "12px 12px 12px 0" }}>
-                        <p style={{ margin: 0, fontWeight: 500 }}>{p.ownerName}</p>
-                        <p style={{ margin: 0, color: "hsl(var(--muted-foreground))", fontSize: 12 }}>{p.ownerEmail}</p>
+                        <p className="m-0 font-medium">{p.ownerName}</p>
+                        <p className="m-0 text-muted-foreground" style={{ fontSize: 12 }}>{p.ownerEmail}</p>
                       </td>
-                      <td style={{ padding: "12px 12px 12px 0", color: "hsl(var(--muted-foreground))" }}>{p.eventName}</td>
-                      <td style={{ padding: "12px 12px 12px 0", fontWeight: 600 }}>{brl(p.amount)}</td>
+                      <td className="text-muted-foreground" style={{ padding: "12px 12px 12px 0" }}>{p.eventName}</td>
+                      <td className="font-semibold" style={{ padding: "12px 12px 12px 0" }}>{brl(p.amount)}</td>
                       <td style={{ padding: "12px 12px 12px 0" }}>
                         <StatusBadge status={p.status} />
                       </td>
-                      <td style={{ padding: "12px 0 12px 0", color: "hsl(var(--muted-foreground))" }}>
+                      <td className="text-muted-foreground" style={{ padding: "12px 0 12px 0" }}>
                         {new Date(p.paidAt ?? p.createdAt).toLocaleDateString("pt-BR")}
                       </td>
                     </tr>
@@ -240,19 +240,17 @@ function KpiCard({ label, value, sub, icon, color, highlight }: {
   label: string; value: string; sub: string; icon: React.ReactNode; color: string; highlight?: boolean;
 }) {
   return (
-    <div style={{
-      background: highlight ? "hsl(var(--primary) / .06)" : "hsl(var(--muted))",
-      border: `1px solid ${highlight ? "hsl(var(--primary) / .25)" : "hsl(var(--border))"}`,
-      borderRadius: 14, padding: 20,
-    }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-        <span style={{ fontSize: 12, fontWeight: 600, color: "hsl(var(--muted-foreground))", textTransform: "uppercase", letterSpacing: ".06em" }}>{label}</span>
+    <div
+      className={`rounded-[14px] p-5 border ${highlight ? "bg-primary/5 border-primary/25" : "bg-muted border-border"}`}
+    >
+      <div className="flex items-center justify-between mb-3">
+        <span className="font-semibold text-muted-foreground uppercase" style={{ fontSize: 12, letterSpacing: ".06em" }}>{label}</span>
         <span style={{ color, opacity: .7 }}>{icon}</span>
       </div>
-      <p style={{ fontFamily: '"Archivo", sans-serif', fontWeight: 700, fontSize: 26, margin: "0 0 4px", color: highlight ? "hsl(var(--primary))" : "hsl(var(--foreground))" }}>
+      <p className={`font-bold ${highlight ? "text-primary" : "text-foreground"}`} style={{ fontFamily: '"Archivo", sans-serif', fontSize: 26, margin: "0 0 4px" }}>
         {value}
       </p>
-      <p style={{ fontSize: 12, color: "hsl(var(--muted-foreground))", margin: 0 }}>{sub}</p>
+      <p className="text-muted-foreground m-0" style={{ fontSize: 12 }}>{sub}</p>
     </div>
   );
 }
@@ -261,12 +259,12 @@ function UserBar({ label, count, total, color }: { label: string; count: number;
   const pct = total > 0 ? (count / total) * 100 : 0;
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 6 }}>
-        <span style={{ color: "hsl(var(--muted-foreground))" }}>{label}</span>
-        <span style={{ fontWeight: 600 }}>{count} <span style={{ fontWeight: 400, color: "hsl(var(--muted-foreground))" }}>({pct.toFixed(0)}%)</span></span>
+      <div className="flex justify-between mb-1.5" style={{ fontSize: 13 }}>
+        <span className="text-muted-foreground">{label}</span>
+        <span className="font-semibold">{count} <span className="font-normal text-muted-foreground">({pct.toFixed(0)}%)</span></span>
       </div>
-      <div style={{ height: 8, borderRadius: 99, background: "hsl(var(--border))", overflow: "hidden" }}>
-        <div style={{ height: "100%", width: `${pct}%`, background: color, borderRadius: 99 }} />
+      <div className="h-2 rounded-full bg-border overflow-hidden">
+        <div className="h-full rounded-full" style={{ width: `${pct}%`, background: color }} />
       </div>
     </div>
   );
@@ -280,7 +278,7 @@ function StatusBadge({ status }: { status: string }) {
   };
   const s = map[status] ?? map.pending;
   return (
-    <span style={{ padding: "3px 10px", borderRadius: 999, fontSize: 12, fontWeight: 600, color: s.color, background: s.bg }}>
+    <span className="py-1 px-2.5 rounded-full font-semibold" style={{ fontSize: 12, color: s.color, background: s.bg }}>
       {s.label}
     </span>
   );
@@ -302,60 +300,53 @@ export function PlataformaHeader({ active }: { active: "dashboard" | "financeiro
   ];
 
   return (
-    <header style={{ height: 60, borderBottom: "1px solid hsl(var(--border))", display: "flex", alignItems: "center", padding: "0 24px", gap: 12, position: "sticky", top: 0, background: "hsl(var(--background))", zIndex: 40 }}>
+    <header className="flex items-center gap-3 px-6 border-b border-border bg-background sticky top-0 z-40" style={{ height: 60 }}>
       <VozWordmark size={20} />
-      <span style={{ fontSize: 11, fontWeight: 700, color: "hsl(var(--primary))", textTransform: "uppercase", letterSpacing: ".1em", padding: "2px 8px", borderRadius: 4, background: "hsl(var(--primary) / .1)", flexShrink: 0 }}>
+      <span className="font-bold text-primary uppercase py-0.5 px-2 rounded bg-primary/10 shrink-0" style={{ fontSize: 11, letterSpacing: ".1em" }}>
         Super Admin
       </span>
 
-      <nav style={{ display: "flex", gap: 2, marginLeft: 4 }}>
+      <nav className="flex gap-0.5 ml-1">
         {links.map(l => (
-          <Link key={l.key} href={l.href} style={{
-            padding: "6px 12px", borderRadius: 8, fontSize: 13, fontWeight: 500, textDecoration: "none",
-            background: active === l.key ? "hsl(var(--muted))" : "transparent",
-            color: active === l.key ? "hsl(var(--foreground))" : "hsl(var(--muted-foreground))",
-          }}>
+          <Link
+            key={l.key}
+            href={l.href}
+            className={`py-1.5 px-3 rounded-lg font-medium no-underline ${active === l.key ? "bg-muted text-foreground" : "text-muted-foreground"}`}
+            style={{ fontSize: 13 }}
+          >
             {l.label}
           </Link>
         ))}
       </nav>
 
-      <div style={{ flex: 1 }} />
+      <div className="flex-1" />
 
       {/* User identity */}
-      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <div style={{
-            width: 32, height: 32, borderRadius: "50%",
-            background: "hsl(var(--primary))", color: "#fff",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: 12, fontWeight: 700, flexShrink: 0, userSelect: "none",
-          }}>
+      <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2">
+          <div
+            className="flex items-center justify-center rounded-full bg-primary font-bold shrink-0 select-none"
+            style={{ width: 32, height: 32, color: "#fff", fontSize: 12 }}
+          >
             {initials}
           </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
-            <span style={{ fontSize: 13, fontWeight: 600, lineHeight: 1 }}>
+          <div className="flex flex-col gap-px">
+            <span className="font-semibold" style={{ fontSize: 13, lineHeight: 1 }}>
               {user?.name ?? "—"}
             </span>
-            <span style={{ fontSize: 11, color: "hsl(var(--muted-foreground))", lineHeight: 1 }}>
+            <span className="text-muted-foreground" style={{ fontSize: 11, lineHeight: 1 }}>
               {user?.email ?? ""}
             </span>
           </div>
         </div>
 
-        <div style={{ width: 1, height: 28, background: "hsl(var(--border))" }} aria-hidden />
+        <div className="bg-border" style={{ width: 1, height: 28 }} aria-hidden />
 
         <button
           onClick={() => signOut({ callbackUrl: "/entrar" })}
           title="Sair da plataforma"
-          style={{
-            display: "flex", alignItems: "center", gap: 6,
-            height: 34, padding: "0 12px", borderRadius: 8,
-            border: "1px solid hsl(var(--border))",
-            background: "transparent",
-            color: "hsl(var(--muted-foreground))",
-            fontSize: 13, fontWeight: 500, cursor: "pointer", fontFamily: "inherit",
-          }}
+          className="flex items-center gap-1.5 h-[34px] px-3 rounded-lg border border-border bg-transparent text-muted-foreground font-medium cursor-pointer"
+          style={{ fontSize: 13, fontFamily: "inherit" }}
         >
           <LogOut size={14} aria-hidden /> Sair
         </button>

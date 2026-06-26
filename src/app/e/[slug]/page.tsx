@@ -5,26 +5,7 @@ import { Calendar, MapPin, Mic, Lock, UserPlus } from "lucide-react";
 import { createServerClient } from "@/lib/supabase";
 import { VozWordmark } from "@/components/voz/wordmark";
 import type { Event, EventPage } from "@/lib/types";
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function mapEvent(row: Record<string, any>): Event {
-  return {
-    id: row.id,
-    slug: row.slug,
-    name: row.name,
-    startsAt: row.starts_at,
-    endsAt: row.ends_at,
-    place: row.place,
-    address: row.address,
-    status: row.status,
-    about: row.about,
-    theme: row.theme ?? {},
-    config: row.config ?? {},
-    organizerId: row.organizer_id,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-  };
-}
+import { mapEvent } from "@/lib/api/mappers";
 
 async function getEvent(slug: string): Promise<Event | null> {
   const supabase = createServerClient();
@@ -73,13 +54,13 @@ export default async function EventPage({ params }: { params: Promise<{ slug: st
         Pular para conteúdo principal
       </a>
 
-      <header style={{ position: "sticky", top: 0, zIndex: 10, height: 52, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 16px", background: `linear-gradient(180deg, ${bg} 60%, transparent)`, backdropFilter: "blur(8px)" }}>
+      <header className="sticky top-0 z-10 flex h-[52px] items-center justify-between px-4" style={{ background: `linear-gradient(180deg, ${bg} 60%, transparent)`, backdropFilter: "blur(8px)" }}>
         {page.logo ? (
-          <Image src={page.logo} alt={event.name} width={120} height={32} style={{ objectFit: "contain", height: 32, width: "auto" }} unoptimized />
+          <Image src={page.logo} alt={event.name} width={120} height={32} className="h-8 w-auto object-contain" unoptimized />
         ) : (
           <VozWordmark size={20} inverse />
         )}
-        <Link href="/entrar" aria-label="Acesso administrativo" className="admin-link" style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: 8, borderRadius: 8, color: "#fff" }}>
+        <Link href="/entrar" aria-label="Acesso administrativo" className="admin-link flex items-center justify-center rounded-lg p-2 text-white">
           <Lock size={15} aria-hidden />
         </Link>
       </header>
@@ -87,34 +68,34 @@ export default async function EventPage({ params }: { params: Promise<{ slug: st
       <main id="conteudo-principal">
         {/* Cover image */}
         {coverUrl && (
-          <div style={{ width: "100%", height: 200, overflow: "hidden", position: "relative" }}>
-            <Image src={coverUrl} alt={event.name} fill style={{ objectFit: "cover" }} unoptimized priority />
+          <div className="relative h-[200px] w-full overflow-hidden">
+            <Image src={coverUrl} alt={event.name} fill className="object-cover" unoptimized priority />
           </div>
         )}
 
         {/* Hero */}
-        <section aria-labelledby="hero-heading" style={{ padding: "8px 24px 32px" }}>
-          <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: `${accent}30`, color: accent, padding: "6px 12px", borderRadius: 999, fontSize: 12, fontWeight: 700, letterSpacing: "0.06em", marginBottom: 16 }}>
+        <section aria-labelledby="hero-heading" className="px-6 pt-2 pb-8">
+          <div className="mb-4 inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-bold tracking-[0.06em]" style={{ background: `${accent}30`, color: accent }}>
             {new Date(event.startsAt).getFullYear()}
           </div>
 
-          <h1 id="hero-heading" style={{ fontFamily: '"Archivo Black", sans-serif', fontWeight: 900, fontSize: "clamp(48px, 12vw, 76px)", lineHeight: 0.95, letterSpacing: "-0.03em", margin: "0 0 16px", color: "#fff" }}>
+          <h1 id="hero-heading" className="mb-4 text-white font-black leading-[0.95]" style={{ fontFamily: '"Archivo Black", sans-serif', fontSize: "clamp(48px, 12vw, 76px)", letterSpacing: "-0.03em" }}>
             {event.name.toUpperCase()}<span style={{ color: accent }}>.</span>
           </h1>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <div className="flex flex-col gap-2.5">
             <Chip icon={<Calendar size={16} />} label={formatDate(event.startsAt)} accent={accent} />
             {event.place && <Chip icon={<MapPin size={16} />} label={[event.place, event.address].filter(Boolean).join(" · ")} accent={accent} />}
           </div>
         </section>
 
-        <div style={{ height: 4, background: `linear-gradient(90deg, ${accent} 0 56px, transparent 56px)` }} />
+        <div className="h-1" style={{ background: `linear-gradient(90deg, ${accent} 0 56px, transparent 56px)` }} />
 
         {/* Sobre */}
         {page.aboutText && (
-          <section aria-labelledby="sobre-heading" style={{ padding: "28px 24px" }}>
+          <section aria-labelledby="sobre-heading" className="px-6 py-7">
             <SectionLabel label="SOBRE" accent={accent} id="sobre-heading" />
-            <p style={{ fontFamily: '"Archivo", sans-serif', fontSize: 20, fontWeight: 600, color: "#fff", lineHeight: 1.35 }}>
+            <p className="text-xl font-semibold leading-[1.35] text-white" style={{ fontFamily: '"Archivo", sans-serif' }}>
               {page.aboutText}
             </p>
           </section>
@@ -122,17 +103,17 @@ export default async function EventPage({ params }: { params: Promise<{ slug: st
 
         {/* Programação */}
         {schedule.length > 0 && (
-          <section aria-labelledby="programacao-heading" style={{ padding: "0 24px 28px" }}>
+          <section aria-labelledby="programacao-heading" className="px-6 pb-7">
             <SectionLabel label="PROGRAMAÇÃO" accent={accent} id="programacao-heading" />
-            <ol style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column" }}>
+            <ol className="m-0 flex list-none flex-col p-0">
               {schedule.map((item, i) => (
-                <li key={item.id} style={{ display: "flex", gap: 14, padding: "12px 0", borderTop: i === 0 ? "none" : "1px solid rgba(255,255,255,.1)" }}>
-                  <span style={{ fontFamily: '"Archivo Black", sans-serif', fontSize: 18, color: accent, minWidth: 56, letterSpacing: "-0.01em", flexShrink: 0 }}>
+                <li key={item.id} className="flex gap-3.5 py-3" style={{ borderTop: i === 0 ? "none" : "1px solid rgba(255,255,255,.1)" }}>
+                  <span className="min-w-[56px] shrink-0 text-lg" style={{ fontFamily: '"Archivo Black", sans-serif', color: accent, letterSpacing: "-0.01em" }}>
                     {item.time}
                   </span>
-                  <span style={{ color: "#fff", fontSize: 15, lineHeight: 1.45 }}>
+                  <span className="text-[15px] leading-[1.45] text-white">
                     {item.title}
-                    {item.description && <span style={{ display: "block", color: "rgba(255,255,255,.6)", fontSize: 13, marginTop: 2 }}>{item.description}</span>}
+                    {item.description && <span className="mt-0.5 block text-[13px]" style={{ color: "rgba(255,255,255,.6)" }}>{item.description}</span>}
                   </span>
                 </li>
               ))}
@@ -142,19 +123,19 @@ export default async function EventPage({ params }: { params: Promise<{ slug: st
 
         {/* Palestrantes */}
         {speakers.length > 0 && (
-          <section aria-labelledby="palestrantes-heading" style={{ padding: "0 24px 28px" }}>
+          <section aria-labelledby="palestrantes-heading" className="px-6 pb-7">
             <SectionLabel label="PALESTRANTES" accent={accent} id="palestrantes-heading" />
-            <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <ul className="m-0 grid grid-cols-2 list-none gap-3 p-0">
               {speakers.map((s) => (
-                <li key={s.id} style={{ background: "rgba(255,255,255,.08)", borderRadius: 12, padding: 14 }}>
-                  <div style={{ width: 64, height: 64, borderRadius: "50%", overflow: "hidden", marginBottom: 10, background: "rgba(255,255,255,.1)", border: `1px solid ${accent}55`, flexShrink: 0 }}>
+                <li key={s.id} className="rounded-xl p-3.5" style={{ background: "rgba(255,255,255,.08)" }}>
+                  <div className="mb-2.5 h-16 w-16 shrink-0 overflow-hidden rounded-full" style={{ background: "rgba(255,255,255,.1)", border: `1px solid ${accent}55` }}>
                     {s.photoUrl && (
-                      <Image src={s.photoUrl} alt={s.name} width={64} height={64} style={{ objectFit: "cover", width: "100%", height: "100%" }} unoptimized />
+                      <Image src={s.photoUrl} alt={s.name} width={64} height={64} className="h-full w-full object-cover" unoptimized />
                     )}
                   </div>
-                  <p style={{ color: "#fff", fontSize: 14, fontWeight: 600, lineHeight: 1.25, margin: "0 0 2px" }}>{s.name}</p>
-                  <p style={{ color: "rgba(255,255,255,.6)", fontSize: 12, margin: 0 }}>{s.role}</p>
-                  {s.bio && <p style={{ color: "rgba(255,255,255,.5)", fontSize: 11, marginTop: 6, lineHeight: 1.4 }}>{s.bio}</p>}
+                  <p className="mb-0.5 text-sm font-semibold leading-tight text-white">{s.name}</p>
+                  <p className="m-0 text-xs" style={{ color: "rgba(255,255,255,.6)" }}>{s.role}</p>
+                  {s.bio && <p className="mt-1.5 text-[11px] leading-[1.4]" style={{ color: "rgba(255,255,255,.5)" }}>{s.bio}</p>}
                 </li>
               ))}
             </ul>
@@ -163,50 +144,52 @@ export default async function EventPage({ params }: { params: Promise<{ slug: st
 
         {/* Local */}
         {event.place && (
-          <section aria-labelledby="local-heading" style={{ padding: "0 24px 28px" }}>
+          <section aria-labelledby="local-heading" className="px-6 pb-7">
             <SectionLabel label="LOCAL" accent={accent} id="local-heading" />
-            <div style={{ background: "rgba(255,255,255,.08)", borderRadius: 12, padding: 14 }}>
-              <p style={{ color: "#fff", fontSize: 15, fontWeight: 600, margin: "0 0 4px" }}>{event.place}</p>
-              {event.address && <p style={{ color: "rgba(255,255,255,.6)", fontSize: 13, margin: 0 }}>{event.address}</p>}
+            <div className="rounded-xl p-3.5" style={{ background: "rgba(255,255,255,.08)" }}>
+              <p className="mb-1 text-[15px] font-semibold text-white">{event.place}</p>
+              {event.address && <p className="m-0 text-[13px]" style={{ color: "rgba(255,255,255,.6)" }}>{event.address}</p>}
             </div>
           </section>
         )}
 
         {/* Footer */}
-        <footer style={{ padding: "16px 24px 130px", borderTop: "1px solid rgba(255,255,255,.1)" }}>
+        <footer className="px-6 pt-4 pb-32" style={{ borderTop: "1px solid rgba(255,255,255,.1)" }}>
           {organizer && (
             <>
-              <p style={{ color: "rgba(255,255,255,.5)", fontSize: 12, margin: "0 0 4px" }}>realização</p>
-              <p style={{ color: "#fff", fontWeight: 600, fontSize: 14, margin: "0 0 10px" }}>{organizer}</p>
+              <p className="mb-1 text-xs" style={{ color: "rgba(255,255,255,.5)" }}>realização</p>
+              <p className="mb-2.5 text-sm font-semibold text-white">{organizer}</p>
             </>
           )}
           {organizerInstagram && (
-            <div style={{ display: "flex", gap: 14, color: "rgba(255,255,255,.5)", fontSize: 13, marginBottom: 16 }}>
-              <Link href={`https://instagram.com/${organizerInstagram.replace("@", "")}`} target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 6, color: "inherit", textDecoration: "none" }}>
+            <div className="mb-4 flex gap-3.5 text-[13px]" style={{ color: "rgba(255,255,255,.5)" }}>
+              <Link href={`https://instagram.com/${organizerInstagram.replace("@", "")}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-inherit no-underline">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor"/></svg>
                 {organizerInstagram}
               </Link>
             </div>
           )}
-          <p style={{ color: "rgba(255,255,255,.4)", fontSize: 12 }}>
+          <p className="text-xs" style={{ color: "rgba(255,255,255,.4)" }}>
             powered by <VozWordmark size={13} inverse />
           </p>
         </footer>
       </main>
 
       {/* Sticky CTA */}
-      <div style={{ position: "fixed", left: 0, right: 0, bottom: 0, padding: "14px 16px 28px", background: `linear-gradient(180deg, transparent, ${bg} 30%)`, zIndex: 10 }}>
+      <div className="fixed inset-x-0 bottom-0 z-10 px-4 pt-3.5 pb-7" style={{ background: `linear-gradient(180deg, transparent, ${bg} 30%)` }}>
         {regOpen ? (
           <Link
             href={`/e/${slug}/inscricao`}
-            style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, height: 52, width: "100%", borderRadius: 10, fontSize: 16, fontWeight: 700, background: accent, color: bg, textDecoration: "none", boxShadow: `0 8px 24px ${accent}55` }}
+            className="flex h-[52px] w-full items-center justify-center gap-2 rounded-[10px] text-base font-bold no-underline"
+            style={{ background: accent, color: bg, boxShadow: `0 8px 24px ${accent}55` }}
           >
             <UserPlus size={20} aria-hidden /> Se inscrever
           </Link>
         ) : (
           <Link
             href={`/e/${slug}/perguntar`}
-            style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, height: 52, width: "100%", borderRadius: 10, fontSize: 16, fontWeight: 700, background: accent, color: bg, textDecoration: "none", boxShadow: `0 8px 24px ${accent}55` }}
+            className="flex h-[52px] w-full items-center justify-center gap-2 rounded-[10px] text-base font-bold no-underline"
+            style={{ background: accent, color: bg, boxShadow: `0 8px 24px ${accent}55` }}
           >
             <Mic size={20} aria-hidden /> Fazer uma pergunta
           </Link>
@@ -218,8 +201,8 @@ export default async function EventPage({ params }: { params: Promise<{ slug: st
 
 function Chip({ icon, label, accent }: { icon: React.ReactNode; label: string; accent: string }) {
   return (
-    <div style={{ display: "inline-flex", alignItems: "center", gap: 8, color: "#fff", background: "rgba(255,255,255,.1)", padding: "8px 12px", borderRadius: 999, fontSize: 13, fontWeight: 500, alignSelf: "flex-start" }}>
-      <span style={{ color: accent, display: "flex" }}>{icon}</span>
+    <div className="inline-flex items-center gap-2 self-start rounded-full px-3 py-2 text-[13px] font-medium text-white" style={{ background: "rgba(255,255,255,.1)" }}>
+      <span className="flex" style={{ color: accent }}>{icon}</span>
       {label}
     </div>
   );
@@ -227,7 +210,7 @@ function Chip({ icon, label, accent }: { icon: React.ReactNode; label: string; a
 
 function SectionLabel({ label, accent, id }: { label: string; accent: string; id?: string }) {
   return (
-    <p id={id} style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 12, fontWeight: 500, letterSpacing: "0.1em", color: accent, textTransform: "uppercase", marginBottom: 12 }}>
+    <p id={id} className="mb-3 text-xs font-medium uppercase tracking-[0.1em]" style={{ fontFamily: '"JetBrains Mono", monospace', color: accent }}>
       {label}
     </p>
   );

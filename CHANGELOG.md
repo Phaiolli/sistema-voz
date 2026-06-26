@@ -32,6 +32,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+- **BOLA/BFLA scoping**: Todas as rotas que mutam/lêm dados de eventos agora validam permissão por `event_id` — owners veem apenas seus eventos, mediadores apenas eventos atribuídos, admins têm acesso global (ADR 010).
+- **GET público sem PII**: `GET /api/v1/events/[eventId]/questions` agora retorna projeção mínima sem `author_email`, `author_contact`, `author_ip`. Perguntas anônimas exibem "Anônimo" como nome (ADR 011).
+- **RLS habilitado**: Migration 20260625000002 ativa Row-Level Security em `users`, `events`, `questions`, `registrations`, `participants`, `event_payments`, `mediator_assignments`. Policies por `organizer_id` e atribuição; service-role (server) continua funcionando.
+- **Register cria owner, nunca admin**: `POST /api/auth/register` força `role: "owner"`. Privilégio `superadmin` só via seed/manual (mitiga BFLA).
+- **Rate limiting**: `register` e `signIn` limitados a 5 tentativas por email em 15 min. Submissão de perguntas: 10/hora por IP. (ADR 011).
+- **Upload rejeita SVG**: `POST /api/v1/upload` valida allowlist (JPEG, PNG, WebP) — SVG bloqueado por risco XSS.
+- **CSP+HSTS**: Headers `Content-Security-Policy` (sem `unsafe-eval`) e `Strict-Transport-Security` configurados em `next.config.ts`.
+
+### Privacy
+- **Direito ao esquecimento LGPD**: `DELETE /api/v1/events/[id]/registrations/[regId]` anonimiza registro. `DELETE /api/v1/me/data` anonimiza todos os dados do owner (ADR 008).
+- **Cleanup LGPD**: `/api/v1/internal/cleanup` executa diariamente (Vercel Cron) — anula `author_ip` de perguntas e inscrições com 30+ dias (ADR 008).
+- **Logs sanitizados**: `logError()` extrai apenas `message`, `code`, `name` — nunca registra objeto bruto de erro ou PII.
+- **Minimização de CPF**: Campo `document` em registrações agora opcional (não coletado por padrão). Retenção de IP: 30 dias.
+- **Dados exportáveis**: `GET /api/v1/me/data-export` — direito de acesso (portabilidade) LGPD implementado.
+
+### Types
+- **NextAuth augmentation**: `types/next-auth.d.ts` estende `Session.user` com `id`, `role`, `plan` — elimina casts `as unknown as`.
+- **Database types**: `src/lib/db/database.types.ts` gerado com Drizzle — rotas usam `createClient<Database>()` sem `eslint-disable no-explicit-any`.
+- **Superadmin no Zod**: Schema de criação de user explicitamente exclui `superadmin` (documentado em `createUserSchema`). Schemas broadcast validam payloads realtime.
+- **WSMessage union**: Tipo discriminado com `question:deleted` agora incluído.
+
+### Architecture
+- **Auth guard compartilhado**: `src/lib/api/auth-guard.ts` centraliza `requireRole()` e `requireEventAccess()`. Middleware.ts protege `/api/v1/*`.
+- **Mappers centralizados**: `src/lib/api/mappers.ts` e `src/lib/api/question-mappers.ts` — `mapEvent()`, `mapQuestion()`, `mapQuestionPublic()`, `mapRegistration()` reutilizados em todas as rotas.
+- **Enums e FKs**: Schema Drizzle define `plan` e `role` como enums; FKs com `onDelete: "cascade"` ou `"set null"` coerente.
+- **ADR 009**: SaaS multi-tenant aprovado — free plan: 1 evento, 15 questões; paid: ilimitado.
+
+### Tests
+- **Coverage.include atualizado**: `vitest.config.ts` agora cobre `src/lib/**` e `src/app/api/**` — target 80%.
+- **Novos testes**: auth (rate limit), stripe/checkout, plataforma/*, lgpd (export/anonymize), participants, upload (svg reject).
+
+### Docs
+- **OpenAPI 3.0**: `docs/api-spec.openapi.yaml` — cobertura completa de endpoints, status codes, schemas, auth.
+- **tsdoc**: Exports públicos de `src/lib/**` e componentes `src/components/voz/**` documentados.
+- **LGPD governance**: Drafts criados em `docs/privacy/` — aviso-de-privacidade.md, ropa.md, ripd.md, direitos-do-titular.md (sujeito a revisão jurídica).
+
 ### Fixed
 - **Cron de cleanup/keep-alive não executava**: o Vercel Cron dispara `GET`, mas a rota `/api/v1/internal/cleanup` só expunha `DELETE` (405) e `CRON_SECRET` não estava no projeto Vercel (apenas no GitHub Actions). Resultado: a limpeza LGPD nunca rodou e o projeto Supabase free pausava por inatividade. Adicionado handler `GET` (mantendo `DELETE` para uso manual) e `CRON_SECRET` setado no Vercel. A execução diária agora também mantém o banco ativo.
 

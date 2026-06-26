@@ -3,6 +3,7 @@ import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { createServerClient } from "@/lib/supabase";
 import bcrypt from "bcryptjs";
+import type { Database } from "@/lib/db/database.types";
 
 const patchProfileSchema = z.object({
   name: z.string().min(2, "Nome muito curto.").max(100).optional(),
@@ -12,7 +13,7 @@ const patchProfileSchema = z.object({
 
 export async function PATCH(req: NextRequest) {
   const session = await auth();
-  const user = session?.user as { id?: string } | undefined;
+  const user = session?.user;
   if (!user?.id) {
     return NextResponse.json({ error: { code: "UNAUTHORIZED" } }, { status: 401 });
   }
@@ -27,7 +28,7 @@ export async function PATCH(req: NextRequest) {
 
   const { name, currentPassword, password } = parsed.data;
   const supabase = createServerClient();
-  const patch: Record<string, unknown> = {};
+  const patch: Database["public"]["Tables"]["users"]["Update"] = {};
 
   if (name !== undefined) patch.name = name;
 
@@ -41,7 +42,7 @@ export async function PATCH(req: NextRequest) {
       .eq("id", user.id)
       .single();
 
-    const valid = row?.password_hash ? await bcrypt.compare(currentPassword, row.password_hash as string) : false;
+    const valid = row?.password_hash ? await bcrypt.compare(currentPassword, row.password_hash) : false;
     if (!valid) {
       return NextResponse.json({ error: { code: "FORBIDDEN", message: "Senha atual incorreta." } }, { status: 403 });
     }

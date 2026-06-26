@@ -14,9 +14,9 @@ export async function GET() {
 
   const user = session.user as { id: string; role?: string };
 
-  if (user.role !== "owner" && user.role !== "admin") {
+  if (user.role !== "owner" && user.role !== "admin" && user.role !== "superadmin") {
     return NextResponse.json(
-      { error: { code: "FORBIDDEN", message: "Acesso restrito a owners." } },
+      { error: { code: "FORBIDDEN", message: "Acesso restrito a owners e administradores." } },
       { status: 403 },
     );
   }

@@ -1,41 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase";
-import { auth } from "@/lib/auth";
+import { requireEventAccess } from "@/lib/api/auth-guard";
 import { patchQuestionSchema } from "@/lib/schemas";
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function mapQuestion(row: Record<string, any>) {
-  return {
-    id: row.id,
-    eventId: row.event_id,
-    authorName: row.author_name,
-    authorContact: row.author_contact ?? null,
-    text: row.text,
-    status: row.status,
-    createdAt: row.created_at,
-    presentedAt: row.presented_at ?? null,
-    answeredAt: row.answered_at ?? null,
-    hiddenAt: row.hidden_at ?? null,
-    hiddenBy: row.hidden_by ?? null,
-  };
-}
+import { mapQuestionModeration, mapQuestionPublic } from "@/lib/api/mappers";
+import type { Database } from "@/lib/db/database.types";
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const session = await auth();
-  if (!session?.user) {
-    return NextResponse.json(
-      { error: { code: "UNAUTHORIZED", message: "Autenticação necessária." } },
-      { status: 401 },
-    );
-  }
-  const role = (session.user as { role?: string }).role;
-  if (role !== "admin" && role !== "mediador") {
-    return NextResponse.json(
-      { error: { code: "FORBIDDEN", message: "Sem permissão para moderar perguntas." } },
-      { status: 403 },
-    );
-  }
-
   const { id } = await params;
 
   const parsed = patchQuestionSchema.safeParse(
@@ -58,6 +28,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     .limit(1)
     .maybeSingle();
 
+  // Resolve existence (404) before authorization (403) to avoid leaking which
+  // question ids exist to a user without access.
   if (!existing) {
     return NextResponse.json(
       { error: { code: "NOT_FOUND", message: "Pergunta não encontrada." } },
@@ -65,7 +37,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     );
   }
 
-  let patch: Record<string, unknown> = {};
+  const guard = await requireEventAccess(existing.event_id as string, ["admin", "mediador", "owner", "superadmin"]);
+  if ("err" in guard) return guard.err;
+
+  let patch: Database["public"]["Tables"]["questions"]["Update"] = {};
 
   if (action === "setNext") {
     await supabase
@@ -90,13 +65,13 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     .single();
 
   if (updateErr) throw updateErr;
-  const updated = mapQuestion(row);
+  const updated = mapQuestionModeration(row);
 
   try {
     await supabase.channel(`event:${updated.eventId}:questions`).send({
       type: "broadcast",
       event: "question:updated",
-      payload: updated,
+      payload: mapQuestionPublic(row),
     });
   } catch { /* non-fatal */ }
 
@@ -104,21 +79,6 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const session = await auth();
-  if (!session?.user) {
-    return NextResponse.json(
-      { error: { code: "UNAUTHORIZED", message: "Autenticação necessária." } },
-      { status: 401 },
-    );
-  }
-  const role = (session.user as { role?: string }).role;
-  if (role !== "admin" && role !== "mediador") {
-    return NextResponse.json(
-      { error: { code: "FORBIDDEN", message: "Sem permissão para apagar perguntas." } },
-      { status: 403 },
-    );
-  }
-
   const { id } = await params;
   const supabase = createServerClient();
 
@@ -129,12 +89,16 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
     .limit(1)
     .maybeSingle();
 
+  // 404 before 403 to avoid leaking question existence.
   if (!existing) {
     return NextResponse.json(
       { error: { code: "NOT_FOUND", message: "Pergunta não encontrada." } },
       { status: 404 },
     );
   }
+
+  const guard = await requireEventAccess(existing.event_id as string, ["admin", "mediador", "owner", "superadmin"]);
+  if ("err" in guard) return guard.err;
 
   const { error: deleteErr } = await supabase
     .from("questions")

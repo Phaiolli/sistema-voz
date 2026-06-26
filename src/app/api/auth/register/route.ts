@@ -2,12 +2,20 @@ import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { createServerClient } from "@/lib/supabase";
 import { registerSchema } from "@/lib/schemas";
+import { rateLimit } from "@/lib/api/rate-limit";
+import { logError } from "@/lib/log";
 import { randomUUID } from "crypto";
 
-// TODO: Add IP-based rate limiting (max 5 registrations/hour per IP)
-// Requires adding an author_ip column to users or a dedicated rate_limit table.
-
 export async function POST(req: NextRequest) {
+  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+  const limit = await rateLimit(`register:${ip}`, { max: 5, windowMs: 60 * 60 * 1000 });
+  if (!limit.ok) {
+    return NextResponse.json(
+      { error: { code: "RATE_LIMITED", message: "Muitas tentativas. Tente novamente mais tarde." } },
+      { status: 429, headers: { "Retry-After": String(limit.retryAfter ?? 3600) } },
+    );
+  }
+
   let body: unknown;
   try {
     body = await req.json();
@@ -49,12 +57,12 @@ export async function POST(req: NextRequest) {
     name,
     email,
     password_hash: passwordHash,
-    role: "admin",
+    role: "owner",
     plan: "free",
   });
 
   if (error) {
-    console.error("[register] insert failed:", error);
+    logError("[register] insert failed", error);
     return NextResponse.json({ message: "Erro ao criar conta." }, { status: 500 });
   }
 

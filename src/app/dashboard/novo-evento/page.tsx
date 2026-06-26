@@ -64,8 +64,8 @@ export default function NovoEventoPage() {
 
   if (loading) {
     return (
-      <div style={{ minHeight: "100dvh", background: "hsl(var(--background))", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <Loader2 size={24} style={{ color: "hsl(var(--muted-foreground))", animation: "spin 1s linear infinite" }} aria-label="Carregando" />
+      <div className="flex items-center justify-center bg-background" style={{ minHeight: "100dvh" }}>
+        <Loader2 size={24} className="text-muted-foreground" style={{ animation: "spin 1s linear infinite" }} aria-label="Carregando" />
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     );
@@ -74,38 +74,38 @@ export default function NovoEventoPage() {
   if (!atLimit) return null;
 
   return (
-    <div style={{ minHeight: "100dvh", background: "hsl(var(--background))", color: "hsl(var(--foreground))" }}>
-      <header style={{ height: 56, borderBottom: "1px solid hsl(var(--border))", display: "flex", alignItems: "center", padding: "0 24px", gap: 16 }}>
+    <div className="bg-background text-foreground" style={{ minHeight: "100dvh" }}>
+      <header className="flex items-center gap-4 border-b border-border px-6" style={{ height: 56 }}>
         <VozWordmark size={22} />
-        <div style={{ flex: 1 }} />
-        <Link href="/dashboard" style={{ fontSize: 13, color: "hsl(var(--muted-foreground))", textDecoration: "none" }}>
+        <div className="flex-1" />
+        <Link href="/dashboard" className="text-[13px] text-muted-foreground no-underline">
           Voltar ao painel
         </Link>
       </header>
 
-      <main style={{ maxWidth: 480, margin: "0 auto", padding: "64px 24px" }}>
-        <div style={{ textAlign: "center", marginBottom: 32 }}>
-          <p style={{ fontSize: 13, fontWeight: 600, color: "hsl(var(--muted-foreground))", textTransform: "uppercase", letterSpacing: "0.08em", margin: "0 0 12px" }}>
+      <main className="mx-auto py-16 px-6" style={{ maxWidth: 480 }}>
+        <div className="text-center mb-8">
+          <p className="text-[13px] font-semibold text-muted-foreground uppercase mb-3" style={{ letterSpacing: "0.08em" }}>
             Plano gratuito
           </p>
-          <h1 style={{ fontFamily: '"Archivo", sans-serif', fontWeight: 700, fontSize: 28, margin: "0 0 12px" }}>
+          <h1 className="font-bold text-[28px] mb-3" style={{ fontFamily: '"Archivo", sans-serif' }}>
             Você atingiu o limite do plano gratuito
           </h1>
-          <p style={{ fontSize: 15, color: "hsl(var(--muted-foreground))", margin: 0 }}>
+          <p className="text-[15px] text-muted-foreground m-0">
             O plano gratuito permite 1 evento. Para criar mais, adquira eventos adicionais.
           </p>
         </div>
 
-        <div style={{ borderRadius: 16, border: "1px solid hsl(var(--border))", overflow: "hidden" }}>
-          <div style={{ padding: "24px 24px 20px", borderBottom: "1px solid hsl(var(--border))", background: "hsl(var(--muted))" }}>
-            <p style={{ fontSize: 13, fontWeight: 600, color: "hsl(var(--muted-foreground))", margin: "0 0 4px" }}>Por evento adicional</p>
-            <div style={{ display: "flex", alignItems: "baseline", gap: 4 }}>
-              <span style={{ fontFamily: '"Archivo", sans-serif', fontWeight: 700, fontSize: 36 }}>R$&nbsp;59,90</span>
+        <div className="rounded-2xl border border-border overflow-hidden">
+          <div className="border-b border-border bg-muted" style={{ padding: "24px 24px 20px" }}>
+            <p className="text-[13px] font-semibold text-muted-foreground mb-1">Por evento adicional</p>
+            <div className="flex items-baseline gap-1">
+              <span className="font-bold text-4xl" style={{ fontFamily: '"Archivo", sans-serif' }}>R$&nbsp;59,90</span>
             </div>
           </div>
 
           <div style={{ padding: "20px 24px 24px" }}>
-            <ul style={{ listStyle: "none", margin: "0 0 24px", padding: 0, display: "flex", flexDirection: "column", gap: 10 }}>
+            <ul className="list-none mb-6 p-0 flex flex-col gap-2.5">
               {[
                 "Evento sem limite de perguntas",
                 "Painel de moderação completo",
@@ -113,8 +113,8 @@ export default function NovoEventoPage() {
                 "QR code para participantes",
                 "Suporte por e-mail",
               ].map((benefit) => (
-                <li key={benefit} style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 14 }}>
-                  <CheckCircle2 size={16} style={{ color: "hsl(var(--success))", flexShrink: 0 }} aria-hidden />
+                <li key={benefit} className="flex items-center gap-2.5 text-sm">
+                  <CheckCircle2 size={16} className="text-success shrink-0" aria-hidden />
                   {benefit}
                 </li>
               ))}
@@ -123,7 +123,8 @@ export default function NovoEventoPage() {
             <button
               onClick={handleCheckout}
               disabled={checkingOut}
-              style={{ width: "100%", height: 44, borderRadius: 10, border: "none", background: "hsl(var(--primary))", color: "hsl(var(--primary-foreground))", fontSize: 15, fontWeight: 600, cursor: checkingOut ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, opacity: checkingOut ? 0.7 : 1 }}
+              className="w-full border-0 bg-primary text-primary-foreground text-[15px] font-semibold flex items-center justify-center gap-2"
+              style={{ height: 44, borderRadius: 10, cursor: checkingOut ? "not-allowed" : "pointer", opacity: checkingOut ? 0.7 : 1 }}
             >
               {checkingOut ? (
                 <>

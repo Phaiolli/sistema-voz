@@ -4,7 +4,7 @@ import { auth } from "@/lib/auth";
 
 const BUCKET = "voz-assets";
 const MAX_BYTES = 3 * 1024 * 1024; // 3 MB
-const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif", "image/svg+xml"];
+const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 
 export async function POST(req: NextRequest) {
   const session = await auth();

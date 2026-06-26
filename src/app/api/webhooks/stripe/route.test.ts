@@ -67,6 +67,7 @@ function makeInsertChain(error: unknown = null) {
     eq: vi.fn().mockReturnThis(),
     maybeSingle: vi.fn().mockResolvedValue({ data: null }),
     insert: vi.fn().mockReturnThis(),
+    upsert: vi.fn().mockReturnThis(),
     update: vi.fn().mockReturnThis(),
     then: (resolve: (v: { data: unknown; error: unknown }) => unknown) =>
       Promise.resolve({ data: null, error }).then(resolve),
@@ -124,9 +125,33 @@ describe("POST /api/webhooks/stripe", () => {
     const json = await res.json();
     expect(json.received).toBe(true);
 
-    // events insert and event_payments update must have been triggered
+    // events upsert (is_paid: true), event_payments update and users plan update
     expect(mockSupabase.from).toHaveBeenCalledWith("event_payments");
     expect(mockSupabase.from).toHaveBeenCalledWith("events");
+    expect(mockSupabase.from).toHaveBeenCalledWith("users");
+
+    // The created event must be flagged as paid (per-event billing).
+    expect(chain.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({ is_paid: true }),
+      expect.objectContaining({ onConflict: "id" }),
+    );
+    // The owner is marked as a paying customer.
+    expect(chain.update).toHaveBeenCalledWith(expect.objectContaining({ plan: "paid" }));
+  });
+
+  it("returns 500 when event_payments update fails (so Stripe retries)", async () => {
+    mockConstructEvent.mockReturnValue(makeStripeEvent());
+
+    // Idempotency check OK; events upsert OK; event_payments update fails.
+    const okChain = makeInsertChain();
+    okChain.maybeSingle.mockResolvedValueOnce({ data: null });
+    const failChain = makeInsertChain({ message: "update failed" });
+    mockSupabase.from.mockImplementation((table: string) =>
+      table === "event_payments" ? failChain : okChain,
+    );
+
+    const res = await POST(makeRequest("{}"));
+    expect(res.status).toBe(500);
   });
 
   it("returns 200 without duplicating (idempotency) when session already paid", async () => {
@@ -145,6 +170,70 @@ describe("POST /api/webhooks/stripe", () => {
     // Should NOT call events insert after idempotency short-circuit
     const calls = mockSupabase.from.mock.calls.map((c: string[]) => c[0]);
     expect(calls).not.toContain("events");
+  });
+
+  it("converges idempotently on redelivery: same deterministic event id, no re-mint", async () => {
+    mockConstructEvent.mockReturnValue(makeStripeEvent());
+
+    // First delivery: idempotency check OK; events upsert OK; payment update fails → 500.
+    const firstOk = makeInsertChain();
+    firstOk.maybeSingle.mockResolvedValueOnce({ data: null });
+    const firstFail = makeInsertChain({ message: "update failed" });
+    mockSupabase.from.mockImplementation((table: string) =>
+      table === "event_payments" ? firstFail : firstOk,
+    );
+    const firstRes = await POST(makeRequest("{}"));
+    expect(firstRes.status).toBe(500);
+    const firstUpsertId = (firstOk.upsert.mock.calls[0]?.[0] as { id: string }).id;
+
+    // Redelivery: payment row still pending with event_id null (update never landed).
+    vi.resetAllMocks();
+    mockConstructEvent.mockReturnValue(makeStripeEvent());
+    const secondOk = makeInsertChain();
+    secondOk.maybeSingle.mockResolvedValueOnce({
+      data: { id: "pmt_1", status: "pending", event_id: null },
+    });
+    mockSupabase.from.mockReturnValue(secondOk);
+    const secondRes = await POST(makeRequest("{}"));
+    expect(secondRes.status).toBe(200);
+    const secondUpsertId = (secondOk.upsert.mock.calls[0]?.[0] as { id: string }).id;
+
+    // Same deterministic id across attempts → upsert onConflict:id is idempotent,
+    // no new UUID minted, no slug collision (poison message avoided).
+    expect(secondUpsertId).toBe(firstUpsertId);
+  });
+
+  it("reapplies plan='paid' on redelivery of an already-paid session (W1)", async () => {
+    mockConstructEvent.mockReturnValue(makeStripeEvent());
+
+    const chain = makeInsertChain();
+    chain.maybeSingle.mockResolvedValueOnce({
+      data: { id: "pmt_1", status: "paid", event_id: "evt_existing" },
+    });
+    mockSupabase.from.mockReturnValue(chain);
+
+    const res = await POST(makeRequest("{}"));
+    expect(res.status).toBe(200);
+
+    // The owner plan is reapplied even though the payment was already marked paid.
+    expect(mockSupabase.from).toHaveBeenCalledWith("users");
+    expect(chain.update).toHaveBeenCalledWith(expect.objectContaining({ plan: "paid" }));
+    // No event creation on the idempotent path.
+    const calls = mockSupabase.from.mock.calls.map((c: string[]) => c[0]);
+    expect(calls).not.toContain("events");
+  });
+
+  it("returns 500 when reapplying plan fails on an already-paid redelivery", async () => {
+    mockConstructEvent.mockReturnValue(makeStripeEvent());
+
+    const chain = makeInsertChain({ message: "plan update failed" });
+    chain.maybeSingle.mockResolvedValueOnce({
+      data: { id: "pmt_1", status: "paid", event_id: "evt_existing" },
+    });
+    mockSupabase.from.mockReturnValue(chain);
+
+    const res = await POST(makeRequest("{}"));
+    expect(res.status).toBe(500);
   });
 
   it("returns 400 when metadata is incomplete (missing ownerId)", async () => {

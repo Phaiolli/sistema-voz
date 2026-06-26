@@ -57,6 +57,16 @@ describe("GET /api/v1/events/[id]", () => {
     const json = await res.json();
     expect(json.id).toBe("evt_1");
   });
+
+  // SW3 — superadmin has platform-wide access and must NOT get 403.
+  it("returns event for superadmin (not 403)", async () => {
+    vi.mocked(auth).mockResolvedValue({ user: { role: "superadmin", id: "su" } } as never);
+    mockSupabase.from.mockReturnValue(makeChain(mockRow));
+    const res = await GET(new NextRequest("http://localhost"), makeParams());
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json.id).toBe("evt_1");
+  });
 });
 
 describe("PATCH /api/v1/events/[id]", () => {
@@ -109,6 +119,16 @@ describe("PATCH /api/v1/events/[id]", () => {
     const json = await res.json();
     expect(json.id).toBe("evt_1");
   });
+
+  // SW3 — superadmin may patch any event (not 403).
+  it("allows superadmin to update an event (200, not 403)", async () => {
+    vi.mocked(auth).mockResolvedValue({ user: { role: "superadmin", id: "su" } } as never);
+    const updatedRow = { ...mockRow, name: "Atualizado" };
+    const chain = makeChain(null, updatedRow, null);
+    mockSupabase.from.mockReturnValue(chain);
+    const res = await PATCH(makeReq({ name: "Atualizado" }), makeParams());
+    expect(res.status).toBe(200);
+  });
 });
 
 describe("DELETE /api/v1/events/[id]", () => {
@@ -120,6 +140,24 @@ describe("DELETE /api/v1/events/[id]", () => {
 
   it("returns 204 on success", async () => {
     vi.mocked(auth).mockResolvedValue({ user: { role: "admin" } } as never);
+    const deleteChain = {
+      delete: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockResolvedValue({ error: null }),
+    };
+    mockSupabase.from.mockReturnValue(deleteChain);
+    const res = await DELETE(new NextRequest("http://localhost"), makeParams());
+    expect(res.status).toBe(204);
+  });
+
+  it("returns 403 for mediador", async () => {
+    vi.mocked(auth).mockResolvedValue({ user: { role: "mediador" } } as never);
+    const res = await DELETE(new NextRequest("http://localhost"), makeParams());
+    expect(res.status).toBe(403);
+  });
+
+  // SW3 — superadmin may delete any event (204, not 403).
+  it("allows superadmin to delete an event (204, not 403)", async () => {
+    vi.mocked(auth).mockResolvedValue({ user: { role: "superadmin", id: "su" } } as never);
     const deleteChain = {
       delete: vi.fn().mockReturnThis(),
       eq: vi.fn().mockResolvedValue({ error: null }),

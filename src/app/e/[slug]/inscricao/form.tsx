@@ -27,8 +27,8 @@ function StatusBanner({ status, reg }: { status: ReturnType<typeof getRegistrati
   if (status === "open") return null;
   const cfg = configs[status];
   return (
-    <div style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "14px 16px", borderRadius: 10, background: cfg.bg, color: cfg.color, fontSize: 14 }}>
-      <AlertCircle size={16} style={{ marginTop: 1, flexShrink: 0 }} />
+    <div className="flex items-start gap-2.5 rounded-[10px] px-4 py-3.5 text-sm" style={{ background: cfg.bg, color: cfg.color }}>
+      <AlertCircle size={16} className="mt-px shrink-0" />
       <span>{cfg.msg}</span>
     </div>
   );
@@ -39,15 +39,12 @@ export function InscricaoForm({ event }: { event: Event }) {
   const reg = event.config?.registration;
   const status = getRegistrationStatus(reg);
 
-  const [form, setForm] = useState({ name: "", email: "", phone: "", document: "", lgpdAccepted: false });
+  const [form, setForm] = useState({ name: "", email: "", phone: "", lgpdAccepted: false });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
-  const inp: React.CSSProperties = {
-    width: "100%", padding: "12px 14px", borderRadius: 10, border: "1.5px solid hsl(var(--border))",
-    background: "hsl(var(--muted))", color: "hsl(var(--foreground))", fontSize: 15, fontFamily: "inherit",
-    outline: "none", boxSizing: "border-box",
-  };
+  const inpClass =
+    "box-border w-full rounded-[10px] border-[1.5px] border-border bg-muted px-3.5 py-3 text-[15px] text-foreground font-[inherit] outline-none";
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -57,7 +54,7 @@ export function InscricaoForm({ event }: { event: Event }) {
       const res = await fetch(`/api/v1/events/${event.id}/registrations`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: form.name, email: form.email, phone: form.phone || undefined, document: form.document || undefined, lgpdAccepted: form.lgpdAccepted }),
+        body: JSON.stringify({ name: form.name, email: form.email, phone: form.phone || undefined, lgpdAccepted: form.lgpdAccepted }),
       });
       const data = await res.json() as { id?: string; error?: { message?: string } };
       if (!res.ok) { setError(data.error?.message ?? "Erro ao realizar inscrição."); return; }
@@ -70,43 +67,41 @@ export function InscricaoForm({ event }: { event: Event }) {
   }
 
   return (
-    <div style={{ minHeight: "100dvh", display: "flex", flexDirection: "column", alignItems: "center", padding: "40px 24px" }}>
-      <div style={{ width: "100%", maxWidth: 480 }}>
-        <div style={{ marginBottom: 32 }}>
+    <div className="flex min-h-[100dvh] flex-col items-center px-6 py-10">
+      <div className="w-full max-w-[480px]">
+        <div className="mb-8">
           <VozWordmark size={22} />
-          <p style={{ fontFamily: '"Archivo", sans-serif', fontWeight: 700, fontSize: 22, margin: "12px 0 4px" }}>{event.name}</p>
-          <p style={{ fontSize: 15, color: "hsl(var(--muted-foreground))", margin: 0 }}>Formulário de inscrição</p>
+          <p className="mt-3 mb-1 text-[22px] font-bold" style={{ fontFamily: '"Archivo", sans-serif' }}>{event.name}</p>
+          <p className="m-0 text-[15px] text-muted-foreground">Formulário de inscrição</p>
         </div>
 
         <StatusBanner status={status} reg={reg} />
 
         {status === "open" && (
-          <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 18 }} noValidate>
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
             {error && (
-              <div role="alert" style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", background: "hsl(var(--destructive) / .08)", borderRadius: 8, color: "hsl(var(--destructive))", fontSize: 14 }}>
+              <div role="alert" className="flex items-center gap-2 rounded-lg bg-destructive/10 px-3 py-2.5 text-sm text-destructive">
                 <AlertCircle size={15} aria-hidden /> {error}
               </div>
             )}
 
             <Field label="Nome completo *" htmlFor="reg-name">
-              <input id="reg-name" required value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} style={inp} autoComplete="name" />
+              <input id="reg-name" required value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} className={inpClass} autoComplete="name" />
             </Field>
             <Field label="E-mail *" htmlFor="reg-email">
-              <input id="reg-email" type="email" required value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} style={inp} autoComplete="email" />
+              <input id="reg-email" type="email" required value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} className={inpClass} autoComplete="email" />
             </Field>
             <Field label="Telefone" htmlFor="reg-phone">
-              <input id="reg-phone" type="tel" value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} style={inp} autoComplete="tel" placeholder="(00) 00000-0000" />
-            </Field>
-            <Field label="CPF" htmlFor="reg-doc">
-              <input id="reg-doc" value={form.document} onChange={(e) => setForm((f) => ({ ...f, document: e.target.value }))} style={inp} placeholder="000.000.000-00" />
+              <input id="reg-phone" type="tel" value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} className={inpClass} autoComplete="tel" placeholder="(00) 00000-0000" />
             </Field>
 
-            <label style={{ display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer", fontSize: 13, color: "hsl(var(--muted-foreground))", lineHeight: 1.5 }}>
+            <label className="flex cursor-pointer items-start gap-2.5 text-[13px] leading-normal text-muted-foreground">
               <input
                 type="checkbox"
                 checked={form.lgpdAccepted}
                 onChange={(e) => setForm((f) => ({ ...f, lgpdAccepted: e.target.checked }))}
-                style={{ width: 16, height: 16, marginTop: 2, flexShrink: 0, accentColor: "hsl(var(--primary))", cursor: "pointer" }}
+                className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer"
+                style={{ accentColor: "hsl(var(--primary))" }}
                 required
               />
               Aceito o tratamento dos meus dados pessoais para fins de credenciamento neste evento, conforme a LGPD.
@@ -115,7 +110,7 @@ export function InscricaoForm({ event }: { event: Event }) {
             <button
               type="submit"
               disabled={busy || !form.lgpdAccepted}
-              style={{ height: 52, borderRadius: 10, border: "none", cursor: busy || !form.lgpdAccepted ? "not-allowed" : "pointer", background: "hsl(var(--primary))", color: "hsl(var(--primary-foreground))", fontSize: 16, fontWeight: 700, opacity: busy || !form.lgpdAccepted ? 0.65 : 1 }}
+              className="h-[52px] cursor-pointer rounded-[10px] border-0 bg-primary text-base font-bold text-primary-foreground disabled:cursor-not-allowed disabled:opacity-65"
             >
               {busy ? "Inscrevendo…" : "Confirmar inscrição"}
             </button>
@@ -128,8 +123,8 @@ export function InscricaoForm({ event }: { event: Event }) {
 
 function Field({ label, htmlFor, children }: { label: string; htmlFor: string; children: React.ReactNode }) {
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-      <label htmlFor={htmlFor} style={{ fontSize: 14, fontWeight: 500 }}>{label}</label>
+    <div className="flex flex-col gap-1.5">
+      <label htmlFor={htmlFor} className="text-sm font-medium">{label}</label>
       {children}
     </div>
   );

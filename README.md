@@ -45,18 +45,48 @@ Acesse [http://localhost:3000](http://localhost:3000).
 
 ## Variáveis de Ambiente
 
-| Variável | Descrição |
-|----------|-----------|
-| `DATABASE_URL` | Supabase pooler URL (porta 6543, transaction mode) |
-| `NEXT_PUBLIC_SUPABASE_URL` | URL do projeto Supabase |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Chave anônima pública do Supabase |
-| `SUPABASE_SERVICE_ROLE_KEY` | Chave de service role (somente servidor) |
-| `AUTH_SECRET` | Secret para assinar JWT do NextAuth (`openssl rand -base64 32`) |
-| `SEED_SECRET` | Secret para proteger o endpoint `/api/seed` |
-| `NEXT_PUBLIC_APP_URL` | URL pública da aplicação (ex.: `https://seudominio.com`) |
-| `STRIPE_SECRET_KEY` | Chave secreta do Stripe (`sk_live_...` ou `sk_test_...`) |
-| `STRIPE_WEBHOOK_SECRET` | Secret do webhook Stripe (`whsec_...`) |
-| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Chave publicável do Stripe (`pk_live_...` ou `pk_test_...`) |
+### Obrigatórias
+
+| Variável | Descrição | Escopo |
+|----------|-----------|--------|
+| `DATABASE_URL` | Supabase pooler URL (porta 6543, transaction mode) | Server |
+| `NEXT_PUBLIC_SUPABASE_URL` | URL do projeto Supabase | Public |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Chave anônima pública do Supabase | Public |
+| `SUPABASE_SERVICE_ROLE_KEY` | Chave de service role (obrigatória para RLS) | Server |
+| `AUTH_SECRET` | Secret para assinar JWT do NextAuth (`openssl rand -base64 32`) | Server |
+
+### Opcionais (Dev/Testing)
+
+| Variável | Descrição | Padrão |
+|----------|-----------|--------|
+| `SEED_SECRET` | Secret para proteger `/api/seed` | (desabilitado se não definido) |
+| `NEXT_PUBLIC_APP_URL` | URL pública da aplicação | `http://localhost:3000` |
+
+### Rate limiting distribuído (Upstash)
+
+O rate limiting de autenticação (`register`/`login`) usa um store in-memory por
+padrão. Definindo **ambas** as variáveis abaixo, ele passa a usar um store
+compartilhado via Upstash Redis (REST), eficaz em deploy com múltiplas
+instâncias. Sem elas, o comportamento é idêntico ao in-memory. Ver ADR 011.
+
+| Variável | Descrição | Padrão |
+|----------|-----------|--------|
+| `UPSTASH_REDIS_REST_URL` | URL REST do banco Upstash Redis | (in-memory se ausente) |
+| `UPSTASH_REDIS_REST_TOKEN` | Token REST do banco Upstash Redis | (in-memory se ausente) |
+
+### Stripe (Pagamentos)
+
+| Variável | Descrição | Obrigatório |
+|----------|-----------|-------------|
+| `STRIPE_SECRET_KEY` | Chave secreta do Stripe (`sk_live_...` ou `sk_test_...`) | Sim (produção) |
+| `STRIPE_WEBHOOK_SECRET` | Secret do webhook Stripe (`whsec_...`) | Sim (produção) |
+| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Chave publicável do Stripe (`pk_live_...` ou `pk_test_...`) | Sim (produção) |
+
+### LGPD/Cleanup
+
+| Variável | Descrição | Obrigatório |
+|----------|-----------|-------------|
+| `CRON_SECRET` | Secret para proteger `/api/v1/internal/cleanup` | Sim (produção) |
 
 ## Setup Stripe
 
@@ -81,31 +111,126 @@ Acesse [http://localhost:3000](http://localhost:3000).
 
 ## Rotas
 
-### Públicas (participantes)
+### Autenticação
+
+| Rota | Método | Descrição | Auth |
+|------|--------|-----------|------|
+| `/api/auth/register` | POST | Registra novo owner | Público |
+| `/api/auth/[...nextauth]` | GET/POST | NextAuth routes (login, callback) | Público |
+
+### Eventos (CRUD)
+
+| Rota | Método | Descrição | Auth |
+|------|--------|-----------|------|
+| `/api/v1/events` | GET | Lista eventos do owner/admin | Sessão |
+| `/api/v1/events` | POST | Cria novo evento | Owner/Admin |
+| `/api/v1/events/[id]` | GET | Obtém detalhes do evento | Owner/Admin |
+| `/api/v1/events/[id]` | PATCH | Atualiza evento | Owner/Admin |
+| `/api/v1/events/[id]` | DELETE | Deleta evento | Owner/Admin |
+
+### Perguntas (Q&A)
+
+| Rota | Método | Descrição | Auth | Escopo |
+|------|--------|-----------|------|--------|
+| `/api/v1/events/[eventId]/questions` | POST | Envia pergunta | Público/Sessão | Rate limit: 10/hora por IP |
+| `/api/v1/events/[eventId]/questions` | GET | Lista perguntas (projeção pública sem PII) | Público | Retorna apenas `id, eventId, text, isAnonymous, authorName, status, createdAt` |
+| `/api/v1/questions/[id]` | PATCH | Modera pergunta (setNext, markAnswered, hide, restore) | Mediador/Admin | Escopo: evento |
+| `/api/v1/questions/[id]` | DELETE | Deleta pergunta | Mediador/Admin | Escopo: evento |
+
+### Inscrições
+
+| Rota | Método | Descrição | Auth | Escopo |
+|------|--------|-----------|------|--------|
+| `/api/v1/events/[id]/registrations` | POST | Inscreve participante | Público | Rate limit por IP |
+| `/api/v1/events/[id]/registrations` | GET | Lista inscrições | Owner/Admin | Escopo: evento |
+| `/api/v1/events/[id]/registrations/[regId]` | PATCH | Atualiza check-in/kit | Owner/Admin | Escopo: evento |
+| `/api/v1/events/[id]/registrations/[regId]` | DELETE | Remove inscrição (anonimiza) | Público/Sessão | Direito ao esquecimento LGPD |
+
+### Participantes (Credenciamento)
+
+| Rota | Método | Descrição | Auth | Escopo |
+|------|--------|-----------|------|--------|
+| `/api/v1/events/[eventId]/participants` | GET | Lista participantes (autores) | Mediador/Admin | Escopo: evento |
+
+### Sorteio
+
+| Rota | Método | Descrição | Auth | Escopo |
+|------|--------|-----------|------|--------|
+| `/api/v1/events/[id]/draw` | POST | Executa sorteio | Owner/Admin | Escopo: evento |
+
+### Mediadores
+
+| Rota | Método | Descrição | Auth | Escopo |
+|------|--------|-----------|------|--------|
+| `/api/v1/events/[id]/mediators` | GET | Lista mediadores atribuídos | Owner/Admin | Escopo: evento |
+| `/api/v1/events/[id]/mediators` | POST | Atribui mediador | Owner/Admin | Escopo: evento |
+| `/api/v1/events/[id]/mediators/[userId]` | DELETE | Remove mediador | Owner/Admin | Escopo: evento |
+
+### Perfil do Usuário
+
+| Rota | Método | Descrição | Auth | Notas |
+|------|--------|-----------|------|-------|
+| `/api/v1/me/profile` | GET | Obtém perfil | Sessão | |
+| `/api/v1/me/profile` | PATCH | Atualiza perfil | Sessão | |
+| `/api/v1/me/plan` | GET | Obtém plano e histórico de pagamentos | Sessão | |
+| `/api/v1/me/assignments` | GET | Lista eventos atribuídos (mediador) | Sessão | |
+| `/api/v1/me/data` | GET | Exporta PII (direito de acesso LGPD) | Sessão | |
+| `/api/v1/me/data` | DELETE | Anonimiza dados (direito ao esquecimento) | Sessão | |
+| `/api/v1/me/data-export` | GET | Download portável de dados | Sessão | JSON/arquivo |
+
+### Plataforma (Admin/Superadmin)
+
+| Rota | Método | Descrição | Auth |
+|------|--------|-----------|------|
+| `/api/v1/plataforma/stats` | GET | Estatísticas gerais | Admin/Superadmin |
+| `/api/v1/plataforma/users` | GET | Lista usuários | Admin/Superadmin |
+| `/api/v1/plataforma/payments` | GET | Lista pagamentos | Admin/Superadmin |
+
+### Upload
+
+| Rota | Método | Descrição | Auth | Validações |
+|------|--------|-----------|------|-----------|
+| `/api/v1/upload` | POST | Upload de arquivo (imagem) | Sessão | Tipos: JPEG, PNG, WebP (SVG rejeitado) |
+
+### Pagamento (Stripe)
+
+| Rota | Método | Descrição | Auth |
+|------|--------|-----------|------|
+| `/api/v1/stripe/checkout` | POST | Cria sessão Stripe Checkout | Sessão |
+| `/api/webhooks/stripe` | POST | Webhook Stripe (checkout.session.completed) | STRIPE_WEBHOOK_SECRET |
+
+### Páginas Web
 
 | Rota | Descrição |
 |------|-----------|
-| `/e/[slug]` | Página do evento (agenda, palestrantes) |
+| `/` | Home |
+| `/cadastro` | Registro de novo owner |
+| `/entrar` | Login |
+| `/dashboard` | Dashboard do owner (eventos, plano) |
+| `/dashboard/conta` | Perfil e privacidade |
+| `/e/[slug]` | Página pública do evento |
 | `/e/[slug]/perguntar` | Formulário de submissão de perguntas |
 | `/e/[slug]/obrigado` | Confirmação de envio |
-| `POST /api/v1/events/[eventId]/questions` | Enviar pergunta (máx. 10/hora por IP) |
-| `GET /api/v1/events/[eventId]/questions` | Listar perguntas do evento |
-
-### Autenticadas (mediadores e admins)
-
-| Rota | Descrição |
-|------|-----------|
-| `/entrar` | Login |
-| `/mediador` | Dashboard com perguntas em tempo real |
+| `/admin/eventos` | Gerenciar eventos (admin) |
+| `/admin/usuarios` | Gerenciar usuários (admin) |
+| `/mediador` | Dashboard mediador (Q&A em tempo real) |
 | `/mediador/apresentar` | Modo apresentação (tela cheia) |
-| `PATCH /api/v1/questions/[id]` | Moderar pergunta (mediador/admin) |
+| `/conta` | Minha conta (owner/mediador) |
+| `/pagamento/sucesso` | Confirmação pós-pagamento |
+| `/pagamento/cancelado` | Cancelamento de pagamento |
 
-### Admin
+### Internas (Cron)
 
-| Rota | Descrição |
-|------|-----------|
-| `/admin/eventos` | Gerenciar eventos |
-| `/admin/usuarios` | Gerenciar usuários e permissões |
+| Rota | Método | Descrição | Auth |
+|------|--------|-----------|------|
+| `/api/v1/internal/cleanup` | GET | Limpeza LGPD (cron diário) | CRON_SECRET |
+| `/api/v1/internal/cleanup` | DELETE | Limpeza LGPD (manual) | CRON_SECRET |
+
+### Seed (Dev)
+
+| Rota | Método | Descrição | Auth |
+|------|--------|-----------|------|
+| `/api/seed` | POST | Cria evento e admin inicial | SEED_SECRET |
 
 ## Comandos
 
@@ -117,11 +242,32 @@ pnpm test:coverage    # Testes com relatório de cobertura
 pnpm typecheck        # Verificar tipos TypeScript
 pnpm lint             # Lint do código
 
+pnpm db:types         # Regenerar src/lib/db/database.types.ts a partir do banco
 pnpm db:generate      # Gerar migrations Drizzle
 pnpm db:migrate       # Executar migrations
 pnpm db:push          # Push do schema (dev)
 pnpm db:studio        # Abrir Drizzle Studio
 ```
+
+### Tipos do banco (`database.types.ts`)
+
+`src/lib/db/database.types.ts` é um **arquivo gerado** — não edite à mão. Ele
+tipa o client Supabase (`createClient<Database>()`) a partir do schema real do
+banco, incluindo as relações (`Relationships`), o que permite inferir joins
+embedded sem casts.
+
+Após aplicar qualquer migration (em `supabase/migrations/`), regenere os tipos:
+
+```bash
+pnpm db:types   # supabase gen types typescript --linked --schema public
+```
+
+Isso requer a CLI `supabase` autenticada e o projeto linkado (`supabase link`).
+Manter este arquivo gerado fecha o risco de drift entre `schema.ts` e os tipos
+do client apontado no ADR 012. As colunas `jsonb` (`events.theme`/`config`,
+`event_payments.event_data`) saem tipadas como `Json`; o narrowing para os tipos
+de domínio (`EventTheme`/`EventConfig`) é feito nos mappers
+(`src/lib/api/mappers.ts`).
 
 ## Arquitetura
 

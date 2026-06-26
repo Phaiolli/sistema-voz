@@ -3,6 +3,8 @@ import { auth } from "@/lib/auth";
 import { stripe, STRIPE_EVENT_PRICE_CENTS, STRIPE_CURRENCY } from "@/lib/stripe";
 import { createServerClient } from "@/lib/supabase";
 import { createEventSchema } from "@/lib/schemas";
+import { toJson } from "@/lib/api/mappers";
+import { logError } from "@/lib/log";
 
 export async function POST(req: NextRequest) {
   const session = await auth();
@@ -15,7 +17,7 @@ export async function POST(req: NextRequest) {
   }
 
   const user = session.user as { id: string; role?: string };
-  if (user.role !== "owner" && user.role !== "admin") {
+  if (user.role !== "owner" && user.role !== "admin" && user.role !== "superadmin") {
     return NextResponse.json(
       { error: { code: "FORBIDDEN", message: "Acesso restrito a owners e administradores." } },
       { status: 403 },
@@ -64,14 +66,22 @@ export async function POST(req: NextRequest) {
   const supabase = createServerClient();
   const paymentId = crypto.randomUUID();
 
-  await supabase.from("event_payments").insert({
+  const { error: insertErr } = await supabase.from("event_payments").insert({
     id: paymentId,
     stripe_session_id: checkoutSession.id,
     owner_id: user.id,
-    event_data: eventData,
+    event_data: toJson(eventData),
     amount: STRIPE_EVENT_PRICE_CENTS,
     status: "pending",
   });
+
+  if (insertErr) {
+    logError("[stripe.checkout] falha ao registrar event_payments", insertErr);
+    return NextResponse.json(
+      { error: { code: "INTERNAL_ERROR", message: "Falha ao iniciar o pagamento." } },
+      { status: 500 },
+    );
+  }
 
   return NextResponse.json({ checkoutUrl: checkoutSession.url });
 }

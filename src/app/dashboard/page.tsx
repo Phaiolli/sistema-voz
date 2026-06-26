@@ -45,50 +45,52 @@ export default function DashboardPage() {
   const atLimit = events.length >= FREE_EVENT_LIMIT;
 
   return (
-    <div style={{ minHeight: "100dvh", background: "hsl(var(--background))", color: "hsl(var(--foreground))" }}>
-      <header style={{ height: 56, borderBottom: "1px solid hsl(var(--border))", display: "flex", alignItems: "center", padding: "0 24px", gap: 16 }}>
+    <div className="bg-background text-foreground" style={{ minHeight: "100dvh" }}>
+      <header className="flex items-center gap-4 border-b border-border px-6" style={{ height: 56 }}>
         <VozWordmark size={22} />
-        <nav style={{ display: "flex", gap: 4 }} aria-label="Dashboard">
+        <nav className="flex gap-1" aria-label="Dashboard">
           <NavLink href="/dashboard" active>Eventos</NavLink>
           <NavLink href="/dashboard/conta">Conta</NavLink>
         </nav>
-        <div style={{ flex: 1 }} />
-        <div style={{ width: 1, height: 24, background: "hsl(var(--border))" }} aria-hidden />
+        <div className="flex-1" />
+        <div className="bg-border" style={{ width: 1, height: 24 }} aria-hidden />
         <HeaderControls />
       </header>
 
-      <main style={{ maxWidth: 960, margin: "0 auto", padding: "32px 24px" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
+      <main className="mx-auto py-8 px-6" style={{ maxWidth: 960 }}>
+        <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 style={{ fontFamily: '"Archivo", sans-serif', fontWeight: 700, fontSize: 28, margin: "0 0 4px" }}>Meus eventos</h1>
-            <p style={{ fontSize: 13, color: "hsl(var(--muted-foreground))", margin: 0 }}>
+            <h1 className="font-bold text-[28px] mb-1" style={{ fontFamily: '"Archivo", sans-serif' }}>Meus eventos</h1>
+            <p className="text-[13px] text-muted-foreground m-0">
               {loading ? "Carregando…" : `${events.length} de ${FREE_EVENT_LIMIT} evento${FREE_EVENT_LIMIT !== 1 ? "s" : ""} no plano gratuito`}
             </p>
           </div>
           <Link
             href="/dashboard/novo-evento"
-            style={{ display: "inline-flex", alignItems: "center", gap: 6, height: 36, padding: "0 14px", borderRadius: 8, border: "none", background: "hsl(var(--primary))", color: "hsl(var(--primary-foreground))", fontSize: 13, fontWeight: 600, textDecoration: "none" }}
+            className="inline-flex items-center gap-1.5 px-3.5 rounded-lg border-0 bg-primary text-primary-foreground text-[13px] font-semibold no-underline"
+            style={{ height: 36 }}
           >
             <Plus size={14} aria-hidden /> Novo evento
           </Link>
         </div>
 
         {atLimit && !loading && (
-          <div style={{ marginBottom: 24, padding: "16px 20px", borderRadius: 12, border: "1px solid hsl(var(--primary) / .3)", background: "hsl(var(--primary) / .06)", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <Zap size={20} style={{ color: "hsl(var(--primary))", flexShrink: 0 }} aria-hidden />
+          <div className="flex items-center justify-between gap-4 mb-6 py-4 px-5 rounded-xl border" style={{ borderColor: "hsl(var(--primary) / .3)", background: "hsl(var(--primary) / .06)" }}>
+            <div className="flex items-center gap-3">
+              <Zap size={20} className="text-primary shrink-0" aria-hidden />
               <div>
-                <p style={{ fontFamily: '"Archivo", sans-serif', fontWeight: 600, fontSize: 14, margin: "0 0 2px" }}>
+                <p className="font-semibold text-sm mb-0.5" style={{ fontFamily: '"Archivo", sans-serif' }}>
                   Limite do plano gratuito atingido
                 </p>
-                <p style={{ fontSize: 13, color: "hsl(var(--muted-foreground))", margin: 0 }}>
+                <p className="text-[13px] text-muted-foreground m-0">
                   Crie mais eventos por R$&nbsp;59,90 cada.
                 </p>
               </div>
             </div>
             <Link
               href="/dashboard/novo-evento"
-              style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 6, height: 36, padding: "0 14px", borderRadius: 8, border: "none", background: "hsl(var(--primary))", color: "hsl(var(--primary-foreground))", fontSize: 13, fontWeight: 600, textDecoration: "none" }}
+              className="shrink-0 inline-flex items-center gap-1.5 px-3.5 rounded-lg border-0 bg-primary text-primary-foreground text-[13px] font-semibold no-underline"
+              style={{ height: 36 }}
             >
               <Plus size={14} aria-hidden /> Criar novo evento — R$&nbsp;59,90
             </Link>
@@ -96,19 +98,20 @@ export default function DashboardPage() {
         )}
 
         {loading && (
-          <div style={{ padding: 48, textAlign: "center", color: "hsl(var(--muted-foreground))" }}>
+          <div className="p-12 text-center text-muted-foreground">
             Carregando eventos…
           </div>
         )}
 
         {!loading && events.length === 0 && (
-          <div style={{ padding: 48, textAlign: "center", color: "hsl(var(--muted-foreground))" }}>
-            <p style={{ fontFamily: '"Archivo", sans-serif', fontWeight: 600, fontSize: 18, color: "hsl(var(--foreground))", margin: "0 0 12px" }}>
+          <div className="p-12 text-center text-muted-foreground">
+            <p className="font-semibold text-lg text-foreground mb-3" style={{ fontFamily: '"Archivo", sans-serif' }}>
               Nenhum evento cadastrado.
             </p>
             <Link
               href="/dashboard/novo-evento"
-              style={{ display: "inline-flex", alignItems: "center", gap: 6, height: 40, padding: "0 16px", borderRadius: 8, border: "none", background: "hsl(var(--primary))", color: "hsl(var(--primary-foreground))", fontSize: 14, fontWeight: 600, textDecoration: "none" }}
+              className="inline-flex items-center gap-1.5 px-4 rounded-lg border-0 bg-primary text-primary-foreground text-sm font-semibold no-underline"
+              style={{ height: 40 }}
             >
               <Plus size={14} aria-hidden /> Criar primeiro evento grátis
             </Link>
@@ -116,7 +119,7 @@ export default function DashboardPage() {
         )}
 
         {!loading && events.length > 0 && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <div className="flex flex-col gap-3">
             {events.map((ev) => {
               const st = eventDateLabel(ev.status, ev.startsAt ?? null);
               const logo = ev.theme?.logoUrl ?? ev.config?.page?.logo;
@@ -127,22 +130,23 @@ export default function DashboardPage() {
                   <Link href={`/admin/eventos/${ev.id}`} className="ev-overlay" aria-label={`Editar ${ev.name}`} />
 
                   <div
-                    style={{ width: 48, height: 48, borderRadius: 10, background: bg, flexShrink: 0, overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", position: "relative", zIndex: 1 }}
+                    className="relative z-[1] flex items-center justify-center shrink-0 overflow-hidden rounded-[10px]"
+                    style={{ width: 48, height: 48, background: bg }}
                     aria-hidden
                   >
                     {logo ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={logo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      <img src={logo} alt="" className="w-full h-full object-cover" />
                     ) : (
-                      <span style={{ fontFamily: '"Archivo Black", sans-serif', fontSize: 20, fontWeight: 900, color: accent, lineHeight: 1, userSelect: "none" }}>
+                      <span className="font-black text-xl select-none" style={{ fontFamily: '"Archivo Black", sans-serif', color: accent, lineHeight: 1 }}>
                         {ev.name.slice(0, 1).toUpperCase()}
                       </span>
                     )}
                   </div>
 
-                  <div style={{ flex: 1, minWidth: 0, position: "relative", zIndex: 1 }}>
-                    <p style={{ fontFamily: '"Archivo", sans-serif', fontWeight: 600, fontSize: 16, margin: "0 0 4px" }}>{ev.name}</p>
-                    <p style={{ fontSize: 13, color: "hsl(var(--muted-foreground))", margin: 0 }}>
+                  <div className="relative z-[1] flex-1 min-w-0">
+                    <p className="font-semibold text-base mb-1" style={{ fontFamily: '"Archivo", sans-serif' }}>{ev.name}</p>
+                    <p className="text-[13px] text-muted-foreground m-0">
                       {ev.startsAt
                         ? new Date(ev.startsAt).toLocaleDateString("pt-BR", { day: "numeric", month: "long", year: "numeric" })
                         : "Sem data"}
@@ -150,11 +154,11 @@ export default function DashboardPage() {
                     </p>
                   </div>
 
-                  <span style={{ padding: "4px 10px", borderRadius: 999, fontSize: 12, fontWeight: 600, color: st.color, background: st.bg, flexShrink: 0, position: "relative", zIndex: 1 }}>
+                  <span className="relative z-[1] shrink-0 rounded-full py-1 px-2.5 text-xs font-semibold" style={{ color: st.color, background: st.bg }}>
                     {st.label}
                   </span>
 
-                  <div style={{ display: "flex", gap: 6, position: "relative", zIndex: 1 }}>
+                  <div className="relative z-[1] flex gap-1.5">
                     <ActionBtn href="/mediador" icon={<Mic size={14} />} label="Abrir mediador" />
                     <ActionBtn href={`/e/${ev.slug}`} icon={<Eye size={14} />} label="Ver página do evento" />
                     <ActionBtn href={`/admin/eventos/${ev.id}`} icon={<Edit size={14} />} label="Editar evento" />
@@ -188,7 +192,10 @@ export default function DashboardPage() {
 
 function NavLink({ href, children, active }: { href: string; children: React.ReactNode; active?: boolean }) {
   return (
-    <Link href={href} style={{ padding: "6px 12px", borderRadius: 8, fontSize: 14, fontWeight: 500, textDecoration: "none", background: active ? "hsl(var(--muted))" : "transparent", color: active ? "hsl(var(--foreground))" : "hsl(var(--muted-foreground))" }}>
+    <Link
+      href={href}
+      className={`py-1.5 px-3 rounded-lg text-sm font-medium no-underline ${active ? "bg-muted text-foreground" : "bg-transparent text-muted-foreground"}`}
+    >
       {children}
     </Link>
   );
@@ -196,7 +203,13 @@ function NavLink({ href, children, active }: { href: string; children: React.Rea
 
 function ActionBtn({ href, icon, label }: { href: string; icon: React.ReactNode; label: string }) {
   return (
-    <Link href={href} aria-label={label} title={label} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 36, height: 36, borderRadius: 8, border: "1px solid hsl(var(--border))", background: "hsl(var(--background))", textDecoration: "none", color: "hsl(var(--foreground))" }}>
+    <Link
+      href={href}
+      aria-label={label}
+      title={label}
+      className="inline-flex items-center justify-center rounded-lg border border-border bg-background no-underline text-foreground"
+      style={{ width: 36, height: 36 }}
+    >
       {icon}
     </Link>
   );

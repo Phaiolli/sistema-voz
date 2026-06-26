@@ -51,6 +51,13 @@ beforeEach(() => {
 describe("PATCH /api/v1/questions/[id]", () => {
   it("returns 401 when not authenticated", async () => {
     vi.mocked(auth).mockResolvedValue(null as never);
+    // The question is resolved (404-before-auth ordering) before the guard runs.
+    mockSupabase.from.mockReturnValue({
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockReturnThis(),
+      maybeSingle: vi.fn().mockResolvedValue({ data: mockQuestion }),
+    });
     const res = await PATCH(makeRequest({ action: "setNext" }), makeParams());
     expect(res.status).toBe(401);
     const json = await res.json();
@@ -58,7 +65,13 @@ describe("PATCH /api/v1/questions/[id]", () => {
   });
 
   it("returns 403 when authenticated without mediador/admin role", async () => {
-    vi.mocked(auth).mockResolvedValue({ user: { role: "viewer" } } as never);
+    vi.mocked(auth).mockResolvedValue({ user: { id: "u1", role: "viewer" } } as never);
+    mockSupabase.from.mockReturnValue({
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockReturnThis(),
+      maybeSingle: vi.fn().mockResolvedValue({ data: mockQuestion }),
+    });
     const res = await PATCH(makeRequest({ action: "setNext" }), makeParams());
     expect(res.status).toBe(403);
     const json = await res.json();

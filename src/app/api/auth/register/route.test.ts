@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
 import { POST } from "./route";
+import { resetRateLimit } from "@/lib/api/rate-limit";
 
 const mockSupabase = { from: vi.fn() };
 
@@ -35,7 +36,10 @@ const validBody = {
   lgpdAccepted: true,
 };
 
-beforeEach(() => vi.resetAllMocks());
+beforeEach(() => {
+  vi.resetAllMocks();
+  resetRateLimit();
+});
 
 describe("POST /api/auth/register", () => {
   it("returns 201 with valid data and new email", async () => {

@@ -1,0 +1,1348 @@
+openapi: 3.0.3
+info:
+  title: voz. API
+  description: Sistema de perguntas e respostas ao vivo para eventos.
+  version: 2.0.0
+  contact:
+    name: voz.
+  license:
+    name: MIT
+servers:
+  - url: https://voz.app
+    description: Production
+  - url: http://localhost:3000
+    description: Development
+
+tags:
+  - name: Auth
+    description: Autenticação e registro
+  - name: Events
+    description: Gerenciamento de eventos
+  - name: Questions
+    description: Gerenciamento de perguntas
+  - name: Registrations
+    description: Inscrições em eventos
+  - name: Participants
+    description: Participantes e credenciamento
+  - name: Mediators
+    description: Atribuição de mediadores
+  - name: Draw
+    description: Sorteio de participantes
+  - name: User
+    description: Dados e conta do usuário
+  - name: Plataforma
+    description: Estatísticas e gerenciamento de plataforma (admin)
+  - name: Stripe
+    description: Integração com Stripe para pagamentos
+  - name: Upload
+    description: Upload de arquivos (imagens)
+  - name: Webhooks
+    description: Webhooks (Stripe)
+  - name: Internal
+    description: Rotas internas (cron, administração)
+
+components:
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              description: Código de erro (ex., UNAUTHORIZED, FORBIDDEN, NOT_FOUND, UNPROCESSABLE_ENTITY)
+            message:
+              type: string
+              description: Mensagem de erro em português
+      required:
+        - error
+      example:
+        error:
+          code: UNAUTHORIZED
+          message: Autenticação necessária.
+
+    Event:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        slug:
+          type: string
+          description: URL-friendly event identifier
+        name:
+          type: string
+        startsAt:
+          type: string
+          format: date-time
+        endsAt:
+          type: string
+          format: date-time
+        place:
+          type: string
+        address:
+          type: string
+        status:
+          type: string
+          enum: [draft, active, ended]
+        about:
+          type: string
+        theme:
+          type: object
+          additionalProperties: true
+        config:
+          type: object
+          additionalProperties: true
+        organizerId:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    Question:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        eventId:
+          type: string
+          format: uuid
+        authorName:
+          type: string
+        authorContact:
+          type: string
+          nullable: true
+        authorEmail:
+          type: string
+          format: email
+          nullable: true
+        text:
+          type: string
+        status:
+          type: string
+          enum: [pending, next, answered, hidden]
+        isAnonymous:
+          type: boolean
+        lgpdAccepted:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        presentedAt:
+          type: string
+          format: date-time
+          nullable: true
+        answeredAt:
+          type: string
+          format: date-time
+          nullable: true
+        hiddenAt:
+          type: string
+          format: date-time
+          nullable: true
+        hiddenBy:
+          type: string
+          nullable: true
+
+    QuestionPublic:
+      type: object
+      description: Projeção pública de pergunta (sem PII)
+      properties:
+        id:
+          type: string
+          format: uuid
+        eventId:
+          type: string
+          format: uuid
+        text:
+          type: string
+        isAnonymous:
+          type: boolean
+        authorName:
+          type: string
+          description: "Anônimo" quando isAnonymous=true, caso contrário o nome real
+        status:
+          type: string
+          enum: [pending, next, answered, hidden]
+        createdAt:
+          type: string
+          format: date-time
+
+    Registration:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        eventId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+          nullable: true
+        document:
+          type: string
+          nullable: true
+        checkedIn:
+          type: boolean
+        checkedInAt:
+          type: string
+          format: date-time
+          nullable: true
+        kitDelivered:
+          type: boolean
+        kitDeliveredAt:
+          type: string
+          format: date-time
+          nullable: true
+        drawn:
+          type: boolean
+        drawnAt:
+          type: string
+          format: date-time
+          nullable: true
+        lgpdAccepted:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        role:
+          type: string
+          enum: [admin, mediador, owner, superadmin]
+        plan:
+          type: string
+          enum: [free, paid]
+        createdAt:
+          type: string
+          format: date-time
+
+  responses:
+    UnauthorizedError:
+      description: Autenticação necessária
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: UNAUTHORIZED
+              message: Autenticação necessária.
+
+    ForbiddenError:
+      description: Acesso negado
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: FORBIDDEN
+              message: Acesso negado.
+
+    NotFoundError:
+      description: Recurso não encontrado
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: NOT_FOUND
+              message: Evento não encontrado.
+
+    UnprocessableEntityError:
+      description: Entidade inválida (validação de payload)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: UNPROCESSABLE_ENTITY
+              message: Pergunta muito curta.
+
+    TooManyRequestsError:
+      description: Rate limit excedido
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: TOO_MANY_REQUESTS
+              message: Limite de tentativas excedido. Tente novamente em alguns segundos.
+
+paths:
+  /api/auth/register:
+    post:
+      tags:
+        - Auth
+      summary: Registra um novo usuário (owner)
+      description: |
+        Cria um novo usuário com role `owner` (não admin).
+        Protegido por rate limiting (5 tentativas por email a cada 15 min).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  minLength: 2
+                  maxLength: 100
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  minLength: 8
+                  pattern: '^(?=.*[A-Z])(?=.*[0-9])'
+                  description: Mínimo 8 caracteres, 1 maiúscula, 1 número
+                lgpdAccepted:
+                  type: boolean
+                  description: Deve ser true
+              required:
+                - name
+                - email
+                - password
+                - lgpdAccepted
+      responses:
+        '201':
+          description: Usuário criado com sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/User'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntityError'
+        '429':
+          $ref: '#/components/responses/TooManyRequestsError'
+
+  /api/auth/{...nextauth}:
+    get:
+      tags:
+        - Auth
+      summary: NextAuth routes (login, callback, etc.)
+      description: Delegado ao NextAuth. Suporta provider Credentials.
+      responses:
+        '200':
+          description: OK
+
+  /api/v1/events:
+    post:
+      tags:
+        - Events
+      summary: Cria um novo evento
+      description: |
+        Usuário autenticado com role `owner`. Owners no plano free podem criar 1 evento;
+        pagos podem criar ilimitados. Retorna 402 PAYMENT_REQUIRED se limite atingido.
+      operationId: createEvent
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  minLength: 2
+                  maxLength: 120
+                slug:
+                  type: string
+                  pattern: '^[a-z0-9-]+$'
+                startsAt:
+                  type: string
+                  format: date-time
+                endsAt:
+                  type: string
+                  format: date-time
+                place:
+                  type: string
+                address:
+                  type: string
+                status:
+                  type: string
+                  enum: [draft, active, ended]
+                  default: draft
+                about:
+                  type: string
+                theme:
+                  type: object
+                config:
+                  type: object
+              required:
+                - name
+                - slug
+                - startsAt
+                - endsAt
+                - place
+      responses:
+        '201':
+          description: Evento criado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Event'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '402':
+          description: Plano free atingiu o limite de eventos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error:
+                  code: PAYMENT_REQUIRED
+                  message: Limite de eventos atingido para seu plano.
+
+    get:
+      tags:
+        - Events
+      summary: Lista eventos do usuário autenticado
+      description: |
+        Owners veem apenas seus próprios eventos.
+        Admins veem todos os eventos.
+      operationId: listEvents
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Lista de eventos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Event'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /api/v1/events/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags:
+        - Events
+      summary: Obtém detalhes de um evento
+      description: |
+        Owner pode acessar apenas seus próprios eventos (403 retorna 404 para evitar enumeration).
+        Admin/superadmin podem acessar qualquer evento.
+      operationId: getEvent
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Detalhes do evento
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Event'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+    patch:
+      tags:
+        - Events
+      summary: Atualiza um evento
+      description: |
+        Owner deve ser o dono do evento. Admin/superadmin podem atualizar qualquer evento.
+      operationId: updateEvent
+      security:
+        - BearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                status:
+                  type: string
+                  enum: [draft, active, ended]
+      responses:
+        '200':
+          description: Evento atualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Event'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+    delete:
+      tags:
+        - Events
+      summary: Deleta um evento
+      operationId: deleteEvent
+      security:
+        - BearerAuth: []
+      responses:
+        '204':
+          description: Evento deletado
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/v1/events/{eventId}/questions:
+    parameters:
+      - name: eventId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      tags:
+        - Questions
+      summary: Envia uma pergunta
+      description: |
+        Público ou autenticado. Rate limited por IP+email (10/hora).
+        Retorna projeção pública sem PII do autor.
+      operationId: submitQuestion
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                authorName:
+                  type: string
+                  minLength: 2
+                authorContact:
+                  type: string
+                  minLength: 5
+                authorEmail:
+                  type: string
+                  format: email
+                text:
+                  type: string
+                  minLength: 10
+                  maxLength: 500
+                lgpdAccepted:
+                  type: boolean
+                anonymous:
+                  type: boolean
+              required:
+                - authorName
+                - authorContact
+                - text
+                - lgpdAccepted
+      responses:
+        '201':
+          description: Pergunta criada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuestionPublic'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntityError'
+        '429':
+          $ref: '#/components/responses/TooManyRequestsError'
+
+    get:
+      tags:
+        - Questions
+      summary: Lista perguntas do evento
+      description: |
+        Autenticado: retorna projeção completa (com PII do moderador).
+        Não autenticado: retorna projeção pública apenas.
+      operationId: listQuestions
+      responses:
+        '200':
+          description: Lista de perguntas
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/QuestionPublic'
+
+  /api/v1/questions/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    patch:
+      tags:
+        - Questions
+      summary: Modera uma pergunta
+      description: |
+        Mediador do evento ou admin pode moderar (setNext, markAnswered, hide, restore).
+      operationId: moderateQuestion
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                action:
+                  type: string
+                  enum: [setNext, markAnswered, hide, restore]
+              required:
+                - action
+      responses:
+        '200':
+          description: Pergunta atualizada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Question'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+    delete:
+      tags:
+        - Questions
+      summary: Deleta uma pergunta
+      operationId: deleteQuestion
+      security:
+        - BearerAuth: []
+      responses:
+        '204':
+          description: Pergunta deletada
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/v1/events/{id}/registrations:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      tags:
+        - Registrations
+      summary: Inscreve um participante em um evento
+      description: |
+        Público. Cria uma inscrição no evento.
+        Rate limited por IP.
+      operationId: createRegistration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  minLength: 2
+                email:
+                  type: string
+                  format: email
+                phone:
+                  type: string
+                document:
+                  type: string
+                lgpdAccepted:
+                  type: boolean
+              required:
+                - name
+                - email
+                - lgpdAccepted
+      responses:
+        '201':
+          description: Inscrição criada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Registration'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntityError'
+        '429':
+          $ref: '#/components/responses/TooManyRequestsError'
+
+    get:
+      tags:
+        - Registrations
+      summary: Lista inscrições do evento
+      operationId: listRegistrations
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Lista de inscrições
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Registration'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/v1/events/{id}/registrations/{regId}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: regId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    patch:
+      tags:
+        - Registrations
+      summary: Atualiza status de inscrição (check-in, kit, etc.)
+      operationId: updateRegistration
+      security:
+        - BearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                checkedIn:
+                  type: boolean
+                kitDelivered:
+                  type: boolean
+      responses:
+        '200':
+          description: Inscrição atualizada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Registration'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+    delete:
+      tags:
+        - Registrations
+      summary: Cancela/remove inscrição (direito ao esquecimento)
+      description: |
+        Remove a inscrição do participante. Dados são anonimizados no banco.
+      operationId: deleteRegistration
+      security:
+        - BearerAuth: []
+      responses:
+        '204':
+          description: Inscrição removida
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/v1/events/{eventId}/participants:
+    parameters:
+      - name: eventId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags:
+        - Participants
+      summary: Lista participantes (autores de perguntas)
+      description: |
+        Mediador ou owner do evento. Útil para credenciamento.
+      operationId: listParticipants
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Lista de participantes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                    name:
+                      type: string
+                    contact:
+                      type: string
+                    questionsCount:
+                      type: integer
+                    createdAt:
+                      type: string
+                      format: date-time
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/v1/events/{id}/draw:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      tags:
+        - Draw
+      summary: Executa sorteio de participantes
+      description: |
+        Owner ou admin do evento. Sorteia N participantes aleatoriamente.
+      operationId: performDraw
+      security:
+        - BearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                count:
+                  type: integer
+                  minimum: 1
+      responses:
+        '200':
+          description: Resultado do sorteio
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  drawn:
+                    type: array
+                    items:
+                      type: object
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/v1/events/{id}/mediators:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      tags:
+        - Mediators
+      summary: Atribui um mediador a um evento
+      operationId: assignMediator
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                userId:
+                  type: string
+              required:
+                - userId
+      responses:
+        '201':
+          description: Mediador atribuído
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+    get:
+      tags:
+        - Mediators
+      summary: Lista mediadores atribuídos
+      operationId: listMediators
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Lista de mediadores
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    userId:
+                      type: string
+                    eventId:
+                      type: string
+                    createdAt:
+                      type: string
+
+  /api/v1/events/{id}/mediators/{userId}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    delete:
+      tags:
+        - Mediators
+      summary: Remove atribuição de mediador
+      operationId: removeMediator
+      security:
+        - BearerAuth: []
+      responses:
+        '204':
+          description: Mediador removido
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/v1/me/profile:
+    get:
+      tags:
+        - User
+      summary: Obtém perfil do usuário autenticado
+      operationId: getProfile
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Perfil do usuário
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+    patch:
+      tags:
+        - User
+      summary: Atualiza perfil
+      operationId: updateProfile
+      security:
+        - BearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                email:
+                  type: string
+      responses:
+        '200':
+          description: Perfil atualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /api/v1/me/plan:
+    get:
+      tags:
+        - User
+      summary: Obtém plano e histórico de pagamentos
+      operationId: getPlan
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Plano e pagamentos
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  plan:
+                    type: string
+                    enum: [free, paid]
+                  payments:
+                    type: array
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /api/v1/me/data:
+    get:
+      tags:
+        - User
+      summary: Exporta dados PII do usuário (direito de acesso LGPD)
+      operationId: exportData
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Dados exportados em JSON
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  exportedAt:
+                    type: string
+                    format: date-time
+                  user:
+                    $ref: '#/components/schemas/User'
+                  events:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Event'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+    delete:
+      tags:
+        - User
+      summary: Anonimiza/remove dados do usuário (direito ao esquecimento LGPD)
+      operationId: deleteData
+      security:
+        - BearerAuth: []
+      responses:
+        '204':
+          description: Dados anonimizados
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /api/v1/me/data-export:
+    get:
+      tags:
+        - User
+      summary: Exporta dados em formato portável (LGPD)
+      description: |
+        Retorna um arquivo contendo todos os dados PII do usuário em JSON.
+      operationId: getDataExport
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Arquivo JSON com dados exportados
+
+  /api/v1/me/assignments:
+    get:
+      tags:
+        - User
+      summary: Lista atribuições de mediador
+      operationId: getAssignments
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Lista de eventos atribuídos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    eventId:
+                      type: string
+                    event:
+                      $ref: '#/components/schemas/Event'
+
+  /api/v1/plataforma/stats:
+    get:
+      tags:
+        - Plataforma
+      summary: Estatísticas gerais da plataforma
+      operationId: getPlatformStats
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Estatísticas
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  totalEvents:
+                    type: integer
+                  totalUsers:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+
+  /api/v1/plataforma/users:
+    get:
+      tags:
+        - Plataforma
+      summary: Lista usuários (admin only)
+      operationId: listPlatformUsers
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Lista de usuários
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+
+  /api/v1/plataforma/payments:
+    get:
+      tags:
+        - Plataforma
+      summary: Lista pagamentos (admin only)
+      operationId: listPlatformPayments
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Lista de pagamentos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                    amount:
+                      type: number
+                    status:
+                      type: string
+                    createdAt:
+                      type: string
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+
+  /api/v1/stripe/checkout:
+    post:
+      tags:
+        - Stripe
+      summary: Cria sessão Stripe Checkout para pagamento de evento
+      operationId: createCheckout
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                eventId:
+                  type: string
+                  format: uuid
+              required:
+                - eventId
+      responses:
+        '200':
+          description: Sessão Stripe criada
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sessionId:
+                    type: string
+                  url:
+                    type: string
+                    format: uri
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/v1/upload:
+    post:
+      tags:
+        - Upload
+      summary: Upload de arquivo (imagem) para Supabase Storage
+      description: |
+        Autenticado. Tipos aceitos: JPEG, PNG, WebP. SVG rejeitado (security).
+        Tamanho máx: 3MB.
+      operationId: uploadFile
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+              required:
+                - file
+      responses:
+        '200':
+          description: Upload bem-sucedido
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  url:
+                    type: string
+                    format: uri
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '422':
+          description: Tipo de arquivo inválido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/webhooks/stripe:
+    post:
+      tags:
+        - Webhooks
+      summary: Webhook Stripe para eventos de pagamento
+      description: |
+        Endpoint para Stripe enviar eventos de checkout.session.completed, payment_intent.succeeded, etc.
+        Validado com assinatura STRIPE_WEBHOOK_SECRET.
+      operationId: handleStripeWebhook
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Webhook processado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  received: true
+        '400':
+          description: Assinatura inválida
+
+  /api/v1/internal/cleanup:
+    get:
+      tags:
+        - Internal
+      summary: Executa limpeza LGPD (cron — GET handler)
+      description: |
+        Protegido por Bearer token CRON_SECRET. Anonimiza PII de perguntas
+        e inscrições com mais de 30 dias. Também mantém o banco de dados ativo.
+        Executado diariamente via Vercel Cron.
+      operationId: cleanup
+      security:
+        - CronAuth: []
+      responses:
+        '200':
+          description: Limpeza concluída
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: true
+                  message: string
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+    delete:
+      tags:
+        - Internal
+      summary: Executa limpeza LGPD manualmente (DELETE handler)
+      operationId: cleanupManual
+      security:
+        - CronAuth: []
+      responses:
+        '200':
+          description: Limpeza concluída
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+securitySchemes:
+  BearerAuth:
+    type: http
+    scheme: bearer
+    description: NextAuth JWT token no header Authorization
+  CronAuth:
+    type: http
+    scheme: bearer
+    description: CRON_SECRET token no header Authorization (formato "Bearer <token>")

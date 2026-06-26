@@ -20,7 +20,7 @@ export default async function EventLayout({
   const themeClass = preset === "incluir" ? "theme-incluir" : "";
 
   return (
-    <div className={themeClass} style={{ minHeight: "100dvh", background: "hsl(var(--background))", color: "hsl(var(--foreground))" }}>
+    <div className={`min-h-[100dvh] bg-background text-foreground ${themeClass}`}>
       {children}
     </div>
   );

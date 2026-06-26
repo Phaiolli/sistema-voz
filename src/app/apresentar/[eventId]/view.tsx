@@ -1,18 +1,23 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { z } from "zod";
 import { createBrowserClient } from "@/lib/supabase";
 import { VozWordmark } from "@/components/voz/wordmark";
 
-interface ProjectionQuestion {
-  id: string;
-  text: string;
-  authorName: string;
-}
+const projectionStateSchema = z.discriminatedUnion("phase", [
+  z.object({ phase: z.literal("waiting") }),
+  z.object({
+    phase: z.literal("showing"),
+    question: z.object({
+      id: z.string().min(1),
+      text: z.string(),
+      authorName: z.string(),
+    }),
+  }),
+]);
 
-type ProjectionState =
-  | { phase: "waiting" }
-  | { phase: "showing"; question: ProjectionQuestion };
+type ProjectionState = z.infer<typeof projectionStateSchema>;
 
 interface Props {
   eventId: string;
@@ -43,8 +48,10 @@ export function ProjectionView({ eventId, eventName, eventSlug, accent, bg }: Pr
     const channel = supabase
       .channel(`event:${eventId}:apresentar`)
       .on("broadcast", { event: "state" }, ({ payload }) => {
-        if (payload.phase === "showing") setQuestionKey((k) => k + 1);
-        setState(payload as ProjectionState);
+        const parsed = projectionStateSchema.safeParse(payload);
+        if (!parsed.success) return;
+        if (parsed.data.phase === "showing") setQuestionKey((k) => k + 1);
+        setState(parsed.data);
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };

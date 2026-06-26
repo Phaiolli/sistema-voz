@@ -4,7 +4,7 @@ import { createServerClient } from "@/lib/supabase";
 
 async function requireSuperAdmin() {
   const session = await auth();
-  const user = session?.user as { role?: string } | undefined;
+  const user = session?.user;
   if (!user) return NextResponse.json({ error: { code: "UNAUTHORIZED" } }, { status: 401 });
   if (user.role !== "superadmin") return NextResponse.json({ error: { code: "FORBIDDEN" } }, { status: 403 });
   return null;

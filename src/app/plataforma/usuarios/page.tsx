@@ -42,36 +42,34 @@ export default function UsuariosPage() {
   const roles = [...new Set(users.map(u => u.role))];
 
   return (
-    <div style={{ minHeight: "100dvh", background: "hsl(var(--background))", color: "hsl(var(--foreground))" }}>
+    <div className="bg-background text-foreground" style={{ minHeight: "100dvh" }}>
       <PlataformaHeader active="usuarios" />
 
-      <main style={{ maxWidth: 1200, margin: "0 auto", padding: "32px 24px" }}>
-        <div style={{ marginBottom: 28 }}>
-          <h1 style={{ fontFamily: '"Archivo", sans-serif', fontWeight: 700, fontSize: 24, margin: "0 0 4px" }}>
+      <main className="mx-auto px-6 py-8" style={{ maxWidth: 1200 }}>
+        <div className="mb-7">
+          <h1 className="font-bold" style={{ fontFamily: '"Archivo", sans-serif', fontSize: 24, margin: "0 0 4px" }}>
             Usuários
           </h1>
-          <p style={{ fontSize: 13, color: "hsl(var(--muted-foreground))", margin: 0 }}>
+          <p className="text-muted-foreground" style={{ fontSize: 13, margin: 0 }}>
             {loading ? "Carregando…" : `${users.length} usuário${users.length !== 1 ? "s" : ""} registrados`}
           </p>
         </div>
 
         {/* Filters */}
-        <div style={{ display: "flex", gap: 12, marginBottom: 20, flexWrap: "wrap" }}>
+        <div className="flex flex-wrap gap-3 mb-5">
           <input
             type="search"
             placeholder="Buscar por nome ou e-mail…"
             value={search}
             onChange={e => setSearch(e.target.value)}
-            style={{
-              flex: 1, minWidth: 240, height: 38, padding: "0 14px", borderRadius: 10,
-              border: "1px solid hsl(var(--border))", background: "hsl(var(--muted))",
-              color: "hsl(var(--foreground))", fontSize: 14, fontFamily: "inherit", outline: "none",
-            }}
+            className="flex-1 h-9 px-3.5 rounded-[10px] border border-border bg-muted text-foreground text-sm outline-none"
+            style={{ minWidth: 240, fontFamily: "inherit" }}
           />
           <select
             value={roleFilter}
             onChange={e => setRoleFilter(e.target.value)}
-            style={{ height: 38, padding: "0 12px", borderRadius: 10, border: "1px solid hsl(var(--border))", background: "hsl(var(--muted))", color: "hsl(var(--foreground))", fontSize: 13, fontFamily: "inherit", cursor: "pointer" }}
+            className="h-9 px-3 rounded-[10px] border border-border bg-muted text-foreground cursor-pointer"
+            style={{ fontSize: 13, fontFamily: "inherit" }}
           >
             <option value="all">Todos os cargos</option>
             {roles.map(r => <option key={r} value={r}>{roleName(r)}</option>)}
@@ -79,7 +77,8 @@ export default function UsuariosPage() {
           <select
             value={planFilter}
             onChange={e => setPlanFilter(e.target.value)}
-            style={{ height: 38, padding: "0 12px", borderRadius: 10, border: "1px solid hsl(var(--border))", background: "hsl(var(--muted))", color: "hsl(var(--foreground))", fontSize: 13, fontFamily: "inherit", cursor: "pointer" }}
+            className="h-9 px-3 rounded-[10px] border border-border bg-muted text-foreground cursor-pointer"
+            style={{ fontSize: 13, fontFamily: "inherit" }}
           >
             <option value="all">Todos os planos</option>
             <option value="free">Gratuito</option>
@@ -88,43 +87,43 @@ export default function UsuariosPage() {
         </div>
 
         {/* Table */}
-        <div style={{ background: "hsl(var(--muted))", border: "1px solid hsl(var(--border))", borderRadius: 16, overflow: "hidden" }}>
+        <div className="bg-muted border border-border rounded-2xl overflow-hidden">
           {loading ? (
-            <p style={{ padding: 32, fontSize: 13, color: "hsl(var(--muted-foreground))", textAlign: "center" }}>Carregando…</p>
+            <p className="p-8 text-center text-muted-foreground" style={{ fontSize: 13 }}>Carregando…</p>
           ) : filtered.length === 0 ? (
-            <p style={{ padding: 32, fontSize: 13, color: "hsl(var(--muted-foreground))", textAlign: "center" }}>
+            <p className="p-8 text-center text-muted-foreground" style={{ fontSize: 13 }}>
               Nenhum usuário encontrado.
             </p>
           ) : (
             <div style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+              <table className="w-full" style={{ borderCollapse: "collapse", fontSize: 13 }}>
                 <thead>
-                  <tr style={{ borderBottom: "1px solid hsl(var(--border))", background: "hsl(var(--background))" }}>
+                  <tr className="border-b border-border bg-background">
                     {["Usuário", "Cargo", "Plano", "Eventos", "Último acesso", "Cadastro"].map(h => (
-                      <th key={h} style={{ padding: "12px 16px", textAlign: "left", fontWeight: 600, color: "hsl(var(--muted-foreground))", fontSize: 12, textTransform: "uppercase", letterSpacing: ".05em", whiteSpace: "nowrap" }}>{h}</th>
+                      <th key={h} className="py-3 px-4 text-left font-semibold text-muted-foreground uppercase whitespace-nowrap" style={{ fontSize: 12, letterSpacing: ".05em" }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {filtered.map(u => (
-                    <tr key={u.id} style={{ borderBottom: "1px solid hsl(var(--border))" }}>
-                      <td style={{ padding: "14px 16px" }}>
-                        <p style={{ margin: 0, fontWeight: 600 }}>{u.name}</p>
-                        <p style={{ margin: 0, color: "hsl(var(--muted-foreground))", fontSize: 12 }}>{u.email}</p>
+                    <tr key={u.id} className="border-b border-border">
+                      <td className="py-3.5 px-4">
+                        <p className="m-0 font-semibold">{u.name}</p>
+                        <p className="m-0 text-muted-foreground" style={{ fontSize: 12 }}>{u.email}</p>
                       </td>
-                      <td style={{ padding: "14px 16px" }}>
+                      <td className="py-3.5 px-4">
                         <RoleBadge role={u.role} />
                       </td>
-                      <td style={{ padding: "14px 16px" }}>
+                      <td className="py-3.5 px-4">
                         <PlanBadge plan={u.plan} />
                       </td>
-                      <td style={{ padding: "14px 16px", fontWeight: 600 }}>
+                      <td className="py-3.5 px-4 font-semibold">
                         {u.eventsCount}
                       </td>
-                      <td style={{ padding: "14px 16px", color: "hsl(var(--muted-foreground))", fontSize: 12 }}>
+                      <td className="py-3.5 px-4 text-muted-foreground" style={{ fontSize: 12 }}>
                         {u.lastSeenAt ? new Date(u.lastSeenAt).toLocaleDateString("pt-BR") : "—"}
                       </td>
-                      <td style={{ padding: "14px 16px", color: "hsl(var(--muted-foreground))", fontSize: 12, whiteSpace: "nowrap" }}>
+                      <td className="py-3.5 px-4 text-muted-foreground whitespace-nowrap" style={{ fontSize: 12 }}>
                         {new Date(u.createdAt).toLocaleDateString("pt-BR")}
                       </td>
                     </tr>
@@ -152,7 +151,7 @@ function RoleBadge({ role }: { role: string }) {
   };
   const s = map[role] ?? { label: role, color: "hsl(var(--muted-foreground))", bg: "hsl(var(--border))" };
   return (
-    <span style={{ padding: "3px 10px", borderRadius: 999, fontSize: 12, fontWeight: 600, color: s.color, background: s.bg, whiteSpace: "nowrap" }}>
+    <span className="py-1 px-2.5 rounded-full font-semibold whitespace-nowrap" style={{ fontSize: 12, color: s.color, background: s.bg }}>
       {s.label}
     </span>
   );
@@ -161,11 +160,10 @@ function RoleBadge({ role }: { role: string }) {
 function PlanBadge({ plan }: { plan: string }) {
   const isPaid = plan === "paid";
   return (
-    <span style={{
-      padding: "3px 10px", borderRadius: 999, fontSize: 12, fontWeight: 600,
-      color: isPaid ? "hsl(var(--primary))" : "hsl(var(--muted-foreground))",
-      background: isPaid ? "hsl(var(--primary) / .1)" : "hsl(var(--border))",
-    }}>
+    <span
+      className={`py-1 px-2.5 rounded-full font-semibold ${isPaid ? "text-primary bg-primary/10" : "text-muted-foreground bg-border"}`}
+      style={{ fontSize: 12 }}
+    >
       {isPaid ? "Pago" : "Grátis"}
     </span>
   );

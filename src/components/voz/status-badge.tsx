@@ -1,3 +1,11 @@
+/**
+ * Question status badge with visual indicators.
+ *
+ * Displays question status (pending, next, answered, hidden) with colored background,
+ * dot indicator, and localized label.
+ *
+ * Used in mediator dashboard and admin question lists.
+ */
 import { EyeOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { QuestionStatus } from "@/lib/types";
@@ -29,11 +37,26 @@ const config: Record<QuestionStatus, { label: string; dot: string; bg: string; t
   },
 };
 
+/**
+ * Props for StatusBadge component.
+ */
 interface Props {
+  /** Question status enum value */
   status: QuestionStatus;
+  /** Optional additional CSS classes */
   className?: string;
 }
 
+/**
+ * Renders a status badge for a question.
+ *
+ * @param props - Component props
+ * @returns Badge element with status indicator and label
+ *
+ * @example
+ * <StatusBadge status="next" />  // "próxima no palco" with accent color
+ * <StatusBadge status="answered" className="text-lg" />  // "respondida" with custom class
+ */
 export function StatusBadge({ status, className }: Props) {
   const c = config[status];
   return (

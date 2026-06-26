@@ -1,48 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase";
-import { auth } from "@/lib/auth";
+import { requireEventAccess } from "@/lib/api/auth-guard";
 import { createRegistrationSchema } from "@/lib/schemas";
+import { mapRegistration, asEventConfig } from "@/lib/api/mappers";
 
 const RATE_LIMIT_MAX = 5;
 const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000; // 1 hour
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function mapRegistration(row: Record<string, any>) {
-  return {
-    id: row.id,
-    eventId: row.event_id,
-    name: row.name,
-    email: row.email,
-    phone: row.phone ?? null,
-    document: row.document ?? null,
-    checkedIn: row.checked_in,
-    checkedInAt: row.checked_in_at ?? null,
-    kitDelivered: row.kit_delivered,
-    kitDeliveredAt: row.kit_delivered_at ?? null,
-    drawn: row.drawn,
-    drawnAt: row.drawn_at ?? null,
-    lgpdAccepted: row.lgpd_accepted,
-    createdAt: row.created_at,
-  };
-}
-
-async function requireAdminOrMediador() {
-  const session = await auth();
-  if (!session?.user) {
-    return { err: NextResponse.json({ error: { code: "UNAUTHORIZED", message: "Autenticação necessária." } }, { status: 401 }) };
-  }
-  const role = (session.user as { role?: string }).role;
-  if (role !== "admin" && role !== "mediador") {
-    return { err: NextResponse.json({ error: { code: "FORBIDDEN", message: "Acesso negado." } }, { status: 403 }) };
-  }
-  return { session, role };
-}
-
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const guard = await requireAdminOrMediador();
-  if (guard.err) return guard.err;
-
   const { id: eventId } = await params;
+
+  const guard = await requireEventAccess(eventId, ["admin", "mediador", "owner", "superadmin"]);
+  if ("err" in guard) return guard.err;
+
   const supabase = createServerClient();
 
   const { data: rows, error } = await supabase
@@ -71,8 +41,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: { code: "NOT_FOUND", message: "Evento não encontrado." } }, { status: 404 });
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const regConfig = (event.config as Record<string, any>)?.registration ?? {};
+  const regConfig = asEventConfig(event.config).registration ?? {};
 
   if (!regConfig.enabled) {
     return NextResponse.json({ error: { code: "REGISTRATION_CLOSED", message: "Inscrições não estão abertas." } }, { status: 422 });

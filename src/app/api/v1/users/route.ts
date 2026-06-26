@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase";
-import { auth } from "@/lib/auth";
+import { requireRole } from "@/lib/api/auth-guard";
 import { createUserSchema } from "@/lib/schemas";
 import bcrypt from "bcryptjs";
+import type { Database } from "@/lib/db/database.types";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function mapUser(row: Record<string, any>) {
+type UserRow = Database["public"]["Tables"]["users"]["Row"];
+type UserPublic = Pick<UserRow, "id" | "name" | "email" | "role" | "created_at" | "last_seen_at">;
+
+function mapUser(row: UserPublic) {
   return {
     id: row.id,
     name: row.name,
@@ -16,31 +19,9 @@ function mapUser(row: Record<string, any>) {
   };
 }
 
-async function requireAdmin() {
-  const session = await auth();
-  if (!session?.user) {
-    return {
-      err: NextResponse.json(
-        { error: { code: "UNAUTHORIZED", message: "Autenticação necessária." } },
-        { status: 401 },
-      ),
-    };
-  }
-  const role = (session.user as { role?: string }).role;
-  if (role !== "admin") {
-    return {
-      err: NextResponse.json(
-        { error: { code: "FORBIDDEN", message: "Acesso restrito a administradores." } },
-        { status: 403 },
-      ),
-    };
-  }
-  return { session };
-}
-
 export async function GET(req: NextRequest) {
-  const guard = await requireAdmin();
-  if (guard.err) return guard.err;
+  const guard = await requireRole(["admin", "superadmin"]);
+  if ("err" in guard) return guard.err;
 
   const roleFilter = req.nextUrl.searchParams.get("role");
   const supabase = createServerClient();
@@ -61,8 +42,8 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const guard = await requireAdmin();
-  if (guard.err) return guard.err;
+  const guard = await requireRole(["admin", "superadmin"]);
+  if ("err" in guard) return guard.err;
 
   const parsed = createUserSchema.safeParse(
     await req.json().catch(() => null),

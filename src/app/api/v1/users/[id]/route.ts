@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase";
-import { auth } from "@/lib/auth";
+import { requireRole } from "@/lib/api/auth-guard";
 import { patchUserSchema } from "@/lib/schemas";
 import bcrypt from "bcryptjs";
+import type { Database } from "@/lib/db/database.types";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function mapUser(row: Record<string, any>) {
+type UserRow = Database["public"]["Tables"]["users"]["Row"];
+type UserPublic = Pick<UserRow, "id" | "name" | "email" | "role" | "created_at" | "last_seen_at">;
+
+function mapUser(row: UserPublic) {
   return {
     id: row.id,
     name: row.name,
@@ -16,31 +19,9 @@ function mapUser(row: Record<string, any>) {
   };
 }
 
-async function requireAdmin() {
-  const session = await auth();
-  if (!session?.user) {
-    return {
-      err: NextResponse.json(
-        { error: { code: "UNAUTHORIZED", message: "Autenticação necessária." } },
-        { status: 401 },
-      ),
-    };
-  }
-  const role = (session.user as { role?: string }).role;
-  if (role !== "admin") {
-    return {
-      err: NextResponse.json(
-        { error: { code: "FORBIDDEN", message: "Acesso restrito a administradores." } },
-        { status: 403 },
-      ),
-    };
-  }
-  return { session };
-}
-
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const guard = await requireAdmin();
-  if (guard.err) return guard.err;
+  const guard = await requireRole(["admin", "superadmin"]);
+  if ("err" in guard) return guard.err;
 
   const { id } = await params;
   const supabase = createServerClient();
@@ -63,8 +44,8 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const guard = await requireAdmin();
-  if (guard.err) return guard.err;
+  const guard = await requireRole(["admin", "superadmin"]);
+  if ("err" in guard) return guard.err;
 
   const { id } = await params;
 
@@ -98,7 +79,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     }
   }
 
-  const patch: Record<string, unknown> = {};
+  const patch: Database["public"]["Tables"]["users"]["Update"] = {};
   if (body.name !== undefined) patch.name = body.name;
   if (body.email !== undefined) patch.email = body.email;
   if (body.role !== undefined) patch.role = body.role;
@@ -127,8 +108,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const guard = await requireAdmin();
-  if (guard.err) return guard.err;
+  const guard = await requireRole(["admin", "superadmin"]);
+  if ("err" in guard) return guard.err;
 
   const { id } = await params;
   const supabase = createServerClient();

@@ -1,26 +1,7 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase";
 import { auth } from "@/lib/auth";
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function mapEvent(row: Record<string, any>) {
-  return {
-    id: row.id,
-    slug: row.slug,
-    name: row.name,
-    startsAt: row.starts_at,
-    endsAt: row.ends_at,
-    place: row.place,
-    address: row.address,
-    status: row.status,
-    about: row.about,
-    theme: row.theme ?? {},
-    config: row.config ?? {},
-    organizerId: row.organizer_id,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-  };
-}
+import { mapEvent } from "@/lib/api/mappers";
 
 export async function GET(_req?: Request) {
   const session = await auth();
@@ -32,10 +13,10 @@ export async function GET(_req?: Request) {
     );
   }
 
-  const user = session.user as { id: string; role?: string };
+  const user = session.user;
   const supabase = createServerClient();
 
-  if (user.role === "admin") {
+  if (user.role === "admin" || user.role === "superadmin") {
     const { data: rows, error: fetchErr } = await supabase
       .from("events")
       .select("*")
@@ -53,9 +34,10 @@ export async function GET(_req?: Request) {
 
   if (assignErr) throw assignErr;
 
+  // The embedded `events` relation is inferred from the generated Database type
+  // (Relationships metadata), so no cast is needed.
   const result = (assignments ?? []).map((row) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const eventRow = Array.isArray(row.events) ? row.events[0] : (row.events as Record<string, any>);
+    const eventRow = Array.isArray(row.events) ? row.events[0] : row.events;
     return {
       eventId: row.event_id,
       assignedAt: row.created_at,

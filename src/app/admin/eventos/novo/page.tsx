@@ -96,32 +96,34 @@ export default function NovoEventoPage() {
   }
 
   return (
-    <div style={{ minHeight: "100dvh", background: "hsl(var(--background))", color: "hsl(var(--foreground))" }}>
-      <header style={{ height: 56, borderBottom: "1px solid hsl(var(--border))", display: "flex", alignItems: "center", padding: "0 24px", gap: 12 }}>
+    <div className="min-h-[100dvh] bg-background text-foreground">
+      <header className="h-14 flex items-center gap-3 px-6" style={{ borderBottom: "1px solid hsl(var(--border))" }}>
         <Link
           href="/admin/eventos"
           aria-label="Voltar"
-          style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 36, height: 36, borderRadius: 8, border: "1px solid hsl(var(--border))", textDecoration: "none", color: "hsl(var(--foreground))" }}
+          className="flex items-center justify-center w-9 h-9 rounded-lg no-underline text-foreground"
+          style={{ border: "1px solid hsl(var(--border))" }}
         >
           <ArrowLeft size={16} aria-hidden />
         </Link>
         <VozWordmark size={20} />
-        <div style={{ flex: 1 }} />
-        <span style={{ fontSize: 13, color: "hsl(var(--muted-foreground))" }}>Novo evento</span>
+        <div className="flex-1" />
+        <span className="text-[13px] text-muted-foreground">Novo evento</span>
         <button
           form="form-novo-evento"
           type="submit"
           disabled={saving}
-          style={{ display: "inline-flex", alignItems: "center", gap: 6, height: 36, padding: "0 14px", borderRadius: 8, border: "none", background: "hsl(var(--primary))", color: "hsl(var(--primary-foreground))", fontSize: 13, fontWeight: 600, cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.7 : 1 }}
+          className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-lg border-0 bg-primary text-primary-foreground text-[13px] font-semibold"
+          style={{ cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.7 : 1 }}
         >
           <Save size={14} aria-hidden /> {saving ? "Criando…" : "Criar evento"}
         </button>
       </header>
 
-      <main style={{ maxWidth: 960, margin: "0 auto", padding: "32px 24px" }}>
+      <main className="max-w-[960px] mx-auto px-6 py-8">
         <form id="form-novo-evento" onSubmit={handleSubmit}>
-          <div style={{ display: "flex", flexDirection: "column", gap: 20, maxWidth: 600 }}>
-            <h2 style={{ fontFamily: '"Archivo", sans-serif', fontWeight: 700, fontSize: 22, margin: 0 }}>Informações gerais</h2>
+          <div className="flex flex-col gap-5 max-w-[600px]">
+            <h2 className="font-bold text-[22px] m-0" style={{ fontFamily: '"Archivo", sans-serif' }}>Informações gerais</h2>
 
             <Field label="Nome do evento" htmlFor="ev-name" error={fieldErrors["name"]}>
               <input
@@ -141,12 +143,12 @@ export default function NovoEventoPage() {
                 onChange={(e) => handleSlugChange(e.target.value)}
                 style={inp}
               />
-              <p style={{ fontSize: 12, color: "hsl(var(--muted-foreground))", margin: "4px 0 0" }}>
+              <p className="text-xs text-muted-foreground" style={{ margin: "4px 0 0" }}>
                 voz.app/e/{slug || "slug-do-evento"}
               </p>
             </Field>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+            <div className="grid gap-4" style={{ gridTemplateColumns: "1fr 1fr" }}>
               <Field label="Início" htmlFor="ev-start" error={fieldErrors["startsAt"]}>
                 <input
                   id="ev-start"
@@ -196,10 +198,10 @@ export default function NovoEventoPage() {
 
 function Field({ label, htmlFor, children, error }: { label: string; htmlFor: string; children: React.ReactNode; error?: string }) {
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-      <label htmlFor={htmlFor} style={{ fontSize: 14, fontWeight: 500 }}>{label}</label>
+    <div className="flex flex-col gap-1.5">
+      <label htmlFor={htmlFor} className="text-sm font-medium">{label}</label>
       {children}
-      {error && <p style={{ fontSize: 12, color: "hsl(var(--destructive))", margin: "2px 0 0" }}>{error}</p>}
+      {error && <p className="text-xs text-destructive" style={{ margin: "2px 0 0" }}>{error}</p>}
     </div>
   );
 }

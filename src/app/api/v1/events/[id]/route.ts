@@ -3,43 +3,8 @@ import { createServerClient } from "@/lib/supabase";
 import { auth } from "@/lib/auth";
 import { patchEventSchema } from "@/lib/schemas";
 import { isEventOwnedBy } from "@/lib/plan-limits";
-import type { EventStatus, EventTheme, EventConfig } from "@/lib/types";
-
-interface EventRow {
-  id: string;
-  slug: string;
-  name: string;
-  starts_at: string;
-  ends_at: string;
-  place: string;
-  address: string;
-  status: EventStatus;
-  about: string;
-  theme: EventTheme | null;
-  config: EventConfig | null;
-  organizer_id: string;
-  created_at: string;
-  updated_at: string;
-}
-
-function mapEvent(row: EventRow) {
-  return {
-    id: row.id,
-    slug: row.slug,
-    name: row.name,
-    startsAt: row.starts_at,
-    endsAt: row.ends_at,
-    place: row.place,
-    address: row.address,
-    status: row.status,
-    about: row.about,
-    theme: row.theme ?? {},
-    config: row.config ?? {},
-    organizerId: row.organizer_id,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-  };
-}
+import type { Database } from "@/lib/db/database.types";
+import { mapEvent, toJson } from "@/lib/api/mappers";
 
 async function requireAuth(roles: string[]) {
   const session = await auth();
@@ -51,7 +16,7 @@ async function requireAuth(roles: string[]) {
       ),
     };
   }
-  const role = (session.user as { role?: string }).role ?? "";
+  const role = session.user.role;
   if (!roles.includes(role)) {
     return {
       err: NextResponse.json(
@@ -79,7 +44,7 @@ async function checkOwnership(eventId: string, sessionUser: SessionUser) {
 }
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const guard = await requireAuth(["admin", "owner"]);
+  const guard = await requireAuth(["admin", "owner", "superadmin"]);
   if (guard.err) return guard.err;
 
   const { id } = await params;
@@ -108,7 +73,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const guard = await requireAuth(["admin", "owner"]);
+  const guard = await requireAuth(["admin", "owner", "superadmin"]);
   if (guard.err) return guard.err;
 
   const { id } = await params;
@@ -147,7 +112,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     }
   }
 
-  const patch: Record<string, unknown> = {};
+  const patch: Database["public"]["Tables"]["events"]["Update"] = {};
   if (body.name !== undefined) patch.name = body.name;
   if (body.slug !== undefined) patch.slug = body.slug;
   if (body.startsAt !== undefined) patch.starts_at = body.startsAt;
@@ -156,8 +121,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (body.address !== undefined) patch.address = body.address;
   if (body.status !== undefined) patch.status = body.status;
   if (body.about !== undefined) patch.about = body.about;
-  if (body.theme !== undefined) patch.theme = body.theme;
-  if (body.config !== undefined) patch.config = body.config;
+  if (body.theme !== undefined) patch.theme = toJson(body.theme);
+  if (body.config !== undefined) patch.config = toJson(body.config);
   patch.updated_at = new Date().toISOString();
 
   const { data: row, error: updateErr } = await supabase
@@ -181,7 +146,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const guard = await requireAuth(["admin", "owner"]);
+  const guard = await requireAuth(["admin", "owner", "superadmin"]);
   if (guard.err) return guard.err;
 
   const { id } = await params;

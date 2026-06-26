@@ -11,14 +11,18 @@ vi.mock("@/lib/supabase", () => ({
   createServerClient: () => mockSupabase,
 }));
 
+// Default: unauthenticated requests fall into the public projection branch.
+vi.mock("@/lib/auth", () => ({ auth: vi.fn().mockResolvedValue(null) }));
+
 // Bypass plan-limits checks — tested separately in plan-limits.test.ts
+import { getEventQuestionCount } from "@/lib/plan-limits";
+
 vi.mock("@/lib/plan-limits", () => ({
-  getOwnerPlan: vi.fn().mockResolvedValue("paid"),
   getEventQuestionCount: vi.fn().mockResolvedValue(0),
   FREE_QUESTION_LIMIT: 15,
 }));
 
-const mockEvent = { id: "evt_1", status: "active", config: {} };
+const mockEvent = { id: "evt_1", status: "active", config: {}, is_paid: true };
 const mockQuestion = {
   id: "q_123",
   event_id: "evt_1",
@@ -55,8 +59,8 @@ function makeGetRequest(params?: string) {
   );
 }
 
-function makeParams(eventId = "evt_1") {
-  return { params: Promise.resolve({ eventId }) };
+function makeParams(id = "evt_1") {
+  return { params: Promise.resolve({ id }) };
 }
 
 beforeEach(() => {
@@ -176,6 +180,53 @@ describe("POST /api/v1/events/[eventId]/questions", () => {
     expect(json.id).toBe("q_123");
     expect(json.status).toBe("pending");
   });
+
+  // SW1 — billing is per-event via events.is_paid.
+  it("returns 403 QUESTION_LIMIT_REACHED when an unpaid event hits the free limit", async () => {
+    vi.mocked(getEventQuestionCount).mockResolvedValue(15);
+    mockSupabase.from.mockReturnValueOnce({
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockReturnThis(),
+      maybeSingle: vi.fn().mockResolvedValue({ data: { ...mockEvent, is_paid: false } }),
+    });
+
+    const res = await POST(makePostRequest(validBody), makeParams());
+    expect(res.status).toBe(403);
+    const json = await res.json();
+    expect(json.error.code).toBe("QUESTION_LIMIT_REACHED");
+  });
+
+  it("allows unlimited questions for a paid event (no limit check)", async () => {
+    vi.mocked(getEventQuestionCount).mockResolvedValue(9999);
+    mockSupabase.from
+      .mockReturnValueOnce({
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockReturnThis(),
+        maybeSingle: vi.fn().mockResolvedValue({ data: { ...mockEvent, is_paid: true } }),
+      })
+      .mockReturnValueOnce({
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              gte: vi.fn().mockResolvedValue({ count: 0, data: [], error: null }),
+            }),
+          }),
+        }),
+      })
+      .mockReturnValueOnce({
+        insert: vi.fn().mockReturnValue({
+          select: vi.fn().mockReturnValue({
+            single: vi.fn().mockResolvedValue({ data: mockQuestion, error: null }),
+          }),
+        }),
+      });
+    mockSupabase.channel.mockReturnValue({ send: vi.fn().mockResolvedValue({}) });
+
+    const res = await POST(makePostRequest(validBody), makeParams());
+    expect(res.status).toBe(201);
+  });
 });
 
 function makeQueryChain(data: unknown[]) {
@@ -207,5 +258,34 @@ describe("GET /api/v1/events/[eventId]/questions", () => {
     expect(res.status).toBe(200);
     const json = await res.json();
     expect(json.questions).toHaveLength(0);
+  });
+
+  // C3 — public projection must never leak PII.
+  it("public response omits author_email, author_contact and author_ip", async () => {
+    // auth() resolves null by default → public (unauthenticated) projection.
+    mockSupabase.from.mockReturnValue(makeQueryChain([mockQuestion]));
+    const res = await GET(makeGetRequest(), makeParams());
+    const json = (await res.json()) as { questions: Record<string, unknown>[] };
+    const q = json.questions[0];
+    expect(q).not.toHaveProperty("authorEmail");
+    expect(q).not.toHaveProperty("authorContact");
+    expect(q).not.toHaveProperty("authorIp");
+    expect(q).not.toHaveProperty("author_email");
+    expect(q).not.toHaveProperty("author_contact");
+    expect(q).not.toHaveProperty("author_ip");
+    // It exposes only the safe minimal projection.
+    expect(Object.keys(q).sort()).toEqual(
+      ["authorName", "createdAt", "eventId", "id", "isAnonymous", "status", "text"].sort(),
+    );
+  });
+
+  it("public response shows 'Anônimo' instead of the real name for anonymous questions", async () => {
+    const anonRow = { ...mockQuestion, author_name: "Maria Silva", is_anonymous: true };
+    mockSupabase.from.mockReturnValue(makeQueryChain([anonRow]));
+    const res = await GET(makeGetRequest(), makeParams());
+    const json = (await res.json()) as { questions: { authorName: string }[] };
+    expect(json.questions[0].authorName).toBe("Anônimo");
+    // Sanity: the real name does not appear anywhere in the serialised payload.
+    expect(JSON.stringify(json)).not.toContain("Maria Silva");
   });
 });

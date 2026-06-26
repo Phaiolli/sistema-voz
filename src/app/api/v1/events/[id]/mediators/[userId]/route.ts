@@ -1,35 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase";
-import { auth } from "@/lib/auth";
-
-async function requireAdmin() {
-  const session = await auth();
-  if (!session?.user) {
-    return {
-      err: NextResponse.json(
-        { error: { code: "UNAUTHORIZED", message: "Autenticação necessária." } },
-        { status: 401 },
-      ),
-    };
-  }
-  const role = (session.user as { role?: string }).role;
-  if (role !== "admin") {
-    return {
-      err: NextResponse.json(
-        { error: { code: "FORBIDDEN", message: "Acesso restrito a administradores." } },
-        { status: 403 },
-      ),
-    };
-  }
-  return { session };
-}
+import { requireRole } from "@/lib/api/auth-guard";
 
 export async function DELETE(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string; userId: string }> },
 ) {
-  const guard = await requireAdmin();
-  if (guard.err) return guard.err;
+  const guard = await requireRole(["admin", "superadmin"]);
+  if ("err" in guard) return guard.err;
 
   const { id: eventId, userId } = await params;
   const supabase = createServerClient();

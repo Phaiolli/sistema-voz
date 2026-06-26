@@ -31,7 +31,7 @@ function EntrarForm() {
         return;
       }
       const session = await getSession();
-      const role = (session?.user as { role?: string })?.role;
+      const role = session?.user?.role;
       if (role === "superadmin") router.push("/plataforma");
       else if (role === "admin") router.push("/admin/eventos");
       else if (role === "owner") router.push("/dashboard");
@@ -52,7 +52,7 @@ function EntrarForm() {
           {/* Brand panel — desktop only */}
           <aside className="lo-brand" aria-hidden="true">
             <VozWordmark size={28} inverse />
-            <div style={{ flex: 1 }} />
+            <div className="flex-1" />
             <div>
               <p className="lo-hero">
                 Pergunte<span className="lo-dot">.</span><br />

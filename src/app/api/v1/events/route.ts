@@ -3,43 +3,7 @@ import { createServerClient } from "@/lib/supabase";
 import { auth } from "@/lib/auth";
 import { createEventSchema } from "@/lib/schemas";
 import { getOwnerEventCount, FREE_EVENT_LIMIT } from "@/lib/plan-limits";
-import type { EventStatus, EventTheme, EventConfig } from "@/lib/types";
-
-interface EventRow {
-  id: string;
-  slug: string;
-  name: string;
-  starts_at: string;
-  ends_at: string;
-  place: string;
-  address: string;
-  status: EventStatus;
-  about: string;
-  theme: EventTheme | null;
-  config: EventConfig | null;
-  organizer_id: string;
-  created_at: string;
-  updated_at: string;
-}
-
-function mapEvent(row: EventRow) {
-  return {
-    id: row.id,
-    slug: row.slug,
-    name: row.name,
-    startsAt: row.starts_at,
-    endsAt: row.ends_at,
-    place: row.place,
-    address: row.address,
-    status: row.status,
-    about: row.about,
-    theme: row.theme ?? {},
-    config: row.config ?? {},
-    organizerId: row.organizer_id,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-  };
-}
+import { mapEvent, toJson } from "@/lib/api/mappers";
 
 async function requireAuth(roles: string[]) {
   const session = await auth();
@@ -51,7 +15,7 @@ async function requireAuth(roles: string[]) {
       ),
     };
   }
-  const role = (session.user as { role?: string }).role ?? "";
+  const role = session.user.role;
   if (!roles.includes(role)) {
     return {
       err: NextResponse.json(
@@ -64,12 +28,12 @@ async function requireAuth(roles: string[]) {
 }
 
 export async function GET() {
-  const guard = await requireAuth(["admin", "owner"]);
+  const guard = await requireAuth(["admin", "owner", "superadmin"]);
   if (guard.err) return guard.err;
 
   const session = guard.session!;
-  const role = (session.user as { role?: string }).role ?? "";
-  const userId = (session.user as { id?: string }).id ?? "";
+  const role = session.user.role;
+  const userId = session.user.id;
 
   const supabase = createServerClient();
   let query = supabase.from("events").select("*").order("starts_at", { ascending: false });
@@ -85,12 +49,12 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const guard = await requireAuth(["admin", "owner"]);
+  const guard = await requireAuth(["admin", "owner", "superadmin"]);
   if (guard.err) return guard.err;
 
   const session = guard.session!;
-  const role = (session.user as { role?: string }).role ?? "";
-  const userId = (session.user as { id?: string }).id ?? "";
+  const role = session.user.role;
+  const userId = session.user.id;
 
   const parsed = createEventSchema.safeParse(
     await req.json().catch(() => null),
@@ -150,8 +114,8 @@ export async function POST(req: NextRequest) {
       address: body.address,
       status: body.status,
       about: body.about,
-      theme: body.theme,
-      config: body.config,
+      theme: toJson(body.theme),
+      config: toJson(body.config),
       organizer_id: organizerId,
     })
     .select()

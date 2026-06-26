@@ -11,9 +11,9 @@ export default function LandingPage() {
         backdropFilter: "blur(12px)",
         borderBottom: "1px solid rgba(255,255,255,.08)",
       }}>
-        <div style={{ maxWidth: 1120, margin: "0 auto", padding: "0 24px", height: 60, display: "flex", alignItems: "center", gap: 24 }}>
+        <div className="mx-auto flex h-[60px] max-w-[1120px] items-center gap-6 px-6">
           <VozWordmark size={22} inverse />
-          <div style={{ flex: 1 }} />
+          <div className="flex-1" />
           <Link href="/entrar" style={navLinkStyle}>Entrar</Link>
           <Link href="/cadastro" style={ctaSmallStyle}>Criar conta grátis</Link>
         </div>
@@ -73,7 +73,7 @@ export default function LandingPage() {
             Colete perguntas da plateia em tempo real, modere com um clique e exiba no palco com elegância.
           </p>
 
-          <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
+          <div className="flex flex-wrap justify-center gap-3">
             <Link href="/cadastro" style={ctaPrimaryStyle}>
               Começar de graça
             </Link>
@@ -85,8 +85,8 @@ export default function LandingPage() {
       </section>
 
       {/* ── HOW IT WORKS ──────────────────────────────────── */}
-      <section style={{ padding: "80px 24px", background: "hsl(var(--background))" }}>
-        <div style={{ maxWidth: 1120, margin: "0 auto" }}>
+      <section className="bg-background px-6 py-20">
+        <div className="mx-auto max-w-[1120px]">
           <SectionLabel>Como funciona</SectionLabel>
           <h2 style={sectionTitleStyle}>Em 3 passos, seu evento ao vivo</h2>
 
@@ -105,8 +105,8 @@ export default function LandingPage() {
       </section>
 
       {/* ── FEATURES ──────────────────────────────────────── */}
-      <section style={{ padding: "80px 24px", background: "hsl(var(--muted))" }}>
-        <div style={{ maxWidth: 1120, margin: "0 auto" }}>
+      <section className="bg-muted px-6 py-20">
+        <div className="mx-auto max-w-[1120px]">
           <SectionLabel>Recursos</SectionLabel>
           <h2 style={sectionTitleStyle}>Tudo que você precisa no palco</h2>
 
@@ -134,20 +134,20 @@ export default function LandingPage() {
       </section>
 
       {/* ── PRICING ───────────────────────────────────────── */}
-      <section style={{ padding: "80px 24px", background: "hsl(var(--background))" }}>
-        <div style={{ maxWidth: 860, margin: "0 auto" }}>
+      <section className="bg-background px-6 py-20">
+        <div className="mx-auto max-w-[860px]">
           <SectionLabel>Planos</SectionLabel>
           <h2 style={sectionTitleStyle}>Simples e transparente</h2>
 
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 24, marginTop: 40 }}>
+          <div className="mt-10 grid gap-6" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))" }}>
             {/* Free */}
             <div style={planCardStyle}>
-              <div style={{ marginBottom: 24 }}>
-                <p style={{ fontSize: 13, fontWeight: 700, letterSpacing: ".08em", color: "hsl(var(--muted-foreground))", margin: "0 0 8px" }}>GRATUITO</p>
-                <p style={{ fontFamily: '"Archivo Black", sans-serif', fontSize: 48, fontWeight: 900, margin: "0 0 4px", letterSpacing: "-0.03em" }}>
+              <div className="mb-6">
+                <p className="mb-2 text-[13px] font-bold tracking-[.08em] text-muted-foreground">GRATUITO</p>
+                <p className="mb-1 text-5xl font-black" style={{ fontFamily: '"Archivo Black", sans-serif', letterSpacing: "-0.03em" }}>
                   R$&nbsp;0
                 </p>
-                <p style={{ fontSize: 14, color: "hsl(var(--muted-foreground))", margin: 0 }}>para sempre</p>
+                <p className="m-0 text-sm text-muted-foreground">para sempre</p>
               </div>
               <ul style={featureListStyle}>
                 <PlanFeature>1 evento</PlanFeature>
@@ -162,7 +162,7 @@ export default function LandingPage() {
             </div>
 
             {/* Per event */}
-            <div style={{ ...planCardStyle, border: "2px solid hsl(var(--primary))", position: "relative" }}>
+            <div className="relative" style={{ ...planCardStyle, border: "2px solid hsl(var(--primary))" }}>
               <span style={{
                 position: "absolute", top: -13, left: "50%", transform: "translateX(-50%)",
                 background: "hsl(var(--primary))", color: "#fff",
@@ -172,12 +172,12 @@ export default function LandingPage() {
               }}>
                 MAIS POPULAR
               </span>
-              <div style={{ marginBottom: 24 }}>
-                <p style={{ fontSize: 13, fontWeight: 700, letterSpacing: ".08em", color: "hsl(var(--muted-foreground))", margin: "0 0 8px" }}>POR EVENTO</p>
-                <p style={{ fontFamily: '"Archivo Black", sans-serif', fontSize: 48, fontWeight: 900, margin: "0 0 4px", letterSpacing: "-0.03em" }}>
-                  R$&nbsp;59<span style={{ fontSize: 28 }}>,90</span>
+              <div className="mb-6">
+                <p className="mb-2 text-[13px] font-bold tracking-[.08em] text-muted-foreground">POR EVENTO</p>
+                <p className="mb-1 text-5xl font-black" style={{ fontFamily: '"Archivo Black", sans-serif', letterSpacing: "-0.03em" }}>
+                  R$&nbsp;59<span className="text-[28px]">,90</span>
                 </p>
-                <p style={{ fontSize: 14, color: "hsl(var(--muted-foreground))", margin: 0 }}>pagamento único por evento</p>
+                <p className="m-0 text-sm text-muted-foreground">pagamento único por evento</p>
               </div>
               <ul style={featureListStyle}>
                 <PlanFeature>Eventos ilimitados</PlanFeature>
@@ -226,10 +226,10 @@ export default function LandingPage() {
         color: "rgba(255,255,255,.45)",
         fontSize: 13,
       }}>
-        <div style={{ maxWidth: 1120, margin: "0 auto", display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
+        <div className="mx-auto flex max-w-[1120px] flex-wrap items-center gap-4">
           <VozWordmark size={18} inverse />
           <span>Plataforma de perguntas ao vivo para eventos presenciais.</span>
-          <div style={{ flex: 1 }} />
+          <div className="flex-1" />
           <Link href="/entrar" style={{ color: "rgba(255,255,255,.45)", textDecoration: "none" }}>Entrar</Link>
           <Link href="/cadastro" style={{ color: "rgba(255,255,255,.45)", textDecoration: "none" }}>Cadastrar</Link>
         </div>
@@ -242,11 +242,7 @@ export default function LandingPage() {
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <p style={{
-      fontSize: 13, fontWeight: 700, letterSpacing: ".1em",
-      color: "hsl(var(--primary))", textTransform: "uppercase",
-      margin: "0 0 12px",
-    }}>
+    <p className="mb-3 text-[13px] font-bold uppercase tracking-[.1em] text-primary">
       {children}
     </p>
   );
@@ -255,13 +251,10 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 function StepCard({ n, title, children }: { n: number; title: string; children: React.ReactNode }) {
   return (
     <div style={cardBaseStyle}>
-      <div style={{
-        width: 40, height: 40, borderRadius: "50%",
-        background: "hsl(var(--primary))", color: "#fff",
-        display: "flex", alignItems: "center", justifyContent: "center",
-        fontFamily: '"Archivo Black", sans-serif', fontWeight: 900, fontSize: 18,
-        marginBottom: 20,
-      }}>
+      <div
+        className="mb-5 flex h-10 w-10 items-center justify-center rounded-full bg-primary text-lg font-black text-white"
+        style={{ fontFamily: '"Archivo Black", sans-serif' }}
+      >
         {n}
       </div>
       <h3 style={cardTitleStyle}>{title}</h3>
@@ -273,7 +266,7 @@ function StepCard({ n, title, children }: { n: number; title: string; children: 
 function FeatureCard({ icon, title, children }: { icon: string; title: string; children: React.ReactNode }) {
   return (
     <div style={cardBaseStyle}>
-      <span style={{ fontSize: 28, marginBottom: 16, display: "block" }}>{icon}</span>
+      <span className="mb-4 block text-[28px]">{icon}</span>
       <h3 style={cardTitleStyle}>{title}</h3>
       <p style={cardBodyStyle}>{children}</p>
     </div>
@@ -282,8 +275,8 @@ function FeatureCard({ icon, title, children }: { icon: string; title: string; c
 
 function PlanFeature({ children }: { children: React.ReactNode }) {
   return (
-    <li style={{ display: "flex", alignItems: "flex-start", gap: 10, fontSize: 15, color: "hsl(var(--foreground))" }}>
-      <span style={{ color: "hsl(var(--success))", flexShrink: 0, marginTop: 1 }}>✓</span>
+    <li className="flex items-start gap-2.5 text-[15px] text-foreground">
+      <span className="mt-px shrink-0 text-success">✓</span>
       {children}
     </li>
   );

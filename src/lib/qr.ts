@@ -1,7 +1,16 @@
 /**
  * Generates a QR code data URL with the voz. logo embedded in the center.
+ *
  * Uses canvas to composite the logo directly into the image so downloads
  * include it (unlike CSS overlays which are presentation-only).
+ *
+ * @param url - Target URL to encode
+ * @param size - Canvas size in pixels (default 300)
+ * @returns Data URL (base64-encoded PNG) ready for download or display
+ *
+ * @example
+ * const qr = await generateQrWithLogo("https://voz.app/e/meu-evento");
+ * // Use in img src or download link
  */
 export async function generateQrWithLogo(url: string, size = 300): Promise<string> {
   const mod = await import("qrcode");
@@ -59,7 +68,13 @@ export async function generateQrWithLogo(url: string, size = 300): Promise<strin
   return canvas.toDataURL("image/png");
 }
 
-/** Generates a clean QR code (no logo) suitable for embedding in posters. */
+/**
+ * Generates a clean QR code without logo, suitable for printing on posters.
+ *
+ * @param url - Target URL to encode
+ * @param size - Canvas size in pixels (default 480 for higher resolution)
+ * @returns Data URL (base64-encoded PNG)
+ */
 export async function generateQr(url: string, size = 480): Promise<string> {
   const mod = await import("qrcode");
   const canvas = document.createElement("canvas");
@@ -73,6 +88,10 @@ export async function generateQr(url: string, size = 480): Promise<string> {
   return canvas.toDataURL("image/png");
 }
 
+/**
+ * Helper to draw a rounded rectangle on canvas.
+ * @internal Used only by QR code generators.
+ */
 function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
   ctx.beginPath();
   ctx.moveTo(x + r, y);

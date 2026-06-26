@@ -1,0 +1,8 @@
+import type { CSSProperties } from "react";
+
+export const subnavBtnStyle: CSSProperties = { display: "inline-flex", alignItems: "center", gap: 6, height: 36, padding: "0 12px", borderRadius: 8, border: "1px solid hsl(var(--border))", cursor: "pointer", fontSize: 13, fontWeight: 500, background: "transparent", color: "hsl(var(--foreground))", flexShrink: 0 };
+export const primaryBtnStyle: CSSProperties = { display: "inline-flex", alignItems: "center", gap: 6, height: 44, padding: "0 16px", borderRadius: 9, border: "none", cursor: "pointer", fontSize: 14, fontWeight: 600, background: "hsl(var(--primary))", color: "hsl(var(--primary-foreground))", flexShrink: 0 };
+export const projectedBtnStyle: CSSProperties = { ...primaryBtnStyle, background: "hsl(var(--primary) / .12)", color: "hsl(var(--primary))", border: "1px solid hsl(var(--primary) / .35)" };
+export const outlineBtnStyle: CSSProperties = { ...primaryBtnStyle, background: "transparent", color: "hsl(var(--foreground))", border: "1px solid hsl(var(--border))" };
+export const ghostSmallStyle: CSSProperties = { display: "inline-flex", alignItems: "center", gap: 4, height: 32, padding: "0 10px", borderRadius: 7, border: "none", cursor: "pointer", fontSize: 13, fontWeight: 500, background: "transparent", color: "hsl(var(--muted-foreground))", flexShrink: 0 };
+export const deleteBtnStyle: CSSProperties = { display: "inline-flex", alignItems: "center", justifyContent: "center", width: 44, height: 44, borderRadius: 9, border: "1px solid hsl(var(--destructive) / .3)", cursor: "pointer", background: "transparent", color: "hsl(var(--destructive))", flexShrink: 0 };

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import { VozWordmark } from "@/components/voz/wordmark";
@@ -48,8 +48,7 @@ export default function AdminUsuariosPage() {
   const [form, setForm] = useState<UserForm>(emptyForm());
   const [submitting, setSubmitting] = useState(false);
 
-  function loadUsers() {
-    setLoading(true);
+  const fetchUsers = useCallback(() =>
     fetch("/api/v1/users?role=admin")
       .then((r) => {
         if (!r.ok) throw new Error("Falha ao carregar usuários");
@@ -57,12 +56,19 @@ export default function AdminUsuariosPage() {
       })
       .then((data: { users: UserPublic[] }) => setUsers(data.users))
       .catch(() => toast.error("Erro ao carregar usuários."))
-      .finally(() => setLoading(false));
+      .finally(() => setLoading(false)),
+  []);
+
+  function loadUsers() {
+    setLoading(true);
+    void fetchUsers();
   }
 
   useEffect(() => {
-    loadUsers();
-  }, []);
+    // `loading` já inicia como `true`; o fetch atualiza o estado apenas nos
+    // callbacks (assíncronos), evitando setState síncrono dentro do efeito.
+    void fetchUsers();
+  }, [fetchUsers]);
 
   function openCreate() {
     setEditingId(null);

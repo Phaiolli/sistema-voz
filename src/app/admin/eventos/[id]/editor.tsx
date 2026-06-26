@@ -3,24 +3,22 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
-import { ArrowLeft, Save, Download, Plus, X, Upload, CheckCircle2, Package, Trophy, ExternalLink, ImagePlus, FileDown } from "lucide-react";
+import { ArrowLeft, Save } from "lucide-react";
 import { VozWordmark } from "@/components/voz/wordmark";
 import { HeaderControls } from "@/components/voz/header-controls";
 import { generateQrWithLogo } from "@/lib/qr";
 import { toast } from "sonner";
-import type { Event, UserRole, EventPageSpeaker, EventPageScheduleItem, Registration, RegistrationConfig } from "@/lib/types";
-
-type Tab = "geral" | "sobre" | "identidade" | "mediadores" | "participantes" | "qrcode" | "configuracoes" | "inscricoes" | "sorteio";
-
-interface UserPublic {
-  id: string;
-  name: string;
-  email: string;
-  role: UserRole;
-  createdAt: string;
-  lastSeenAt: string | null;
-}
+import type { Event, EventPageSpeaker, EventPageScheduleItem, Registration, RegistrationConfig } from "@/lib/types";
+import { type Tab, type UserPublic } from "./_editor/shared";
+import { TabGeral } from "./_editor/tab-geral";
+import { TabSobre } from "./_editor/tab-sobre";
+import { TabIdentidade } from "./_editor/tab-identidade";
+import { TabMediadores } from "./_editor/tab-mediadores";
+import { TabParticipantes } from "./_editor/tab-participantes";
+import { TabInscricoes } from "./_editor/tab-inscricoes";
+import { TabSorteio } from "./_editor/tab-sorteio";
+import { TabQrcode } from "./_editor/tab-qrcode";
+import { TabConfiguracoes } from "./_editor/tab-configuracoes";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "geral", label: "Geral" },
@@ -32,15 +30,6 @@ const TABS: { id: Tab; label: string }[] = [
   { id: "sorteio", label: "Sorteio" },
   { id: "qrcode", label: "QR Code" },
   { id: "configuracoes", label: "Configurações" },
-];
-
-const THEME_PRESETS = [
-  { id: "incluir", label: "INCLUIR", bg: "#1E4953", accent: "#F2B33D" },
-  { id: "voz-base", label: "voz. base", bg: "#ffffff", accent: "#7C7AE8" },
-  { id: "warmth", label: "Warmth", bg: "#3D1F0A", accent: "#F2923D" },
-  { id: "mono", label: "Mono", bg: "#141414", accent: "#FFFFFF" },
-  { id: "lake", label: "Lake", bg: "#0E2B3D", accent: "#4DBFB8" },
-  { id: "vine", label: "Vine", bg: "#1A2E1A", accent: "#7EC85E" },
 ];
 
 function toDatetimeLocal(iso: string) {
@@ -117,20 +106,6 @@ export function EventEditor({ eventId, isNew }: { eventId: string | null; isNew:
   const [drawWinner, setDrawWinner] = useState<{ id: string; name: string } | null>(null);
   const [drawRemaining, setDrawRemaining] = useState<number | null>(null);
 
-  const inp: React.CSSProperties = {
-    padding: "10px 14px",
-    borderRadius: 8,
-    border: "1.5px solid hsl(var(--border))",
-    background: "hsl(var(--background))",
-    color: "hsl(var(--foreground))",
-    fontSize: 15,
-    fontFamily: "inherit",
-    width: "100%",
-    boxSizing: "border-box" as const,
-  };
-
-  const smInp: React.CSSProperties = { ...inp, fontSize: 14, padding: "8px 12px" };
-
   // Load event
   useEffect(() => {
     if (!eventId) return;
@@ -195,12 +170,22 @@ export function EventEditor({ eventId, isNew }: { eventId: string | null; isNew:
   useEffect(() => {
     if (tab !== "participantes") return;
     if (!eventId) return;
-    setParticipantsLoading(true);
-    fetch(`/api/v1/events/${eventId}/participants`)
-      .then((r) => r.json() as Promise<{ participants: { name: string; whatsapp: string | null; email: string | null; questionText: string; isAnonymous: boolean; lgpdAccepted: boolean }[] }>)
-      .then((d) => setParticipants(d.participants ?? []))
-      .catch(() => toast.error("Erro ao carregar participantes."))
-      .finally(() => setParticipantsLoading(false));
+    let cancelled = false;
+    // Estado de loading é atualizado dentro de uma função assíncrona (após o
+    // primeiro await), evitando setState síncrono direto no corpo do efeito.
+    (async () => {
+      setParticipantsLoading(true);
+      try {
+        const r = await fetch(`/api/v1/events/${eventId}/participants`);
+        const d = await r.json() as { participants: { name: string; whatsapp: string | null; email: string | null; questionText: string; isAnonymous: boolean; lgpdAccepted: boolean }[] };
+        if (!cancelled) setParticipants(d.participants ?? []);
+      } catch {
+        if (!cancelled) toast.error("Erro ao carregar participantes.");
+      } finally {
+        if (!cancelled) setParticipantsLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
   }, [tab, eventId]);
 
   // Generate QR code
@@ -503,614 +488,96 @@ export function EventEditor({ eventId, isNew }: { eventId: string | null; isNew:
 
       <main style={{ maxWidth: 960, margin: "0 auto", padding: "32px 24px" }} role="tabpanel">
 
-        {/* ─── GERAL ─── */}
         {tab === "geral" && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 20, maxWidth: 600 }}>
-            <h2 style={{ fontFamily: '"Archivo", sans-serif', fontWeight: 700, fontSize: 22, margin: 0 }}>Informações gerais</h2>
-            <Field label="Nome do evento" htmlFor="ev-name">
-              <input id="ev-name" value={name} onChange={(e) => setName(e.target.value)} style={inp} />
-            </Field>
-            <Field label="Slug (URL)" htmlFor="ev-slug">
-              <input id="ev-slug" value={slug} onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-"))} style={inp} />
-              <p style={{ fontSize: 12, color: "hsl(var(--muted-foreground))", margin: "4px 0 0" }}>voz.app/e/{slug || "slug-do-evento"}</p>
-            </Field>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-              <Field label="Início" htmlFor="ev-start">
-                <input id="ev-start" type="datetime-local" value={startsAt} onChange={(e) => setStartsAt(e.target.value)} style={inp} />
-              </Field>
-              <Field label="Término" htmlFor="ev-end">
-                <input id="ev-end" type="datetime-local" value={endsAt} onChange={(e) => setEndsAt(e.target.value)} style={inp} />
-              </Field>
-            </div>
-            <Field label="Local" htmlFor="ev-place">
-              <input id="ev-place" value={place} onChange={(e) => setPlace(e.target.value)} style={inp} />
-            </Field>
-            <Field label="Endereço completo" htmlFor="ev-address">
-              <input id="ev-address" value={address} onChange={(e) => setAddress(e.target.value)} style={inp} />
-            </Field>
-          </div>
+          <TabGeral
+            name={name} setName={setName}
+            slug={slug} setSlug={setSlug}
+            startsAt={startsAt} setStartsAt={setStartsAt}
+            endsAt={endsAt} setEndsAt={setEndsAt}
+            place={place} setPlace={setPlace}
+            address={address} setAddress={setAddress}
+          />
         )}
 
-        {/* ─── SOBRE ─── */}
         {tab === "sobre" && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 28, maxWidth: 700 }}>
-            <h2 style={{ fontFamily: '"Archivo", sans-serif', fontWeight: 700, fontSize: 22, margin: 0 }}>Página do evento</h2>
-
-            {/* Logo */}
-            <SectionBlock title="Logo do evento">
-              <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-                {logo && (
-                  <div style={{ width: 80, height: 80, borderRadius: 10, border: "1px solid hsl(var(--border))", overflow: "hidden", background: "hsl(var(--muted))", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <Image src={logo} alt="Logo" width={80} height={80} style={{ objectFit: "contain", width: "100%", height: "100%" }} unoptimized />
-                  </div>
-                )}
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  <input ref={logoInputRef} type="file" accept="image/*" style={{ display: "none" }} id="logo-upload" onChange={handleLogoUpload} />
-                  <label
-                    htmlFor="logo-upload"
-                    style={{ display: "inline-flex", alignItems: "center", gap: 6, height: 36, padding: "0 14px", borderRadius: 8, border: "1px solid hsl(var(--border))", background: "transparent", fontSize: 13, cursor: logoUploading ? "not-allowed" : "pointer", opacity: logoUploading ? 0.6 : 1 }}
-                  >
-                    <Upload size={14} aria-hidden /> {logoUploading ? "Enviando…" : logo ? "Trocar logo" : "Fazer upload"}
-                  </label>
-                  {logo && (
-                    <button onClick={() => setLogo("")} style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 12, color: "hsl(var(--destructive))", border: "none", background: "none", cursor: "pointer", padding: 0 }}>
-                      <X size={12} /> Remover
-                    </button>
-                  )}
-                  <p style={{ fontSize: 12, color: "hsl(var(--muted-foreground))", margin: 0 }}>PNG, JPG, SVG · max 3 MB</p>
-                </div>
-              </div>
-            </SectionBlock>
-
-            {/* Imagem de capa */}
-            <SectionBlock title="Imagem de capa">
-              <div style={{ display: "flex", alignItems: "flex-start", gap: 16 }}>
-                {coverUrl ? (
-                  <div style={{ width: 120, height: 68, borderRadius: 8, overflow: "hidden", border: "1px solid hsl(var(--border))", flexShrink: 0 }}>
-                    <Image src={coverUrl} alt="Capa" width={120} height={68} style={{ objectFit: "cover", width: "100%", height: "100%" }} unoptimized />
-                  </div>
-                ) : (
-                  <div style={{ width: 120, height: 68, borderRadius: 8, border: "1px dashed hsl(var(--border))", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, color: "hsl(var(--muted-foreground))" }}>
-                    <ImagePlus size={22} aria-hidden />
-                  </div>
-                )}
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  <input ref={coverInputRef} type="file" accept="image/*" style={{ display: "none" }} id="cover-upload" onChange={handleCoverUpload} />
-                  <label
-                    htmlFor="cover-upload"
-                    style={{ display: "inline-flex", alignItems: "center", gap: 6, height: 36, padding: "0 14px", borderRadius: 8, border: "1px solid hsl(var(--border))", background: "transparent", fontSize: 13, cursor: coverUploading ? "not-allowed" : "pointer", opacity: coverUploading ? 0.6 : 1 }}
-                  >
-                    <Upload size={14} aria-hidden /> {coverUploading ? "Enviando…" : coverUrl ? "Trocar capa" : "Fazer upload"}
-                  </label>
-                  {coverUrl && (
-                    <button onClick={() => setCoverUrl("")} style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 12, color: "hsl(var(--destructive))", border: "none", background: "none", cursor: "pointer", padding: 0 }}>
-                      <X size={12} /> Remover
-                    </button>
-                  )}
-                  <p style={{ fontSize: 12, color: "hsl(var(--muted-foreground))", margin: 0 }}>Exibida como banner no evento · max 3 MB</p>
-                </div>
-              </div>
-            </SectionBlock>
-
-            {/* Sobre */}
-            <SectionBlock title="Texto sobre o evento">
-              <textarea
-                id="ev-about"
-                value={aboutText}
-                onChange={(e) => setAboutText(e.target.value)}
-                rows={4}
-                placeholder="Uma breve descrição do evento para os participantes…"
-                style={{ ...smInp, resize: "vertical" }}
-              />
-            </SectionBlock>
-
-            {/* Organizador */}
-            <SectionBlock title="Realização">
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                <Field label="Organização" htmlFor="ev-org">
-                  <input id="ev-org" value={organizer} onChange={(e) => setOrganizer(e.target.value)} style={smInp} placeholder="Nome da organização" />
-                </Field>
-                <Field label="Instagram" htmlFor="ev-ig">
-                  <input id="ev-ig" value={organizerInstagram} onChange={(e) => setOrganizerInstagram(e.target.value)} style={smInp} placeholder="@handle" />
-                </Field>
-              </div>
-            </SectionBlock>
-
-            {/* Programação */}
-            <SectionBlock title="Programação" action={<button onClick={addScheduleItem} style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 13, height: 30, padding: "0 10px", borderRadius: 6, border: "1px solid hsl(var(--border))", background: "transparent", cursor: "pointer" }}><Plus size={12} /> Adicionar</button>}>
-              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                {schedule.length === 0 && (
-                  <p style={{ fontSize: 13, color: "hsl(var(--muted-foreground))" }}>Nenhum item. Clique em &quot;Adicionar&quot; para incluir.</p>
-                )}
-                {schedule.map((item) => (
-                  <div key={item.id} style={{ display: "grid", gridTemplateColumns: "80px 1fr 1fr auto", gap: 8, alignItems: "start", padding: 12, background: "hsl(var(--muted))", borderRadius: 8 }}>
-                    <input value={item.time} onChange={(e) => updateScheduleItem(item.id, { time: e.target.value })} placeholder="14h00" style={smInp} aria-label="Horário" />
-                    <input value={item.title} onChange={(e) => updateScheduleItem(item.id, { title: e.target.value })} placeholder="Título" style={smInp} aria-label="Título" />
-                    <input value={item.description ?? ""} onChange={(e) => updateScheduleItem(item.id, { description: e.target.value })} placeholder="Descrição (opcional)" style={smInp} aria-label="Descrição" />
-                    <button onClick={() => removeScheduleItem(item.id)} aria-label="Remover" style={{ height: 36, width: 36, borderRadius: 6, border: "1px solid hsl(var(--border))", background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "hsl(var(--destructive))", flexShrink: 0 }}>
-                      <X size={14} />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </SectionBlock>
-
-            {/* Palestrantes */}
-            <SectionBlock title="Palestrantes" action={<button onClick={addSpeaker} style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 13, height: 30, padding: "0 10px", borderRadius: 6, border: "1px solid hsl(var(--border))", background: "transparent", cursor: "pointer" }}><Plus size={12} /> Adicionar</button>}>
-              <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-                {speakers.length === 0 && (
-                  <p style={{ fontSize: 13, color: "hsl(var(--muted-foreground))" }}>Nenhum palestrante. Clique em &quot;Adicionar&quot; para incluir.</p>
-                )}
-                {speakers.map((sp) => (
-                  <div key={sp.id} style={{ padding: 14, background: "hsl(var(--muted))", borderRadius: 10, border: "1px solid hsl(var(--border))" }}>
-                    <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
-                      {/* Photo */}
-                      <div style={{ flexShrink: 0 }}>
-                        <div style={{ width: 60, height: 60, borderRadius: "50%", overflow: "hidden", background: "hsl(var(--background))", border: "1px solid hsl(var(--border))", marginBottom: 6, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                          {sp.photoUrl ? (
-                            <Image src={sp.photoUrl} alt={sp.name || "Palestrante"} width={60} height={60} style={{ objectFit: "cover", width: "100%", height: "100%" }} unoptimized />
-                          ) : (
-                            <span style={{ fontSize: 10, color: "hsl(var(--muted-foreground))" }}>foto</span>
-                          )}
-                        </div>
-                        <label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, cursor: "pointer", color: "hsl(var(--muted-foreground))" }}>
-                          <Upload size={10} />
-                          <input type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadSpeakerPhoto(sp.id, f); e.target.value = ""; }} />
-                          Foto
-                        </label>
-                      </div>
-                      {/* Fields */}
-                      <div style={{ flex: 1, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                        <input value={sp.name} onChange={(e) => updateSpeaker(sp.id, { name: e.target.value })} placeholder="Nome" style={smInp} aria-label="Nome do palestrante" />
-                        <input value={sp.role} onChange={(e) => updateSpeaker(sp.id, { role: e.target.value })} placeholder="Cargo / especialidade" style={smInp} aria-label="Cargo" />
-                        <textarea value={sp.bio ?? ""} onChange={(e) => updateSpeaker(sp.id, { bio: e.target.value })} placeholder="Mini bio" rows={2} style={{ ...smInp, gridColumn: "1 / -1", resize: "vertical" }} aria-label="Bio" />
-                      </div>
-                      <button onClick={() => removeSpeaker(sp.id)} aria-label="Remover palestrante" style={{ height: 30, width: 30, borderRadius: 6, border: "1px solid hsl(var(--border))", background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "hsl(var(--destructive))", flexShrink: 0 }}>
-                        <X size={14} />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </SectionBlock>
-          </div>
+          <TabSobre
+            logo={logo} setLogo={setLogo} logoUploading={logoUploading}
+            coverUrl={coverUrl} setCoverUrl={setCoverUrl} coverUploading={coverUploading}
+            aboutText={aboutText} setAboutText={setAboutText}
+            organizer={organizer} setOrganizer={setOrganizer}
+            organizerInstagram={organizerInstagram} setOrganizerInstagram={setOrganizerInstagram}
+            speakers={speakers} schedule={schedule}
+            logoInputRef={logoInputRef} coverInputRef={coverInputRef}
+            handleLogoUpload={handleLogoUpload} handleCoverUpload={handleCoverUpload}
+            addSpeaker={addSpeaker} updateSpeaker={updateSpeaker} removeSpeaker={removeSpeaker}
+            uploadSpeakerPhoto={uploadSpeakerPhoto}
+            addScheduleItem={addScheduleItem} updateScheduleItem={updateScheduleItem} removeScheduleItem={removeScheduleItem}
+          />
         )}
 
-        {/* ─── IDENTIDADE ─── */}
         {tab === "identidade" && (
-          <div style={{ maxWidth: 700 }}>
-            <h2 style={{ fontFamily: '"Archivo", sans-serif', fontWeight: 700, fontSize: 22, margin: "0 0 20px" }}>Identidade visual</h2>
-            <div style={{ marginBottom: 24 }}>
-              <p style={{ fontSize: 14, fontWeight: 500, marginBottom: 12 }}>Presets</p>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
-                {THEME_PRESETS.map((p) => (
-                  <button key={p.id} onClick={() => { setPreset(p.id); setBgColor(p.bg); setAccentColor(p.accent); }} style={{ padding: 12, borderRadius: 10, border: "2px solid", borderColor: preset === p.id ? "hsl(var(--primary))" : "hsl(var(--border))", cursor: "pointer", background: p.bg, textAlign: "left" }}>
-                    <span style={{ display: "block", width: 24, height: 24, borderRadius: 6, background: p.accent, marginBottom: 6 }} />
-                    <span style={{ fontSize: 12, fontWeight: 600, color: "#fff" }}>{p.label}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 24 }}>
-              <Field label="Cor de fundo" htmlFor="ev-bg">
-                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                  <input type="color" id="ev-bg" value={bgColor} onChange={(e) => setBgColor(e.target.value)} style={{ width: 44, height: 44, borderRadius: 8, border: "1px solid hsl(var(--border))", cursor: "pointer", padding: 2 }} />
-                  <input value={bgColor} onChange={(e) => setBgColor(e.target.value)} style={{ ...inp, width: "auto", flex: 1 }} />
-                </div>
-              </Field>
-              <Field label="Cor de destaque" htmlFor="ev-accent">
-                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                  <input type="color" id="ev-accent" value={accentColor} onChange={(e) => setAccentColor(e.target.value)} style={{ width: 44, height: 44, borderRadius: 8, border: "1px solid hsl(var(--border))", cursor: "pointer", padding: 2 }} />
-                  <input value={accentColor} onChange={(e) => setAccentColor(e.target.value)} style={{ ...inp, width: "auto", flex: 1 }} />
-                </div>
-              </Field>
-            </div>
-            <div>
-              <p style={{ fontSize: 14, fontWeight: 500, marginBottom: 12 }}>Preview ao vivo</p>
-              <div style={{ borderRadius: 12, overflow: "hidden", background: bgColor, padding: 20, display: "flex", flexDirection: "column", gap: 10 }}>
-                <span style={{ fontFamily: '"Archivo Black", sans-serif', fontSize: 32, color: "#fff", letterSpacing: "-0.02em" }}>
-                  {name ? name.toUpperCase().slice(0, 6) : "EVENTO"}<span style={{ color: accentColor }}>.</span>
-                </span>
-                <div style={{ display: "inline-flex", gap: 6, alignItems: "center", background: `${accentColor}22`, padding: "6px 12px", borderRadius: 999, alignSelf: "flex-start" }}>
-                  <span style={{ width: 8, height: 8, borderRadius: "50%", background: accentColor }} />
-                  <span style={{ color: "#fff", fontSize: 13 }}>ao vivo · 42 participantes</span>
-                </div>
-                <button style={{ height: 44, borderRadius: 8, border: "none", background: accentColor, color: "#1E4953", fontWeight: 700, fontSize: 15, cursor: "default" }}>
-                  Fazer uma pergunta
-                </button>
-              </div>
-            </div>
-          </div>
+          <TabIdentidade
+            name={name}
+            accentColor={accentColor} setAccentColor={setAccentColor}
+            bgColor={bgColor} setBgColor={setBgColor}
+            preset={preset} setPreset={setPreset}
+          />
         )}
 
-        {/* ─── MEDIADORES ─── */}
         {tab === "mediadores" && (
-          <div style={{ maxWidth: 600 }}>
-            <h2 style={{ fontFamily: '"Archivo", sans-serif', fontWeight: 700, fontSize: 22, margin: "0 0 20px" }}>Mediadores</h2>
-
-            {/* Create form */}
-            <form onSubmit={handleCreateMediator} style={{ padding: 16, background: "hsl(var(--muted))", borderRadius: 10, border: "1px solid hsl(var(--border))", marginBottom: 24, display: "flex", flexDirection: "column", gap: 12 }}>
-              <p style={{ fontSize: 14, fontWeight: 600, margin: 0 }}>Novo mediador</p>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                <Field label="Nome" htmlFor="med-name">
-                  <input id="med-name" required value={newMed.name} onChange={(e) => setNewMed((m) => ({ ...m, name: e.target.value }))} style={smInp} placeholder="Nome completo" />
-                </Field>
-                <Field label="E-mail" htmlFor="med-email">
-                  <input id="med-email" type="email" required value={newMed.email} onChange={(e) => setNewMed((m) => ({ ...m, email: e.target.value }))} style={smInp} />
-                </Field>
-                <Field label="Senha" htmlFor="med-pass">
-                  <input id="med-pass" type="password" required value={newMed.password} onChange={(e) => setNewMed((m) => ({ ...m, password: e.target.value }))} style={smInp} placeholder="Mín. 8 chars, 1 maiúscula, 1 número" />
-                </Field>
-              </div>
-              <button
-                type="submit"
-                disabled={newMed.submitting}
-                style={{ alignSelf: "flex-start", display: "inline-flex", alignItems: "center", gap: 6, height: 36, padding: "0 14px", borderRadius: 8, border: "none", background: "hsl(var(--primary))", color: "hsl(var(--primary-foreground))", fontSize: 13, fontWeight: 600, cursor: newMed.submitting ? "not-allowed" : "pointer", opacity: newMed.submitting ? 0.7 : 1 }}
-              >
-                <Plus size={14} aria-hidden /> {newMed.submitting ? "Criando…" : "Criar e atribuir"}
-              </button>
-            </form>
-
-            {/* List */}
-            {mediatorsLoading && <div style={{ padding: 24, textAlign: "center", color: "hsl(var(--muted-foreground))" }}>Carregando…</div>}
-            {!mediatorsLoading && (
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                {mediators.length === 0 && (
-                  <p style={{ fontSize: 14, color: "hsl(var(--muted-foreground))", textAlign: "center", padding: 24 }}>Nenhum mediador atribuído.</p>
-                )}
-                {mediators.map((m) => (
-                  <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", background: "hsl(var(--muted))", borderRadius: 10, border: "1px solid hsl(var(--border))" }}>
-                    <div style={{ width: 36, height: 36, borderRadius: "50%", background: "hsl(var(--primary) / .15)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700, flexShrink: 0 }}>
-                      {m.name.split(" ").map((w) => w[0]).slice(0, 2).join("")}
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <p style={{ fontWeight: 600, fontSize: 14, margin: 0 }}>{m.name}</p>
-                      <p style={{ fontSize: 12, color: "hsl(var(--muted-foreground))", margin: 0 }}>{m.email}</p>
-                    </div>
-                    <button onClick={() => handleRemoveMediator(m.id)} style={{ height: 32, padding: "0 10px", borderRadius: 6, border: "1px solid hsl(var(--border))", background: "transparent", fontSize: 12, cursor: "pointer", color: "hsl(var(--destructive))" }}>
-                      Remover
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+          <TabMediadores
+            handleCreateMediator={handleCreateMediator}
+            newMed={newMed} setNewMed={setNewMed}
+            mediatorsLoading={mediatorsLoading}
+            mediators={mediators}
+            handleRemoveMediator={handleRemoveMediator}
+          />
         )}
 
-        {/* ─── PARTICIPANTES ─── */}
         {tab === "participantes" && (
-          <div>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-              <div>
-                <h2 style={{ fontFamily: '"Archivo", sans-serif', fontWeight: 700, fontSize: 22, margin: 0 }}>Participantes</h2>
-                <p style={{ fontSize: 13, color: "hsl(var(--muted-foreground))", margin: "4px 0 0" }}>
-                  Pessoas que enviaram perguntas neste evento — {participants.length} no total.
-                </p>
-              </div>
-              <button
-                onClick={() => {
-                  if (participants.length === 0) return;
-                  const header = "Nome,WhatsApp,E-mail,Pergunta,Anônimo?,LGPD";
-                  const rows = participants.map((p) =>
-                    [p.name, p.whatsapp ?? "", p.email ?? "", p.questionText, p.isAnonymous ? "Sim" : "Não", p.lgpdAccepted ? "Sim" : "Não"].map((v) => `"${String(v).replace(/"/g, '""')}"`).join(",")
-                  );
-                  const csv = "﻿" + [header, ...rows].join("\n");
-                  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-                  const a = document.createElement("a");
-                  a.href = URL.createObjectURL(blob);
-                  a.download = `participantes-${slug || eventId}.csv`;
-                  a.click();
-                }}
-                style={{ display: "inline-flex", alignItems: "center", gap: 6, height: 36, padding: "0 14px", borderRadius: 8, border: "1px solid hsl(var(--border))", background: "transparent", fontSize: 13, cursor: "pointer" }}
-              >
-                <Download size={14} aria-hidden /> Exportar CSV
-              </button>
-            </div>
-            <div style={{ border: "1px solid hsl(var(--border))", borderRadius: 10, overflow: "hidden" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
-                <thead>
-                  <tr style={{ background: "hsl(var(--muted))", borderBottom: "1px solid hsl(var(--border))" }}>
-                    {["Nome", "WhatsApp", "E-mail", "Pergunta", "Anônimo?", "LGPD"].map((h) => (
-                      <th key={h} style={{ padding: "10px 16px", textAlign: "left", fontWeight: 600, fontSize: 13 }}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {participantsLoading && (
-                    <tr><td colSpan={6} style={{ padding: "24px 16px", textAlign: "center", color: "hsl(var(--muted-foreground))", fontSize: 13 }}>Carregando…</td></tr>
-                  )}
-                  {!participantsLoading && participants.length === 0 && (
-                    <tr><td colSpan={6} style={{ padding: "24px 16px", textAlign: "center", color: "hsl(var(--muted-foreground))", fontSize: 13 }}>Nenhum participante ainda.</td></tr>
-                  )}
-                  {!participantsLoading && participants.map((p, i) => (
-                    <tr key={i} style={{ borderTop: i === 0 ? undefined : "1px solid hsl(var(--border))" }}>
-                      <td style={{ padding: "10px 16px", fontWeight: 500, whiteSpace: "nowrap" }}>{p.name}</td>
-                      <td style={{ padding: "10px 16px", color: "hsl(var(--muted-foreground))", whiteSpace: "nowrap" }}>{p.whatsapp ?? "—"}</td>
-                      <td style={{ padding: "10px 16px", color: "hsl(var(--muted-foreground))", whiteSpace: "nowrap" }}>{p.email ?? "—"}</td>
-                      <td style={{ padding: "10px 16px", color: "hsl(var(--muted-foreground))", maxWidth: 320, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.questionText}</td>
-                      <td style={{ padding: "10px 16px", textAlign: "center", whiteSpace: "nowrap", color: p.isAnonymous ? "hsl(var(--muted-foreground))" : "hsl(142 71% 45%)" }}>{p.isAnonymous ? "Sim" : "Não"}</td>
-                      <td style={{ padding: "10px 16px", textAlign: "center", whiteSpace: "nowrap", color: p.lgpdAccepted ? "hsl(142 71% 45%)" : "hsl(var(--destructive))" }}>{p.lgpdAccepted ? "Sim" : "Não"}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
+          <TabParticipantes
+            participants={participants}
+            participantsLoading={participantsLoading}
+            slug={slug}
+            eventId={eventId}
+          />
         )}
 
-        {/* ─── INSCRIÇÕES ─── */}
         {tab === "inscricoes" && (
-          <div style={{ maxWidth: 800 }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
-              <h2 style={{ fontFamily: '"Archivo", sans-serif', fontWeight: 700, fontSize: 22, margin: 0 }}>Inscrições</h2>
-              {slug && (
-                <a href={`/e/${slug}/inscricao`} target="_blank" rel="noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 6, height: 34, padding: "0 12px", borderRadius: 8, border: "1px solid hsl(var(--border))", fontSize: 13, color: "hsl(var(--foreground))", textDecoration: "none" }}>
-                  <ExternalLink size={13} /> Ver formulário
-                </a>
-              )}
-            </div>
-
-            {/* Config */}
-            <div style={{ padding: 20, background: "hsl(var(--muted) / .4)", border: "1px solid hsl(var(--border))", borderRadius: 12, marginBottom: 24, display: "flex", flexDirection: "column", gap: 16 }}>
-              <Toggle
-                label="Inscrições abertas"
-                description="Habilita o formulário público de inscrição."
-                checked={regEnabled}
-                onToggle={() => setRegEnabled((v) => !v)}
-              />
-              {regEnabled && (
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-                  <Field label="Abertura das inscrições" htmlFor="reg-opens">
-                    <input id="reg-opens" type="datetime-local" value={regOpensAt} onChange={(e) => setRegOpensAt(e.target.value)} style={inp} />
-                  </Field>
-                  <Field label="Encerramento das inscrições" htmlFor="reg-closes">
-                    <input id="reg-closes" type="datetime-local" value={regClosesAt} onChange={(e) => setRegClosesAt(e.target.value)} style={inp} />
-                  </Field>
-                </div>
-              )}
-              <button
-                onClick={handleSave}
-                disabled={saving}
-                style={{ alignSelf: "flex-start", display: "inline-flex", alignItems: "center", gap: 6, height: 36, padding: "0 14px", borderRadius: 8, border: "none", background: "hsl(var(--primary))", color: "hsl(var(--primary-foreground))", fontSize: 13, fontWeight: 600, cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.7 : 1 }}
-              >
-                <Save size={13} /> {saving ? "Salvando…" : "Salvar configurações"}
-              </button>
-            </div>
-
-            {/* List */}
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-              <p style={{ fontWeight: 600, fontSize: 15, margin: 0 }}>{registrations.length} inscritos</p>
-              {registrations.length > 0 && (
-                <button
-                  onClick={exportCsv}
-                  style={{ display: "inline-flex", alignItems: "center", gap: 6, height: 34, padding: "0 12px", borderRadius: 8, border: "1px solid hsl(var(--border))", background: "transparent", fontSize: 13, cursor: "pointer" }}
-                >
-                  <FileDown size={14} aria-hidden /> Exportar CSV
-                </button>
-              )}
-            </div>
-            {regsLoading && <div style={{ padding: 32, textAlign: "center", color: "hsl(var(--muted-foreground))" }}>Carregando…</div>}
-            {!regsLoading && registrations.length === 0 && (
-              <div style={{ padding: 32, textAlign: "center", color: "hsl(var(--muted-foreground))" }}>Nenhum inscrito ainda.</div>
-            )}
-            {!regsLoading && registrations.length > 0 && (
-              <div style={{ border: "1px solid hsl(var(--border))", borderRadius: 12, overflow: "hidden" }}>
-                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-                  <thead>
-                    <tr style={{ background: "hsl(var(--muted))", borderBottom: "1px solid hsl(var(--border))" }}>
-                      {["Nome", "E-mail", "Telefone", "CPF", "Check-in", "Kit", "Ações"].map((h) => (
-                        <th key={h} style={{ padding: "10px 14px", textAlign: "left", fontWeight: 600 }}>{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {registrations.map((reg, i) => (
-                      <tr key={reg.id} style={{ borderBottom: i < registrations.length - 1 ? "1px solid hsl(var(--border))" : "none" }}>
-                        <td style={{ padding: "10px 14px", fontWeight: 500 }}>{reg.name}</td>
-                        <td style={{ padding: "10px 14px", color: "hsl(var(--muted-foreground))" }}>{reg.email}</td>
-                        <td style={{ padding: "10px 14px", color: "hsl(var(--muted-foreground))" }}>{reg.phone ?? "—"}</td>
-                        <td style={{ padding: "10px 14px", color: "hsl(var(--muted-foreground))" }}>{reg.document ?? "—"}</td>
-                        <td style={{ padding: "10px 14px" }}>
-                          <Badge active={reg.checkedIn} label={reg.checkedIn ? "Sim" : "Não"} />
-                        </td>
-                        <td style={{ padding: "10px 14px" }}>
-                          <Badge active={reg.kitDelivered} label={reg.kitDelivered ? "Sim" : "Não"} />
-                        </td>
-                        <td style={{ padding: "10px 14px" }}>
-                          <div style={{ display: "flex", gap: 6 }}>
-                            <button onClick={() => toggleRegistrationField(reg, "checkedIn")} style={{ display: "inline-flex", alignItems: "center", gap: 4, height: 28, padding: "0 8px", borderRadius: 6, border: "1px solid hsl(var(--border))", background: "transparent", fontSize: 11, cursor: "pointer" }}>
-                              <CheckCircle2 size={11} /> {reg.checkedIn ? "Desfazer" : "Check-in"}
-                            </button>
-                            <button onClick={() => toggleRegistrationField(reg, "kitDelivered")} style={{ display: "inline-flex", alignItems: "center", gap: 4, height: 28, padding: "0 8px", borderRadius: 6, border: "1px solid hsl(var(--border))", background: "transparent", fontSize: 11, cursor: "pointer" }}>
-                              <Package size={11} /> {reg.kitDelivered ? "Desfazer kit" : "Kit"}
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
+          <TabInscricoes
+            slug={slug}
+            regEnabled={regEnabled} setRegEnabled={setRegEnabled}
+            regOpensAt={regOpensAt} setRegOpensAt={setRegOpensAt}
+            regClosesAt={regClosesAt} setRegClosesAt={setRegClosesAt}
+            handleSave={handleSave} saving={saving}
+            registrations={registrations} exportCsv={exportCsv}
+            regsLoading={regsLoading} toggleRegistrationField={toggleRegistrationField}
+          />
         )}
 
-        {/* ─── SORTEIO ─── */}
         {tab === "sorteio" && (
-          <div style={{ maxWidth: 600 }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
-              <h2 style={{ fontFamily: '"Archivo", sans-serif', fontWeight: 700, fontSize: 22, margin: 0 }}>Sorteio</h2>
-              <button onClick={handleResetDraw} style={{ height: 32, padding: "0 12px", borderRadius: 7, border: "1px solid hsl(var(--border))", background: "transparent", fontSize: 12, cursor: "pointer", color: "hsl(var(--muted-foreground))" }}>
-                Resetar sorteio
-              </button>
-            </div>
-            <p style={{ fontSize: 14, color: "hsl(var(--muted-foreground))", margin: "0 0 32px" }}>
-              Apenas inscritos com check-in participam. Sorteados não aparecem novamente.
-            </p>
-
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 32, padding: "40px 0" }}>
-              {drawPhase === "idle" && (
-                <button
-                  onClick={handleDraw}
-                  style={{ display: "inline-flex", alignItems: "center", gap: 10, height: 64, padding: "0 48px", borderRadius: 16, border: "none", background: "hsl(var(--primary))", color: "hsl(var(--primary-foreground))", fontSize: 20, fontWeight: 700, cursor: "pointer" }}
-                >
-                  <Trophy size={22} aria-hidden /> Sortear
-                </button>
-              )}
-
-              {drawPhase === "counting" && (
-                <div style={{ textAlign: "center" }}>
-                  <p style={{ fontFamily: '"Archivo Black", sans-serif', fontSize: 96, margin: 0, lineHeight: 1, color: "hsl(var(--primary))" }}>
-                    {drawCountdown}
-                  </p>
-                  <p style={{ fontSize: 16, color: "hsl(var(--muted-foreground))", margin: "16px 0 0" }}>Sorteando…</p>
-                </div>
-              )}
-
-              {drawPhase === "winner" && drawWinner && (
-                <div style={{ textAlign: "center" }}>
-                  <div style={{ display: "inline-flex", alignItems: "center", gap: 8, color: "hsl(142 71% 40%)", marginBottom: 16 }}>
-                    <Trophy size={28} />
-                    <span style={{ fontSize: 18, fontWeight: 600 }}>Sorteado!</span>
-                  </div>
-                  <p style={{ fontFamily: '"Archivo Black", sans-serif', fontSize: 48, margin: "0 0 8px", lineHeight: 1.1 }}>{drawWinner.name}</p>
-                  {drawRemaining !== null && (
-                    <p style={{ fontSize: 13, color: "hsl(var(--muted-foreground))", margin: "0 0 32px" }}>
-                      {drawRemaining} {drawRemaining === 1 ? "inscrito restante" : "inscritos restantes"}
-                    </p>
-                  )}
-                  <button
-                    onClick={() => { setDrawPhase("idle"); setDrawWinner(null); }}
-                    style={{ height: 44, padding: "0 24px", borderRadius: 10, border: "1px solid hsl(var(--border))", background: "transparent", fontSize: 14, cursor: "pointer" }}
-                  >
-                    Novo sorteio
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
+          <TabSorteio
+            handleResetDraw={handleResetDraw}
+            drawPhase={drawPhase} setDrawPhase={setDrawPhase}
+            drawCountdown={drawCountdown}
+            handleDraw={handleDraw}
+            drawWinner={drawWinner} setDrawWinner={setDrawWinner}
+            drawRemaining={drawRemaining}
+          />
         )}
 
-        {/* ─── QR CODE ─── */}
         {tab === "qrcode" && (
-          <div style={{ maxWidth: 500 }}>
-            <h2 style={{ fontFamily: '"Archivo", sans-serif', fontWeight: 700, fontSize: 22, margin: "0 0 20px" }}>QR Code</h2>
-            <div style={{ background: "#fff", border: "1px solid hsl(var(--border))", borderRadius: 16, padding: 24, textAlign: "center", marginBottom: 16 }}>
-              {qrDataUrl ? (
-                <img src={qrDataUrl} alt={`QR Code para /e/${slug}`} width={280} height={280} style={{ display: "block", margin: "0 auto" }} />
-              ) : (
-                <div style={{ width: 280, height: 280, margin: "0 auto", background: "hsl(var(--muted))", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", color: "hsl(var(--muted-foreground))", fontSize: 13 }}>
-                  {slug ? "Gerando…" : "Salve o slug primeiro"}
-                </div>
-              )}
-            </div>
-            <p style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 12, color: "hsl(var(--muted-foreground))", textAlign: "center", marginBottom: 16 }}>
-              {window?.location?.origin ?? "https://sistema-voz-beta.vercel.app"}/e/{slug || "slug-do-evento"}
-            </p>
-            <div style={{ display: "flex", gap: 8 }}>
-              <button
-                onClick={() => downloadQr("png")}
-                disabled={!qrDataUrl}
-                style={{ flex: 1, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6, height: 40, borderRadius: 8, border: "1px solid hsl(var(--border))", background: "transparent", fontSize: 14, cursor: qrDataUrl ? "pointer" : "not-allowed", opacity: qrDataUrl ? 1 : 0.5 }}
-              >
-                <Download size={14} aria-hidden /> Baixar PNG
-              </button>
-            </div>
-          </div>
+          <TabQrcode qrDataUrl={qrDataUrl} slug={slug} downloadQr={downloadQr} />
         )}
 
-        {/* ─── CONFIGURAÇÕES ─── */}
         {tab === "configuracoes" && (
-          <div style={{ maxWidth: 500 }}>
-            <h2 style={{ fontFamily: '"Archivo", sans-serif', fontWeight: 700, fontSize: 22, margin: "0 0 20px" }}>Configurações</h2>
-            <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-              <Field label="Máximo de perguntas por participante" htmlFor="cfg-max">
-                <input id="cfg-max" type="number" defaultValue={5} min={1} max={20} style={{ ...inp, width: 80 }} />
-              </Field>
-              <ConfigToggle label="Moderação manual" description="O mediador aprova cada pergunta antes de exibir." defaultChecked />
-              <ConfigToggle label="Permitir anônimos" description="Participantes podem enviar sem identificação." defaultChecked />
-              <ConfigToggle label="LGPD obrigatório" description="Exige aceite antes do envio." defaultChecked />
-              <Toggle
-                label="Habilitar sorteio"
-                description="Permite que o mediador realize sorteios entre os inscritos durante o evento."
-                checked={drawEnabled}
-                onToggle={() => setDrawEnabled((v) => !v)}
-              />
-              <div style={{ marginTop: 8, padding: 20, background: "hsl(var(--destructive) / .08)", border: "1px solid hsl(var(--destructive) / .2)", borderRadius: 12 }}>
-                <p style={{ fontWeight: 600, fontSize: 15, color: "hsl(var(--destructive))", margin: "0 0 8px" }}>Zona de perigo</p>
-                <p style={{ fontSize: 13, color: "hsl(var(--muted-foreground))", margin: "0 0 12px" }}>Encerrar o evento impede novos envios de perguntas.</p>
-                <button onClick={handleDeleteEvent} style={{ height: 40, padding: "0 16px", borderRadius: 8, border: "1px solid hsl(var(--destructive))", background: "transparent", color: "hsl(var(--destructive))", fontSize: 14, fontWeight: 600, cursor: "pointer" }}>
-                  Encerrar evento
-                </button>
-              </div>
-            </div>
-          </div>
+          <TabConfiguracoes
+            drawEnabled={drawEnabled} setDrawEnabled={setDrawEnabled}
+            handleDeleteEvent={handleDeleteEvent}
+          />
         )}
 
       </main>
     </div>
-  );
-}
-
-function Field({ label, htmlFor, children }: { label: string; htmlFor: string; children: React.ReactNode }) {
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-      <label htmlFor={htmlFor} style={{ fontSize: 14, fontWeight: 500 }}>{label}</label>
-      {children}
-    </div>
-  );
-}
-
-function SectionBlock({ title, children, action }: { title: string; children: React.ReactNode; action?: React.ReactNode }) {
-  return (
-    <div style={{ padding: 20, background: "hsl(var(--muted) / .4)", border: "1px solid hsl(var(--border))", borderRadius: 12 }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-        <p style={{ fontSize: 14, fontWeight: 600, margin: 0 }}>{title}</p>
-        {action}
-      </div>
-      {children}
-    </div>
-  );
-}
-
-function ConfigToggle({ label, description, defaultChecked }: { label: string; description: string; defaultChecked?: boolean }) {
-  const [checked, setChecked] = useState(defaultChecked ?? false);
-  return (
-    <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16 }}>
-      <div>
-        <p style={{ fontWeight: 500, fontSize: 15, margin: "0 0 2px" }}>{label}</p>
-        <p style={{ fontSize: 13, color: "hsl(var(--muted-foreground))", margin: 0 }}>{description}</p>
-      </div>
-      <Toggle checked={checked} onToggle={() => setChecked((v) => !v)} />
-    </div>
-  );
-}
-
-function Toggle({ label, description, checked, onToggle }: { label?: string; description?: string; checked: boolean; onToggle: () => void }) {
-  return (
-    <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16, width: "100%" }}>
-      {(label || description) && (
-        <div>
-          {label && <p style={{ fontWeight: 500, fontSize: 15, margin: "0 0 2px" }}>{label}</p>}
-          {description && <p style={{ fontSize: 13, color: "hsl(var(--muted-foreground))", margin: 0 }}>{description}</p>}
-        </div>
-      )}
-      <button
-        role="switch"
-        aria-checked={checked}
-        onClick={onToggle}
-        style={{ width: 44, height: 24, borderRadius: 999, border: "none", cursor: "pointer", position: "relative", flexShrink: 0, background: checked ? "hsl(var(--primary))" : "hsl(var(--muted))" }}
-      >
-        <span style={{ position: "absolute", top: 2, left: checked ? 22 : 2, width: 20, height: 20, borderRadius: "50%", background: "#fff" }} />
-      </button>
-    </div>
-  );
-}
-
-function Badge({ active, label }: { active: boolean; label: string }) {
-  return (
-    <span style={{ padding: "3px 8px", borderRadius: 999, fontSize: 11, fontWeight: 600, background: active ? "hsl(142 71% 45% / .12)" : "hsl(var(--muted))", color: active ? "hsl(142 71% 35%)" : "hsl(var(--muted-foreground))" }}>
-      {label}
-    </span>
   );
 }

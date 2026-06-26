@@ -2,31 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase";
 import { requireEventAccess } from "@/lib/api/auth-guard";
 import { createRegistrationSchema } from "@/lib/schemas";
-import type { Database } from "@/lib/db/database.types";
+import { mapRegistration } from "@/lib/api/mappers";
 
 const RATE_LIMIT_MAX = 5;
 const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000; // 1 hour
-
-type RegistrationRow = Database["public"]["Tables"]["registrations"]["Row"];
-
-function mapRegistration(row: RegistrationRow) {
-  return {
-    id: row.id,
-    eventId: row.event_id,
-    name: row.name,
-    email: row.email,
-    phone: row.phone ?? null,
-    document: row.document ?? null,
-    checkedIn: row.checked_in,
-    checkedInAt: row.checked_in_at ?? null,
-    kitDelivered: row.kit_delivered,
-    kitDeliveredAt: row.kit_delivered_at ?? null,
-    drawn: row.drawn,
-    drawnAt: row.drawn_at ?? null,
-    lgpdAccepted: row.lgpd_accepted,
-    createdAt: row.created_at,
-  };
-}
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id: eventId } = await params;

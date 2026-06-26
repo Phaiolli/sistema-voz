@@ -16,6 +16,7 @@ import type { EventTheme, EventConfig } from "@/lib/types";
 type EventStatus = "draft" | "active" | "ended";
 type QuestionStatus = "pending" | "next" | "answered" | "hidden";
 type UserRole = "admin" | "mediador" | "owner" | "superadmin";
+type UserPlan = "free" | "paid";
 
 export interface Database {
   public: {
@@ -131,7 +132,7 @@ export interface Database {
           name: string;
           email: string;
           role: UserRole;
-          plan: string;
+          plan: UserPlan;
           password_hash: string;
           created_at: string;
           last_seen_at: string | null;
@@ -141,7 +142,7 @@ export interface Database {
           name: string;
           email: string;
           role?: UserRole;
-          plan?: string;
+          plan?: UserPlan;
           password_hash: string;
           created_at?: string;
           last_seen_at?: string | null;
@@ -151,7 +152,7 @@ export interface Database {
           name?: string;
           email?: string;
           role?: UserRole;
-          plan?: string;
+          plan?: UserPlan;
           password_hash?: string;
           created_at?: string;
           last_seen_at?: string | null;
@@ -309,6 +310,7 @@ export interface Database {
       event_status: EventStatus;
       question_status: QuestionStatus;
       user_role: UserRole;
+      user_plan: UserPlan;
     };
   };
 }

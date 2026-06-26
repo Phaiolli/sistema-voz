@@ -3,8 +3,8 @@ import { createServerClient } from "@/lib/supabase";
 import { submitQuestionSchema } from "@/lib/schemas";
 import { getOwnerPlan, getEventQuestionCount, FREE_QUESTION_LIMIT } from "@/lib/plan-limits";
 import { requireEventAccess } from "@/lib/api/auth-guard";
-import { mapQuestionPublic } from "@/lib/api/question-mappers";
-import type { QuestionPublicSource } from "@/lib/api/question-mappers";
+import { mapQuestion, mapQuestionPublic } from "@/lib/api/mappers";
+import type { QuestionFullRow, QuestionPublicSource } from "@/lib/api/mappers";
 import type { Database } from "@/lib/db/database.types";
 
 type QuestionRow = Database["public"]["Tables"]["questions"]["Row"];
@@ -25,28 +25,6 @@ function questionId() {
 
 function error(code: string, message: string, status: number, details?: object) {
   return NextResponse.json({ error: { code, message, ...details } }, { status });
-}
-
-/** Full (non-IP) projection returned to authorized moderators/owners. */
-type QuestionFullRow = Omit<QuestionRow, "author_ip">;
-
-function mapQuestion(row: QuestionFullRow) {
-  return {
-    id: row.id,
-    eventId: row.event_id,
-    authorName: row.author_name,
-    authorContact: row.author_contact ?? null,
-    authorEmail: row.author_email ?? null,
-    text: row.text,
-    status: row.status,
-    isAnonymous: row.is_anonymous ?? false,
-    lgpdAccepted: row.lgpd_accepted ?? false,
-    createdAt: row.created_at,
-    presentedAt: row.presented_at ?? null,
-    answeredAt: row.answered_at ?? null,
-    hiddenAt: row.hidden_at ?? null,
-    hiddenBy: row.hidden_by ?? null,
-  };
 }
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ eventId: string }> }) {

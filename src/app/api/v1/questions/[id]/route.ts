@@ -2,26 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase";
 import { requireEventAccess } from "@/lib/api/auth-guard";
 import { patchQuestionSchema } from "@/lib/schemas";
-import { mapQuestionPublic } from "@/lib/api/question-mappers";
+import { mapQuestionModeration, mapQuestionPublic } from "@/lib/api/mappers";
 import type { Database } from "@/lib/db/database.types";
-
-type QuestionRow = Database["public"]["Tables"]["questions"]["Row"];
-
-function mapQuestion(row: QuestionRow) {
-  return {
-    id: row.id,
-    eventId: row.event_id,
-    authorName: row.author_name,
-    authorContact: row.author_contact ?? null,
-    text: row.text,
-    status: row.status,
-    createdAt: row.created_at,
-    presentedAt: row.presented_at ?? null,
-    answeredAt: row.answered_at ?? null,
-    hiddenAt: row.hidden_at ?? null,
-    hiddenBy: row.hidden_by ?? null,
-  };
-}
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -83,7 +65,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     .single();
 
   if (updateErr) throw updateErr;
-  const updated = mapQuestion(row);
+  const updated = mapQuestionModeration(row);
 
   try {
     await supabase.channel(`event:${updated.eventId}:questions`).send({

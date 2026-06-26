@@ -5,26 +5,7 @@ import { Calendar, MapPin, Mic, Lock, UserPlus } from "lucide-react";
 import { createServerClient } from "@/lib/supabase";
 import { VozWordmark } from "@/components/voz/wordmark";
 import type { Event, EventPage } from "@/lib/types";
-import type { Database } from "@/lib/db/database.types";
-
-function mapEvent(row: Database["public"]["Tables"]["events"]["Row"]): Event {
-  return {
-    id: row.id,
-    slug: row.slug,
-    name: row.name,
-    startsAt: row.starts_at,
-    endsAt: row.ends_at,
-    place: row.place,
-    address: row.address,
-    status: row.status,
-    about: row.about,
-    theme: row.theme ?? {},
-    config: row.config ?? {},
-    organizerId: row.organizer_id,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-  };
-}
+import { mapEvent } from "@/lib/api/mappers";
 
 async function getEvent(slug: string): Promise<Event | null> {
   const supabase = createServerClient();

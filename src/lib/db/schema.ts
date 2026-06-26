@@ -3,6 +3,7 @@ import { pgTable, text, timestamp, boolean, integer, jsonb, pgEnum, uniqueIndex,
 export const eventStatusEnum = pgEnum("event_status", ["draft", "active", "ended"]);
 export const questionStatusEnum = pgEnum("question_status", ["pending", "next", "answered", "hidden"]);
 export const userRoleEnum = pgEnum("user_role", ["admin", "mediador", "owner", "superadmin"]);
+export const userPlanEnum = pgEnum("user_plan", ["free", "paid"]);
 
 export const events = pgTable("events", {
   id: text("id").primaryKey(),
@@ -16,14 +17,14 @@ export const events = pgTable("events", {
   about: text("about").notNull().default(""),
   theme: jsonb("theme").notNull().default({}),
   config: jsonb("config").notNull().default({}),
-  organizerId: text("organizer_id").notNull(),
+  organizerId: text("organizer_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
 export const questions = pgTable("questions", {
   id: text("id").primaryKey(),
-  eventId: text("event_id").notNull().references(() => events.id),
+  eventId: text("event_id").notNull().references(() => events.id, { onDelete: "cascade" }),
   authorName: text("author_name").notNull(),
   authorContact: text("author_contact"),
   authorEmail: text("author_email"),
@@ -44,15 +45,15 @@ export const users = pgTable("users", {
   name: text("name").notNull(),
   email: text("email").notNull().unique(),
   role: userRoleEnum("role").notNull().default("mediador"),
-  plan: text("plan").notNull().default("free"),
+  plan: userPlanEnum("plan").notNull().default("free"),
   passwordHash: text("password_hash").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   lastSeenAt: timestamp("last_seen_at", { withTimezone: true }),
 });
 
 export const mediatorAssignments = pgTable("mediator_assignments", {
-  eventId: text("event_id").notNull().references(() => events.id),
-  userId: text("user_id").notNull().references(() => users.id),
+  eventId: text("event_id").notNull().references(() => events.id, { onDelete: "cascade" }),
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [
   uniqueIndex("mediator_assignments_event_user_idx").on(t.eventId, t.userId),
@@ -60,7 +61,7 @@ export const mediatorAssignments = pgTable("mediator_assignments", {
 
 export const participants = pgTable("participants", {
   id: text("id").primaryKey(),
-  eventId: text("event_id").notNull().references(() => events.id),
+  eventId: text("event_id").notNull().references(() => events.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
   contact: text("contact").notNull(),
   questionsCount: integer("questions_count").notNull().default(0),
@@ -70,7 +71,7 @@ export const participants = pgTable("participants", {
 
 export const registrations = pgTable("registrations", {
   id: text("id").primaryKey(),
-  eventId: text("event_id").notNull().references(() => events.id),
+  eventId: text("event_id").notNull().references(() => events.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
   email: text("email").notNull(),
   phone: text("phone"),
@@ -91,8 +92,8 @@ export const registrations = pgTable("registrations", {
 
 export const eventPayments = pgTable("event_payments", {
   id: text("id").primaryKey(),
-  eventId: text("event_id").references(() => events.id),
-  ownerId: text("owner_id").notNull().references(() => users.id),
+  eventId: text("event_id").references(() => events.id, { onDelete: "set null" }),
+  ownerId: text("owner_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   stripeSessionId: text("stripe_session_id").notNull().unique(),
   stripePaymentIntentId: text("stripe_payment_intent_id"),
   amount: integer("amount").notNull(),

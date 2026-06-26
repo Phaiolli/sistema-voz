@@ -1,28 +1,10 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase";
 import { auth } from "@/lib/auth";
+import { mapEvent } from "@/lib/api/mappers";
 import type { Database } from "@/lib/db/database.types";
 
 type EventRow = Database["public"]["Tables"]["events"]["Row"];
-
-function mapEvent(row: EventRow) {
-  return {
-    id: row.id,
-    slug: row.slug,
-    name: row.name,
-    startsAt: row.starts_at,
-    endsAt: row.ends_at,
-    place: row.place,
-    address: row.address,
-    status: row.status,
-    about: row.about,
-    theme: row.theme ?? {},
-    config: row.config ?? {},
-    organizerId: row.organizer_id,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-  };
-}
 
 export async function GET(_req?: Request) {
   const session = await auth();

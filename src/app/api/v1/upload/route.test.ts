@@ -85,10 +85,18 @@ describe("POST /api/v1/upload", () => {
 
   it("accepts all allowed mime types", async () => {
     vi.mocked(auth).mockResolvedValue({ user: { role: "admin" } } as never);
-    const types = ["image/jpeg", "image/png", "image/webp", "image/gif", "image/svg+xml"];
+    const types = ["image/jpeg", "image/png", "image/webp", "image/gif"];
     for (const type of types) {
       const res = await POST(makeFormDataReq(makeFile(`img.${type.split("/")[1]}`, type)));
       expect(res.status).toBe(200);
     }
+  });
+
+  it("rejects image/svg+xml (XSS vector)", async () => {
+    vi.mocked(auth).mockResolvedValue({ user: { role: "admin" } } as never);
+    const res = await POST(makeFormDataReq(makeFile("evil.svg", "image/svg+xml")));
+    expect(res.status).toBe(422);
+    const body = await res.json() as { error: { code: string } };
+    expect(body.error.code).toBe("INVALID_TYPE");
   });
 });

@@ -1,24 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
+import { randomInt } from "crypto";
 import { createServerClient } from "@/lib/supabase";
-import { auth } from "@/lib/auth";
-
-async function requireAdminOrMediador() {
-  const session = await auth();
-  if (!session?.user) {
-    return { err: NextResponse.json({ error: { code: "UNAUTHORIZED", message: "Autenticação necessária." } }, { status: 401 }) };
-  }
-  const role = (session.user as { role?: string }).role;
-  if (role !== "admin" && role !== "mediador") {
-    return { err: NextResponse.json({ error: { code: "FORBIDDEN", message: "Acesso negado." } }, { status: 403 }) };
-  }
-  return { session };
-}
+import { requireEventAccess } from "@/lib/api/auth-guard";
 
 export async function POST(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const guard = await requireAdminOrMediador();
-  if (guard.err) return guard.err;
-
   const { id: eventId } = await params;
+
+  const guard = await requireEventAccess(eventId, ["admin", "mediador", "owner"]);
+  if ("err" in guard) return guard.err;
+
   const supabase = createServerClient();
 
   const { data: eligible, error } = await supabase
@@ -37,13 +27,14 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
     );
   }
 
-  const winner = eligible[Math.floor(Math.random() * eligible.length)];
+  const winner = eligible[randomInt(eligible.length)];
   const now = new Date().toISOString();
 
   const { error: updateErr } = await supabase
     .from("registrations")
     .update({ drawn: true, drawn_at: now })
-    .eq("id", winner.id);
+    .eq("id", winner.id)
+    .eq("drawn", false); // idempotent: don't redraw an already-drawn registration
 
   if (updateErr) throw updateErr;
 
@@ -54,12 +45,11 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const session = await auth();
-  if (!session?.user || (session.user as { role?: string }).role !== "admin") {
-    return NextResponse.json({ error: { code: "FORBIDDEN", message: "Apenas administradores podem resetar o sorteio." } }, { status: 403 });
-  }
-
   const { id: eventId } = await params;
+
+  const guard = await requireEventAccess(eventId, ["admin", "owner"]);
+  if ("err" in guard) return guard.err;
+
   const supabase = createServerClient();
 
   const { error } = await supabase

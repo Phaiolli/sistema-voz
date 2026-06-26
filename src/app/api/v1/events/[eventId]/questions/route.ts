@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase";
 import { submitQuestionSchema } from "@/lib/schemas";
 import { getOwnerPlan, getEventQuestionCount, FREE_QUESTION_LIMIT } from "@/lib/plan-limits";
+import { requireEventAccess } from "@/lib/api/auth-guard";
+import { mapQuestionPublic } from "@/lib/api/question-mappers";
 
 const RATE_LIMIT_MAX = 10;
 const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000; // 1 hour
@@ -111,22 +113,31 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ eve
     await supabase.channel(`event:${eventId}:questions`).send({
       type: "broadcast",
       event: "question:new",
-      payload: question,
+      payload: mapQuestionPublic(row),
     });
   } catch { /* non-fatal */ }
 
   return NextResponse.json(question, { status: 201 });
 }
 
+// Explicit column list — never select author_ip (PII) for the API response.
+const QUESTION_COLUMNS =
+  "id, event_id, author_name, author_contact, author_email, text, status, is_anonymous, lgpd_accepted, created_at, presented_at, answered_at, hidden_at, hidden_by";
+
 export async function GET(req: NextRequest, { params }: { params: Promise<{ eventId: string }> }) {
   const { eventId } = await params;
   const url = new URL(req.url);
   const status = url.searchParams.get("status");
 
+  // Moderators/owners/admins get the full (non-IP) projection; everyone else
+  // gets the minimal public projection with no PII.
+  const guard = await requireEventAccess(eventId, ["admin", "mediador", "owner", "superadmin"]);
+  const authorized = !("err" in guard);
+
   const supabase = createServerClient();
   let query = supabase
     .from("questions")
-    .select("*")
+    .select(authorized ? QUESTION_COLUMNS : "id, event_id, author_name, text, status, is_anonymous")
     .eq("event_id", eventId)
     .order("created_at");
 
@@ -137,5 +148,6 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ even
   const { data: rows, error: fetchErr } = await query;
   if (fetchErr) throw fetchErr;
 
-  return NextResponse.json({ questions: (rows ?? []).map(mapQuestion) });
+  const questions = (rows ?? []).map(authorized ? mapQuestion : mapQuestionPublic);
+  return NextResponse.json({ questions });
 }

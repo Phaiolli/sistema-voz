@@ -13,9 +13,15 @@ export function createBrowserClient() {
   return _browserClient;
 }
 
-// Server-side Supabase client (for server actions / API routes)
+// Server-side Supabase client (for server actions / API routes).
+// MUST use the service-role key: it bypasses RLS, which is required now that
+// RLS is enabled (migration 20260625000002). Falling back to the anon key would
+// silently break every server query, so we fail fast instead.
 export function createServerClient() {
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? anonKey;
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!serviceKey) {
+    throw new Error("SUPABASE_SERVICE_ROLE_KEY is not set — server client requires the service-role key.");
+  }
   return createClient(url, serviceKey, {
     auth: { persistSession: false },
   });

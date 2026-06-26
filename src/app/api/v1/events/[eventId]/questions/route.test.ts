@@ -11,6 +11,9 @@ vi.mock("@/lib/supabase", () => ({
   createServerClient: () => mockSupabase,
 }));
 
+// Default: unauthenticated requests fall into the public projection branch.
+vi.mock("@/lib/auth", () => ({ auth: vi.fn().mockResolvedValue(null) }));
+
 // Bypass plan-limits checks — tested separately in plan-limits.test.ts
 vi.mock("@/lib/plan-limits", () => ({
   getOwnerPlan: vi.fn().mockResolvedValue("paid"),
@@ -207,5 +210,34 @@ describe("GET /api/v1/events/[eventId]/questions", () => {
     expect(res.status).toBe(200);
     const json = await res.json();
     expect(json.questions).toHaveLength(0);
+  });
+
+  // C3 — public projection must never leak PII.
+  it("public response omits author_email, author_contact and author_ip", async () => {
+    // auth() resolves null by default → public (unauthenticated) projection.
+    mockSupabase.from.mockReturnValue(makeQueryChain([mockQuestion]));
+    const res = await GET(makeGetRequest(), makeParams());
+    const json = (await res.json()) as { questions: Record<string, unknown>[] };
+    const q = json.questions[0];
+    expect(q).not.toHaveProperty("authorEmail");
+    expect(q).not.toHaveProperty("authorContact");
+    expect(q).not.toHaveProperty("authorIp");
+    expect(q).not.toHaveProperty("author_email");
+    expect(q).not.toHaveProperty("author_contact");
+    expect(q).not.toHaveProperty("author_ip");
+    // It exposes only the safe minimal projection.
+    expect(Object.keys(q).sort()).toEqual(
+      ["authorName", "createdAt", "eventId", "id", "isAnonymous", "status", "text"].sort(),
+    );
+  });
+
+  it("public response shows 'Anônimo' instead of the real name for anonymous questions", async () => {
+    const anonRow = { ...mockQuestion, author_name: "Maria Silva", is_anonymous: true };
+    mockSupabase.from.mockReturnValue(makeQueryChain([anonRow]));
+    const res = await GET(makeGetRequest(), makeParams());
+    const json = (await res.json()) as { questions: { authorName: string }[] };
+    expect(json.questions[0].authorName).toBe("Anônimo");
+    // Sanity: the real name does not appear anywhere in the serialised payload.
+    expect(JSON.stringify(json)).not.toContain("Maria Silva");
   });
 });

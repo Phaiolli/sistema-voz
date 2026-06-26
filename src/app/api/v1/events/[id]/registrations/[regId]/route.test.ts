@@ -36,6 +36,16 @@ function makeReq(body: unknown) {
   });
 }
 
+/** Mock for the guard's mediator_assignments lookup (assignment present). */
+function assignmentChain() {
+  return {
+    select: vi.fn().mockReturnThis(),
+    eq: vi.fn().mockReturnThis(),
+    limit: vi.fn().mockReturnThis(),
+    maybeSingle: vi.fn().mockResolvedValue({ data: { event_id: "evt_1" } }),
+  };
+}
+
 beforeEach(() => { vi.resetAllMocks(); setupChannelMock(); });
 
 describe("PATCH /api/v1/events/[id]/registrations/[regId]", () => {
@@ -52,34 +62,38 @@ describe("PATCH /api/v1/events/[id]/registrations/[regId]", () => {
   });
 
   it("returns 422 for invalid body (wrong type)", async () => {
-    vi.mocked(auth).mockResolvedValue({ user: { role: "mediador" } } as never);
+    vi.mocked(auth).mockResolvedValue({ user: { id: "u_med", role: "mediador" } } as never);
+    mockSupabase.from.mockImplementation((table: string) =>
+      table === "mediator_assignments" ? assignmentChain() : ({}) as never);
     // checkedIn must be boolean, not string
     const res = await PATCH(makeReq({ checkedIn: "yes" }), makeParams());
     expect(res.status).toBe(422);
   });
 
   it("returns 404 when registration not found", async () => {
-    vi.mocked(auth).mockResolvedValue({ user: { role: "mediador" } } as never);
+    vi.mocked(auth).mockResolvedValue({ user: { id: "u_med", role: "mediador" } } as never);
     const chain = {
       update: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
       select: vi.fn().mockReturnThis(),
       single: vi.fn().mockResolvedValue({ data: null, error: new Error("Not found") }),
     };
-    mockSupabase.from.mockReturnValue(chain);
+    mockSupabase.from.mockImplementation((table: string) =>
+      table === "mediator_assignments" ? assignmentChain() : chain);
     const res = await PATCH(makeReq({ checkedIn: true }), makeParams());
     expect(res.status).toBe(404);
   });
 
   it("marks check-in, broadcasts, and returns 200", async () => {
-    vi.mocked(auth).mockResolvedValue({ user: { role: "mediador" } } as never);
+    vi.mocked(auth).mockResolvedValue({ user: { id: "u_med", role: "mediador" } } as never);
     const chain = {
       update: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
       select: vi.fn().mockReturnThis(),
       single: vi.fn().mockResolvedValue({ data: mockRow, error: null }),
     };
-    mockSupabase.from.mockReturnValue(chain);
+    mockSupabase.from.mockImplementation((table: string) =>
+      table === "mediator_assignments" ? assignmentChain() : chain);
 
     const res = await PATCH(makeReq({ checkedIn: true }), makeParams());
     expect(res.status).toBe(200);

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase";
-import { auth } from "@/lib/auth";
+import { requireEventAccess } from "@/lib/api/auth-guard";
 
 interface ParticipantRow {
   name: string;
@@ -12,10 +12,11 @@ interface ParticipantRow {
 }
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ eventId: string }> }) {
-  const session = await auth();
-  if (!session?.user) return NextResponse.json({ error: { code: "UNAUTHORIZED", message: "Não autorizado." } }, { status: 401 });
-
   const { eventId } = await params;
+
+  const guard = await requireEventAccess(eventId, ["admin", "mediador", "owner"]);
+  if ("err" in guard) return guard.err;
+
   const supabase = createServerClient();
 
   const { data: rows, error } = await supabase

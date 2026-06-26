@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase";
-import { auth } from "@/lib/auth";
+import { requireEventAccess } from "@/lib/api/auth-guard";
 import { assignMediatorSchema } from "@/lib/schemas";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -15,33 +15,12 @@ function mapUser(row: Record<string, any>) {
   };
 }
 
-async function requireAdmin() {
-  const session = await auth();
-  if (!session?.user) {
-    return {
-      err: NextResponse.json(
-        { error: { code: "UNAUTHORIZED", message: "Autenticação necessária." } },
-        { status: 401 },
-      ),
-    };
-  }
-  const role = (session.user as { role?: string }).role;
-  if (role !== "admin") {
-    return {
-      err: NextResponse.json(
-        { error: { code: "FORBIDDEN", message: "Acesso restrito a administradores." } },
-        { status: 403 },
-      ),
-    };
-  }
-  return { session };
-}
-
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const guard = await requireAdmin();
-  if (guard.err) return guard.err;
-
   const { id: eventId } = await params;
+
+  const guard = await requireEventAccess(eventId, ["admin", "owner"]);
+  if ("err" in guard) return guard.err;
+
   const supabase = createServerClient();
 
   const { data: rows, error: fetchErr } = await supabase
@@ -63,10 +42,10 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 }
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const guard = await requireAdmin();
-  if (guard.err) return guard.err;
-
   const { id: eventId } = await params;
+
+  const guard = await requireEventAccess(eventId, ["admin", "owner"]);
+  if ("err" in guard) return guard.err;
 
   const parsed = assignMediatorSchema.safeParse(
     await req.json().catch(() => null),

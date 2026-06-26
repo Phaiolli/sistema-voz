@@ -71,6 +71,32 @@ describe("GET /api/v1/events/[id]/mediators", () => {
   });
 });
 
+describe("GET /api/v1/events/[id]/mediators — event isolation (C2 BFLA)", () => {
+  function ownershipChain(owns: boolean) {
+    return {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      maybeSingle: vi.fn().mockResolvedValue({ data: owns ? { id: "evt_1" } : null, error: null }),
+    };
+  }
+
+  it("returns 404 when owner B lists mediators of owner A's event", async () => {
+    vi.mocked(auth).mockResolvedValue({ user: { id: "owner_b", role: "owner" } } as never);
+    mockSupabase.from.mockImplementation((table: string) =>
+      table === "events" ? ownershipChain(false) : makeChain(),
+    );
+    const res = await GET(new NextRequest("http://localhost"), makeParams());
+    expect(res.status).toBe(404);
+  });
+
+  it("returns 403 for an assigned mediador (role not permitted on this route)", async () => {
+    // mediador is NOT in the allowlist here (admin/owner only) — denied at role gate.
+    vi.mocked(auth).mockResolvedValue({ user: { id: "med_1", role: "mediador" } } as never);
+    const res = await GET(new NextRequest("http://localhost"), makeParams());
+    expect(res.status).toBe(403);
+  });
+});
+
 describe("POST /api/v1/events/[id]/mediators", () => {
   it("returns 422 for missing userId", async () => {
     vi.mocked(auth).mockResolvedValue({ user: { role: "admin" } } as never);

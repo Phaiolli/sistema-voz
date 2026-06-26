@@ -2,6 +2,7 @@ import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { createServerClient } from "./supabase";
+import { rateLimit } from "./api/rate-limit";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   session: { strategy: "jwt" },
@@ -13,6 +14,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
+        // Throttle login attempts per email. Returns null when blocked so the
+        // caller cannot distinguish "rate limited" from "wrong credentials"
+        // (no information leak). Limit is per-process — see ADR 011.
+        const limit = rateLimit(`login:${credentials.email as string}`, { max: 5, windowMs: 15 * 60 * 1000 });
+        if (!limit.ok) return null;
         const supabase = createServerClient();
         const { data: user } = await supabase
           .from("users")

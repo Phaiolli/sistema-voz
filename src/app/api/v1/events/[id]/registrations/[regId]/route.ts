@@ -1,25 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase";
-import { auth } from "@/lib/auth";
+import { requireEventAccess } from "@/lib/api/auth-guard";
 import { patchRegistrationSchema } from "@/lib/schemas";
 
-async function requireAdminOrMediador() {
-  const session = await auth();
-  if (!session?.user) {
-    return { err: NextResponse.json({ error: { code: "UNAUTHORIZED", message: "Autenticação necessária." } }, { status: 401 }) };
-  }
-  const role = (session.user as { role?: string }).role;
-  if (role !== "admin" && role !== "mediador") {
-    return { err: NextResponse.json({ error: { code: "FORBIDDEN", message: "Acesso negado." } }, { status: 403 }) };
-  }
-  return { session };
-}
-
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string; regId: string }> }) {
-  const guard = await requireAdminOrMediador();
-  if (guard.err) return guard.err;
-
   const { id: eventId, regId } = await params;
+
+  const guard = await requireEventAccess(eventId, ["admin", "mediador", "owner"]);
+  if ("err" in guard) return guard.err;
 
   const parsed = patchRegistrationSchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) {
@@ -69,11 +57,13 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   };
 
   // Notify other connected mediators via Realtime
-  await supabase.channel(`event:${eventId}:registrations`).send({
-    type: "broadcast",
-    event: "registration:updated",
-    payload: updated,
-  });
+  try {
+    await supabase.channel(`event:${eventId}:registrations`).send({
+      type: "broadcast",
+      event: "registration:updated",
+      payload: updated,
+    });
+  } catch { /* non-fatal */ }
 
   return NextResponse.json(updated);
 }

@@ -37,7 +37,18 @@ describe("exportOwnerData", () => {
   it("returns a full structured export for an owner with events", async () => {
     const userRow = { id: "owner_1", name: "Org", email: "org@example.test", role: "owner", created_at: "2026-01-01", last_seen_at: null };
     const eventRows = [{ id: "evt_1" }, { id: "evt_2" }];
-    const participantRows = [{ id: "p1", name: "Participante", contact: "x" }];
+    // Participants are sourced from `questions` (author PII), never author_ip.
+    const participantRows = [
+      {
+        author_name: "Participante",
+        author_contact: "x",
+        author_email: null,
+        text: "Pergunta",
+        is_anonymous: false,
+        lgpd_accepted: true,
+        created_at: "2026-01-02",
+      },
+    ];
     const registrationRows = [{ id: "r1", name: "Inscrito", email: "i@example.test" }];
 
     mockSupabase.from.mockImplementation((table: string) => {
@@ -46,7 +57,7 @@ describe("exportOwnerData", () => {
           return tableStub({ maybeSingleData: userRow });
         case "events":
           return tableStub({ selectData: eventRows });
-        case "participants":
+        case "questions":
           return tableStub({ selectData: participantRows });
         case "registrations":
           return tableStub({ selectData: registrationRows });
@@ -59,6 +70,8 @@ describe("exportOwnerData", () => {
     expect(result.user).toEqual(userRow);
     expect(result.events).toEqual(eventRows);
     expect(result.participants).toEqual(participantRows);
+    // author_ip must never be exported (data minimization).
+    expect(JSON.stringify(result.participants)).not.toContain("author_ip");
     expect(result.registrations).toEqual(registrationRows);
     expect(typeof result.exportedAt).toBe("string");
   });

@@ -93,6 +93,7 @@ export type Database = {
           created_at: string
           ends_at: string
           id: string
+          is_paid: boolean
           name: string
           organizer_id: string
           place: string
@@ -109,6 +110,7 @@ export type Database = {
           created_at?: string
           ends_at: string
           id: string
+          is_paid?: boolean
           name: string
           organizer_id: string
           place: string
@@ -125,6 +127,7 @@ export type Database = {
           created_at?: string
           ends_at?: string
           id?: string
+          is_paid?: boolean
           name?: string
           organizer_id?: string
           place?: string

@@ -17,6 +17,7 @@ export const events = pgTable("events", {
   about: text("about").notNull().default(""),
   theme: jsonb("theme").notNull().default({}),
   config: jsonb("config").notNull().default({}),
+  isPaid: boolean("is_paid").notNull().default(false),
   organizerId: text("organizer_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),

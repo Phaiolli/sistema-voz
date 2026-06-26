@@ -21,7 +21,7 @@ function mapUser(row: MediatorUser) {
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id: eventId } = await params;
 
-  const guard = await requireEventAccess(eventId, ["admin", "owner"]);
+  const guard = await requireEventAccess(eventId, ["admin", "owner", "superadmin"]);
   if ("err" in guard) return guard.err;
 
   const supabase = createServerClient();
@@ -48,7 +48,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id: eventId } = await params;
 
-  const guard = await requireEventAccess(eventId, ["admin", "owner"]);
+  const guard = await requireEventAccess(eventId, ["admin", "owner", "superadmin"]);
   if ("err" in guard) return guard.err;
 
   const parsed = assignMediatorSchema.safeParse(

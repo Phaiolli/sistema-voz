@@ -37,7 +37,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     );
   }
 
-  const guard = await requireEventAccess(existing.event_id as string, ["admin", "mediador", "owner"]);
+  const guard = await requireEventAccess(existing.event_id as string, ["admin", "mediador", "owner", "superadmin"]);
   if ("err" in guard) return guard.err;
 
   let patch: Database["public"]["Tables"]["questions"]["Update"] = {};
@@ -97,7 +97,7 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
     );
   }
 
-  const guard = await requireEventAccess(existing.event_id as string, ["admin", "mediador", "owner"]);
+  const guard = await requireEventAccess(existing.event_id as string, ["admin", "mediador", "owner", "superadmin"]);
   if ("err" in guard) return guard.err;
 
   const { error: deleteErr } = await supabase

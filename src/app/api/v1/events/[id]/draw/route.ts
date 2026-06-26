@@ -6,7 +6,7 @@ import { requireEventAccess } from "@/lib/api/auth-guard";
 export async function POST(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id: eventId } = await params;
 
-  const guard = await requireEventAccess(eventId, ["admin", "mediador", "owner"]);
+  const guard = await requireEventAccess(eventId, ["admin", "mediador", "owner", "superadmin"]);
   if ("err" in guard) return guard.err;
 
   const supabase = createServerClient();
@@ -47,7 +47,7 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id: eventId } = await params;
 
-  const guard = await requireEventAccess(eventId, ["admin", "owner"]);
+  const guard = await requireEventAccess(eventId, ["admin", "owner", "superadmin"]);
   if ("err" in guard) return guard.err;
 
   const supabase = createServerClient();

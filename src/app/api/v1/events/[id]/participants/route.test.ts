@@ -44,8 +44,8 @@ function ownershipChain(owns: boolean) {
   };
 }
 
-function makeParams(eventId = "evt_1") {
-  return { params: Promise.resolve({ eventId }) };
+function makeParams(id = "evt_1") {
+  return { params: Promise.resolve({ id }) };
 }
 
 function makeReq() {

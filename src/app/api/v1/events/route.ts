@@ -28,7 +28,7 @@ async function requireAuth(roles: string[]) {
 }
 
 export async function GET() {
-  const guard = await requireAuth(["admin", "owner"]);
+  const guard = await requireAuth(["admin", "owner", "superadmin"]);
   if (guard.err) return guard.err;
 
   const session = guard.session!;
@@ -49,7 +49,7 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const guard = await requireAuth(["admin", "owner"]);
+  const guard = await requireAuth(["admin", "owner", "superadmin"]);
   if (guard.err) return guard.err;
 
   const session = guard.session!;

@@ -4,7 +4,25 @@ import { createServerClient } from "@/lib/supabase";
 import { createEventSchema } from "@/lib/schemas";
 import { toJson } from "@/lib/api/mappers";
 import { logError } from "@/lib/log";
+import { createHash } from "node:crypto";
 import type Stripe from "stripe";
+
+/**
+ * Derives a deterministic UUID from a Stripe session id.
+ *
+ * Using a stable id keyed on the session means webhook redeliveries reuse the
+ * same event id, so the event upsert (onConflict: "id") stays idempotent and
+ * never collides on the event's unique slug, even if a prior attempt failed
+ * after the event was created but before event_payments recorded the event_id.
+ */
+function deterministicEventId(sessionId: string): string {
+  const hex = createHash("sha256").update(sessionId).digest("hex");
+  // Shape the first 32 hex chars as a v4-style UUID (set version/variant nibbles).
+  const version = "4" + hex.slice(13, 16);
+  const variant =
+    ((parseInt(hex[16], 16) & 0x3) | 0x8).toString(16) + hex.slice(17, 20);
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${version}-${variant}-${hex.slice(20, 32)}`;
+}
 
 export async function POST(req: NextRequest) {
   const body = await req.text();
@@ -52,11 +70,25 @@ export async function POST(req: NextRequest) {
   // Idempotency check: skip if already paid
   const { data: existingPayment } = await supabase
     .from("event_payments")
-    .select("id, status")
+    .select("id, status, event_id")
     .eq("stripe_session_id", checkoutSession.id)
     .maybeSingle();
 
+  // Reapply plan="paid" before the idempotent early-return: a prior redelivery
+  // may have marked the payment paid but failed to update the owner's plan.
+  // Setting it again is harmless.
   if (existingPayment?.status === "paid") {
+    const { error: planErr } = await supabase
+      .from("users")
+      .update({ plan: "paid" })
+      .eq("id", metadata.ownerId);
+    if (planErr) {
+      logError("Stripe webhook: falha ao reaplicar plano do owner", planErr);
+      return NextResponse.json(
+        { error: "Falha ao atualizar plano do owner." },
+        { status: 500 },
+      );
+    }
     return NextResponse.json({ received: true });
   }
 
@@ -81,29 +113,41 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const eventId = crypto.randomUUID();
+  // Reuse the event id from a prior (interrupted) attempt to stay idempotent;
+  // otherwise derive it deterministically from the Stripe session so a redelivery
+  // converges on the same id instead of minting a fresh one (which would collide
+  // on the event's unique slug and poison the message).
+  const eventId =
+    existingPayment?.event_id ?? deterministicEventId(checkoutSession.id);
 
-  const { error: insertErr } = await supabase.from("events").insert({
-    id: eventId,
-    slug: parsedEventData.slug,
-    name: parsedEventData.name,
-    starts_at: parsedEventData.startsAt,
-    ends_at: parsedEventData.endsAt,
-    place: parsedEventData.place,
-    address: parsedEventData.address,
-    status: parsedEventData.status,
-    about: parsedEventData.about,
-    theme: toJson(parsedEventData.theme),
-    config: toJson(parsedEventData.config),
-    organizer_id: metadata.ownerId,
-  });
-
-  if (insertErr) {
-    logError("Stripe webhook: falha ao criar evento", insertErr);
-    return NextResponse.json(
-      { error: "Falha ao criar evento." },
-      { status: 500 },
+  // Only create the event if it was not already created by a prior attempt.
+  if (!existingPayment?.event_id) {
+    const { error: insertErr } = await supabase.from("events").upsert(
+      {
+        id: eventId,
+        slug: parsedEventData.slug,
+        name: parsedEventData.name,
+        starts_at: parsedEventData.startsAt,
+        ends_at: parsedEventData.endsAt,
+        place: parsedEventData.place,
+        address: parsedEventData.address,
+        status: parsedEventData.status,
+        about: parsedEventData.about,
+        theme: toJson(parsedEventData.theme),
+        config: toJson(parsedEventData.config),
+        organizer_id: metadata.ownerId,
+        is_paid: true,
+      },
+      { onConflict: "id" },
     );
+
+    if (insertErr) {
+      logError("Stripe webhook: falha ao criar evento", insertErr);
+      return NextResponse.json(
+        { error: "Falha ao criar evento." },
+        { status: 500 },
+      );
+    }
   }
 
   const { error: updateErr } = await supabase
@@ -120,7 +164,26 @@ export async function POST(req: NextRequest) {
     .eq("stripe_session_id", checkoutSession.id);
 
   if (updateErr) {
+    // Return 500 so Stripe retries the webhook; the steps above are idempotent.
     logError("Stripe webhook: falha ao atualizar event_payments", updateErr);
+    return NextResponse.json(
+      { error: "Falha ao atualizar pagamento." },
+      { status: 500 },
+    );
+  }
+
+  // Mark the owner as a paying customer (used for badges/stats).
+  const { error: planErr } = await supabase
+    .from("users")
+    .update({ plan: "paid" })
+    .eq("id", metadata.ownerId);
+
+  if (planErr) {
+    logError("Stripe webhook: falha ao atualizar plano do owner", planErr);
+    return NextResponse.json(
+      { error: "Falha ao atualizar plano do owner." },
+      { status: 500 },
+    );
   }
 
   return NextResponse.json({ received: true });

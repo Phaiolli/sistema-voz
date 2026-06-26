@@ -74,6 +74,19 @@ describe("GET /api/v1/events", () => {
     expect(json.events[0].id).toBe("evt_1");
     expect(json.events[0]).not.toHaveProperty("organizer_id");
   });
+
+  // SW3 — superadmin gets the same global view as admin.
+  it("returns the full event list for superadmin", async () => {
+    vi.mocked(auth).mockResolvedValue({ user: { role: "superadmin", id: "su" } } as never);
+    const chain = makeChain([mockEventRow]);
+    mockSupabase.from.mockReturnValue(chain);
+    const res = await GET();
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json.events).toHaveLength(1);
+    // No organizer_id filter applied for superadmin (platform-wide view).
+    expect(chain.eq).not.toHaveBeenCalledWith("organizer_id", expect.anything());
+  });
 });
 
 describe("POST /api/v1/events", () => {

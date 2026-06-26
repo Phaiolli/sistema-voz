@@ -14,8 +14,11 @@ import { createServerClient } from "@/lib/supabase";
  * Returns a structured JSON containing:
  * - User profile (name, email, dates)
  * - All events owned
- * - All participants (authors) in those events
+ * - All participants (question authors) in those events
  * - All registrations in those events
+ *
+ * Participant data is sourced from `questions` (the live table); `author_ip`
+ * is intentionally excluded for data minimization.
  *
  * Used by `/api/v1/me/data-export` endpoint.
  *
@@ -41,8 +44,10 @@ export async function exportOwnerData(ownerId: string): Promise<object> {
   const { data: participants } =
     eventIds.length > 0
       ? await supabase
-          .from("participants")
-          .select("*")
+          .from("questions")
+          .select(
+            "author_name, author_contact, author_email, text, is_anonymous, lgpd_accepted, created_at",
+          )
           .in("event_id", eventIds)
       : { data: [] };
 
@@ -50,7 +55,9 @@ export async function exportOwnerData(ownerId: string): Promise<object> {
     eventIds.length > 0
       ? await supabase
           .from("registrations")
-          .select("*")
+          .select(
+            "name, email, phone, document, checked_in, checked_in_at, kit_delivered, kit_delivered_at, drawn, drawn_at, lgpd_accepted, created_at",
+          )
           .in("event_id", eventIds)
       : { data: [] };
 

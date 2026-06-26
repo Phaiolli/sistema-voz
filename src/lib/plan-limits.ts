@@ -86,6 +86,30 @@ export async function getEventQuestionCount(eventId: string): Promise<number> {
 }
 
 /**
+ * Returns whether a specific event has been paid for.
+ *
+ * Billing is per-event: a paid event has unlimited questions, an unpaid one is
+ * capped at `FREE_QUESTION_LIMIT`. See ADR 015 (billing per-evento is_paid).
+ *
+ * @param eventId - UUID of the event
+ * @returns true if the event is paid; false otherwise
+ * @throws On database error
+ */
+export async function isEventPaid(eventId: string): Promise<boolean> {
+  const supabase = createServerClient();
+  const { data, error } = await supabase
+    .from("events")
+    .select("is_paid")
+    .eq("id", eventId)
+    .maybeSingle();
+  if (error) {
+    logError("[plan-limits] isEventPaid failed", error);
+    throw error;
+  }
+  return data?.is_paid === true;
+}
+
+/**
  * Returns the plan of the given owner.
  *
  * Determines which rate limits and quota restrictions apply.

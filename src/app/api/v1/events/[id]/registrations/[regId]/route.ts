@@ -8,7 +8,7 @@ import type { Database } from "@/lib/db/database.types";
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string; regId: string }> }) {
   const { id: eventId, regId } = await params;
 
-  const guard = await requireEventAccess(eventId, ["admin", "mediador", "owner"]);
+  const guard = await requireEventAccess(eventId, ["admin", "mediador", "owner", "superadmin"]);
   if ("err" in guard) return guard.err;
 
   const parsed = patchRegistrationSchema.safeParse(await req.json().catch(() => null));
@@ -83,7 +83,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string; regId: string }> }) {
   const { id: eventId, regId } = await params;
 
-  const guard = await requireEventAccess(eventId, ["admin", "mediador", "owner"]);
+  const guard = await requireEventAccess(eventId, ["admin", "mediador", "owner", "superadmin"]);
   if ("err" in guard) return guard.err;
 
   const supabase = createServerClient();

@@ -10,7 +10,7 @@ const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000; // 1 hour
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id: eventId } = await params;
 
-  const guard = await requireEventAccess(eventId, ["admin", "mediador", "owner"]);
+  const guard = await requireEventAccess(eventId, ["admin", "mediador", "owner", "superadmin"]);
   if ("err" in guard) return guard.err;
 
   const supabase = createServerClient();

@@ -28,6 +28,7 @@ const eventRow: EventRow = {
   about: "Evento sintético para testes.",
   theme: { preset: "voz-base" },
   config: { registration: { enabled: true } },
+  is_paid: false,
   organizer_id: "user_1",
   created_at: "2026-06-01T00:00:00.000Z",
   updated_at: "2026-06-02T00:00:00.000Z",

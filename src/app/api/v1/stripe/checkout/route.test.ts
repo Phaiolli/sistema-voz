@@ -68,10 +68,12 @@ describe("POST /api/v1/stripe/checkout", () => {
     expect(mockCreateSession).not.toHaveBeenCalled();
   });
 
-  it("returns 403 when role is superadmin (not owner/admin)", async () => {
+  it("allows superadmin (superset of admin) to create a checkout", async () => {
     vi.mocked(auth).mockResolvedValue({ user: { id: "u1", role: "superadmin" } } as never);
     const res = await POST(makeRequest({ eventData: validEventData }));
-    expect(res.status).toBe(403);
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json.checkoutUrl).toBe("https://checkout.stripe.com/c/pay/cs_test_123");
   });
 
   it("returns 422 when eventData is invalid", async () => {
@@ -131,5 +133,19 @@ describe("POST /api/v1/stripe/checkout", () => {
     const res = await POST(makeRequest({ eventData: validEventData }));
     expect(res.status).toBe(200);
     expect(mockCreateSession).toHaveBeenCalledTimes(1);
+  });
+
+  // SW1 — if the pending payment row cannot be persisted, the checkout must
+  // fail with 500 rather than returning a checkout URL for an untracked
+  // session (which would never flip the event to is_paid via the webhook).
+  it("returns 500 when the event_payments insert fails", async () => {
+    vi.mocked(auth).mockResolvedValue({ user: { id: "usr_owner", role: "owner" } } as never);
+    mockInsert.mockResolvedValue({ error: { message: "insert failed" } });
+    const res = await POST(makeRequest({ eventData: validEventData }));
+    expect(res.status).toBe(500);
+    const json = await res.json();
+    expect(json.error.code).toBe("INTERNAL_ERROR");
+    // No checkout URL is leaked on failure.
+    expect(json).not.toHaveProperty("checkoutUrl");
   });
 });

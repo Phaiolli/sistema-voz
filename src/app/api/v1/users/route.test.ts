@@ -63,6 +63,16 @@ describe("GET /api/v1/users", () => {
     expect(res.status).toBe(200);
     expect(chain.eq).toHaveBeenCalledWith("role", "mediador");
   });
+
+  // SW3 — superadmin is a superset of admin.
+  it("returns user list for superadmin", async () => {
+    vi.mocked(auth).mockResolvedValue({ user: { id: "su", role: "superadmin" } } as never);
+    mockSupabase.from.mockReturnValue(makeChain([mockUserRow]));
+    const res = await GET(new NextRequest("http://localhost/api/v1/users"));
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json.users).toHaveLength(1);
+  });
 });
 
 describe("POST /api/v1/users", () => {
@@ -126,5 +136,39 @@ describe("POST /api/v1/users", () => {
     const json = await res.json();
     expect(json).not.toHaveProperty("passwordHash");
     expect(json).not.toHaveProperty("password_hash");
+  });
+
+  // SW3 — superadmin is a superset of admin and may create users.
+  it("allows superadmin to create a user (201)", async () => {
+    vi.mocked(auth).mockResolvedValue({ user: { id: "su", role: "superadmin" } } as never);
+    const chain = makeChain(undefined, mockUserRow);
+    chain.maybeSingle.mockResolvedValueOnce({ data: null });
+    mockSupabase.from.mockReturnValue(chain);
+    const res = await POST(makeReq(validBody));
+    expect(res.status).toBe(201);
+  });
+
+  // SW3 — privilege-escalation guard: the superadmin role can NEVER be
+  // assigned through the API, even by a superadmin caller. The schema must
+  // reject it (422) before any DB write occurs.
+  it("returns 422 when role=superadmin is requested (escalation blocked)", async () => {
+    vi.mocked(auth).mockResolvedValue({ user: { id: "su", role: "superadmin" } } as never);
+    const chain = makeChain(undefined, mockUserRow);
+    mockSupabase.from.mockReturnValue(chain);
+    const res = await POST(makeReq({ ...validBody, role: "superadmin" }));
+    expect(res.status).toBe(422);
+    const json = await res.json();
+    expect(json.error.code).toBe("VALIDATION_FAILED");
+    // No user row may be inserted when validation fails.
+    expect(chain.insert).not.toHaveBeenCalled();
+  });
+
+  it("returns 422 when an admin attempts to assign role=superadmin", async () => {
+    vi.mocked(auth).mockResolvedValue({ user: { id: "a", role: "admin" } } as never);
+    const chain = makeChain(undefined, mockUserRow);
+    mockSupabase.from.mockReturnValue(chain);
+    const res = await POST(makeReq({ ...validBody, role: "superadmin" }));
+    expect(res.status).toBe(422);
+    expect(chain.insert).not.toHaveBeenCalled();
   });
 });

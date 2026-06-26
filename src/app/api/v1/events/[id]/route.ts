@@ -44,7 +44,7 @@ async function checkOwnership(eventId: string, sessionUser: SessionUser) {
 }
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const guard = await requireAuth(["admin", "owner"]);
+  const guard = await requireAuth(["admin", "owner", "superadmin"]);
   if (guard.err) return guard.err;
 
   const { id } = await params;
@@ -73,7 +73,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const guard = await requireAuth(["admin", "owner"]);
+  const guard = await requireAuth(["admin", "owner", "superadmin"]);
   if (guard.err) return guard.err;
 
   const { id } = await params;
@@ -146,7 +146,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const guard = await requireAuth(["admin", "owner"]);
+  const guard = await requireAuth(["admin", "owner", "superadmin"]);
   if (guard.err) return guard.err;
 
   const { id } = await params;

@@ -16,7 +16,7 @@ export async function GET(_req?: Request) {
   const user = session.user;
   const supabase = createServerClient();
 
-  if (user.role === "admin") {
+  if (user.role === "admin" || user.role === "superadmin") {
     const { data: rows, error: fetchErr } = await supabase
       .from("events")
       .select("*")

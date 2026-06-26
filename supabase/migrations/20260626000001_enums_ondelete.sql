@@ -86,19 +86,24 @@ ALTER TABLE event_payments
   FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE;
 
 -- events.organizer_id -> users.id  (CASCADE)
--- No FK existed before; add it now. If orphan organizer_id values exist this
--- ADD will fail — that surfaces data integrity issues intentionally.
--- Pre-deploy check (run manually before applying in production):
+-- No FK existed before. Production has at least one orphan row
+-- (organizer_id='usr_ippaiquere' with no matching users row), so the FK is added
+-- NOT VALID: it is enforced for every INSERT/UPDATE from now on, but existing
+-- rows are not validated (avoids destroying/guessing legacy production data).
+-- After the orphan(s) are fixed, finish enforcement with:
+--   -- find orphans:
 --   SELECT id, organizer_id FROM events e
 --   WHERE organizer_id IS NOT NULL
 --     AND NOT EXISTS (SELECT 1 FROM users u WHERE u.id = e.organizer_id);
+--   -- then:
+--   ALTER TABLE events VALIDATE CONSTRAINT events_organizer_id_users_id_fk;
 -- CASCADE here means deleting a user removes their events and all dependent
 -- personal data. User deletion must be a deliberate, audited admin action — the
 -- routine LGPD owner-erasure path anonymises (lib/lgpd.ts), it does not hard-delete.
 ALTER TABLE events DROP CONSTRAINT IF EXISTS events_organizer_id_users_id_fk;
 ALTER TABLE events
   ADD CONSTRAINT events_organizer_id_users_id_fk
-  FOREIGN KEY (organizer_id) REFERENCES users(id) ON DELETE CASCADE;
+  FOREIGN KEY (organizer_id) REFERENCES users(id) ON DELETE CASCADE NOT VALID;
 
 -- ---------------------------------------------------------------------------
 -- Rollback (manual):

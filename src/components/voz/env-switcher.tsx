@@ -9,7 +9,7 @@ interface EnvSwitcherProps {
 
 export function EnvSwitcher({ active }: EnvSwitcherProps) {
   const { data: session } = useSession();
-  const role = (session?.user as { role?: string } | undefined)?.role;
+  const role = session?.user?.role;
 
   if (role !== "admin" && role !== "superadmin") return null;
 

@@ -3,8 +3,7 @@ import { NextResponse } from "next/server";
 
 export default auth((req) => {
   const { pathname } = req.nextUrl;
-  const session = req.auth;
-  const user = session?.user as { role?: string } | undefined;
+  const user = req.auth?.user;
 
   if (pathname.startsWith("/plataforma")) {
     if (!user) {

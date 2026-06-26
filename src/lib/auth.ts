@@ -1,8 +1,11 @@
 import NextAuth from "next-auth";
+import type { Session } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { createServerClient } from "./supabase";
 import { rateLimit } from "./api/rate-limit";
+import type { UserRole, UserPlan } from "./types";
+import type { JWT } from "next-auth/jwt";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   session: { strategy: "jwt" },
@@ -29,24 +32,30 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         if (!user) return null;
         const ok = await bcrypt.compare(credentials.password as string, user.password_hash as string);
         if (!ok) return null;
-        return { id: user.id as string, name: user.name as string, email: user.email as string, role: user.role as string, plan: (user.plan ?? "free") as string };
+        return {
+          id: user.id as string,
+          name: user.name as string,
+          email: user.email as string,
+          role: user.role as UserRole,
+          plan: (user.plan ?? "free") as UserPlan,
+        };
       },
     }),
   ],
   callbacks: {
     jwt({ token, user }) {
       if (user) {
-        token.role = (user as { role: string }).role;
-        token.userId = user.id;
-        token.plan = (user as { plan?: string }).plan ?? "free";
+        token.role = user.role;
+        token.userId = user.id ?? "";
+        token.plan = user.plan ?? "free";
       }
       return token;
     },
-    session({ session, token }) {
+    session({ session, token }: { session: Session; token: JWT }) {
       if (session.user) {
-        (session.user as unknown as { role: string; id: string; plan: string }).role = token.role as string;
-        (session.user as unknown as { id: string }).id = token.userId as string;
-        (session.user as unknown as { plan: string }).plan = token.plan as string;
+        session.user.role = token.role;
+        session.user.id = token.userId;
+        session.user.plan = token.plan;
       }
       return session;
     },

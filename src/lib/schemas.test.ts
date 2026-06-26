@@ -4,6 +4,7 @@ import {
   createEventSchema, patchEventSchema,
   createUserSchema, patchUserSchema,
   assignMediatorSchema,
+  questionBroadcastSchema, questionDeletedBroadcastSchema,
 } from "./schemas";
 
 const validSubmit = {
@@ -228,5 +229,92 @@ describe("assignMediatorSchema", () => {
 
   it("rejects missing userId", () => {
     expect(assignMediatorSchema.safeParse({}).success).toBe(false);
+  });
+});
+
+// Realtime broadcasts são assinados apenas com a anon key: qualquer subscriber
+// pode publicar um payload forjado. O consumidor faz `safeParse` e ignora o
+// evento quando inválido. Estes testes garantem que um payload válido passa e
+// que qualquer adulteração (campo faltando, tipo errado, enum inválido, extra
+// malicioso) seja rejeitada — caso contrário o forjado entraria na UI.
+const validBroadcast = {
+  id: "q_abc123",
+  eventId: "evt_xyz789",
+  text: "Pergunta pública transmitida via realtime.",
+  isAnonymous: false,
+  authorName: "Maria",
+  status: "pending" as const,
+  createdAt: "2026-06-26T12:00:00.000Z",
+};
+
+describe("questionBroadcastSchema", () => {
+  it("accepts a valid public question payload", () => {
+    expect(questionBroadcastSchema.safeParse(validBroadcast).success).toBe(true);
+  });
+
+  const statuses = ["pending", "next", "answered", "hidden"] as const;
+  it.each(statuses)("accepts status=%s", (status) => {
+    expect(questionBroadcastSchema.safeParse({ ...validBroadcast, status }).success).toBe(true);
+  });
+
+  it("rejects unknown status (forged enum)", () => {
+    expect(questionBroadcastSchema.safeParse({ ...validBroadcast, status: "deleted" }).success).toBe(false);
+  });
+
+  it("rejects empty id", () => {
+    expect(questionBroadcastSchema.safeParse({ ...validBroadcast, id: "" }).success).toBe(false);
+  });
+
+  it("rejects empty eventId", () => {
+    expect(questionBroadcastSchema.safeParse({ ...validBroadcast, eventId: "" }).success).toBe(false);
+  });
+
+  it("rejects missing required field (text)", () => {
+    const { text: _text, ...rest } = validBroadcast;
+    expect(questionBroadcastSchema.safeParse(rest).success).toBe(false);
+  });
+
+  it("rejects wrong type for isAnonymous (string instead of boolean)", () => {
+    expect(questionBroadcastSchema.safeParse({ ...validBroadcast, isAnonymous: "true" }).success).toBe(false);
+  });
+
+  it("rejects null payload", () => {
+    expect(questionBroadcastSchema.safeParse(null).success).toBe(false);
+  });
+
+  it("rejects undefined payload", () => {
+    expect(questionBroadcastSchema.safeParse(undefined).success).toBe(false);
+  });
+
+  it("rejects non-object payload (string)", () => {
+    expect(questionBroadcastSchema.safeParse("malicious").success).toBe(false);
+  });
+
+  it("strips unexpected extra fields and keeps the payload valid", () => {
+    const result = questionBroadcastSchema.safeParse({ ...validBroadcast, __proto__hack: "x", role: "admin" });
+    expect(result.success).toBe(true);
+    expect(result.success && "role" in result.data).toBe(false);
+  });
+});
+
+describe("questionDeletedBroadcastSchema", () => {
+  it("accepts a valid deletion payload", () => {
+    expect(questionDeletedBroadcastSchema.safeParse({ id: "q_abc123" }).success).toBe(true);
+  });
+
+  it("rejects empty id", () => {
+    expect(questionDeletedBroadcastSchema.safeParse({ id: "" }).success).toBe(false);
+  });
+
+  it("rejects missing id", () => {
+    expect(questionDeletedBroadcastSchema.safeParse({}).success).toBe(false);
+  });
+
+  it("rejects wrong type for id (number)", () => {
+    expect(questionDeletedBroadcastSchema.safeParse({ id: 123 }).success).toBe(false);
+  });
+
+  it("rejects null payload", () => {
+    expect(questionDeletedBroadcastSchema.safeParse(null).success).toBe(false);
   });
 });

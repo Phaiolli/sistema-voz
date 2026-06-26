@@ -12,7 +12,7 @@ async function requireAdmin() {
       ),
     };
   }
-  const role = (session.user as { role?: string }).role;
+  const role = session.user.role;
   if (role !== "admin") {
     return {
       err: NextResponse.json(

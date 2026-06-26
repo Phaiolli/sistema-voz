@@ -51,7 +51,7 @@ async function requireAuth(roles: string[]) {
       ),
     };
   }
-  const role = (session.user as { role?: string }).role ?? "";
+  const role = session.user.role;
   if (!roles.includes(role)) {
     return {
       err: NextResponse.json(
@@ -68,8 +68,8 @@ export async function GET() {
   if (guard.err) return guard.err;
 
   const session = guard.session!;
-  const role = (session.user as { role?: string }).role ?? "";
-  const userId = (session.user as { id?: string }).id ?? "";
+  const role = session.user.role;
+  const userId = session.user.id;
 
   const supabase = createServerClient();
   let query = supabase.from("events").select("*").order("starts_at", { ascending: false });
@@ -89,8 +89,8 @@ export async function POST(req: NextRequest) {
   if (guard.err) return guard.err;
 
   const session = guard.session!;
-  const role = (session.user as { role?: string }).role ?? "";
-  const userId = (session.user as { id?: string }).id ?? "";
+  const role = session.user.role;
+  const userId = session.user.id;
 
   const parsed = createEventSchema.safeParse(
     await req.json().catch(() => null),

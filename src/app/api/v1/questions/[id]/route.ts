@@ -3,9 +3,11 @@ import { createServerClient } from "@/lib/supabase";
 import { requireEventAccess } from "@/lib/api/auth-guard";
 import { patchQuestionSchema } from "@/lib/schemas";
 import { mapQuestionPublic } from "@/lib/api/question-mappers";
+import type { Database } from "@/lib/db/database.types";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function mapQuestion(row: Record<string, any>) {
+type QuestionRow = Database["public"]["Tables"]["questions"]["Row"];
+
+function mapQuestion(row: QuestionRow) {
   return {
     id: row.id,
     eventId: row.event_id,
@@ -56,7 +58,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const guard = await requireEventAccess(existing.event_id as string, ["admin", "mediador", "owner"]);
   if ("err" in guard) return guard.err;
 
-  let patch: Record<string, unknown> = {};
+  let patch: Database["public"]["Tables"]["questions"]["Update"] = {};
 
   if (action === "setNext") {
     await supabase

@@ -3,6 +3,7 @@ import { createServerClient } from "@/lib/supabase";
 import { requireEventAccess } from "@/lib/api/auth-guard";
 import { patchRegistrationSchema } from "@/lib/schemas";
 import { logError } from "@/lib/log";
+import type { Database } from "@/lib/db/database.types";
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string; regId: string }> }) {
   const { id: eventId, regId } = await params;
@@ -20,7 +21,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   const supabase = createServerClient();
   const now = new Date().toISOString();
-  const patch: Record<string, unknown> = {};
+  const patch: Database["public"]["Tables"]["registrations"]["Update"] = {};
 
   if (parsed.data.checkedIn !== undefined) {
     patch.checked_in = parsed.data.checkedIn;

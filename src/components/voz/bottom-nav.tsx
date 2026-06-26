@@ -44,7 +44,7 @@ function UsersIcon() {
 export function BottomNav() {
   const pathname = usePathname();
   const { data: session } = useSession();
-  const role = (session?.user as { role?: string } | undefined)?.role;
+  const role = session?.user?.role;
   const isAdmin = role === "admin" || role === "superadmin";
 
   const isEventos = pathname.startsWith("/admin/eventos");

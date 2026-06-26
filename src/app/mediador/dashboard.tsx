@@ -8,8 +8,28 @@ import { HeaderControls } from "@/components/voz/header-controls";
 import { createBrowserClient } from "@/lib/supabase";
 import { signOut, useSession } from "next-auth/react";
 import type { Question, QuestionStatus } from "@/lib/types";
+import { questionBroadcastSchema, questionDeletedBroadcastSchema, type QuestionBroadcast } from "@/lib/schemas";
 import { QRModal } from "./qr-modal";
 import { toast } from "sonner";
+
+/**
+ * Builds a {@link Question} from a validated public broadcast payload. PII
+ * fields (contact/email) are never broadcast, so they default to undefined; the
+ * `lgpdAccepted` marker defaults to `true` (the question only exists because it
+ * was accepted on submission).
+ */
+function questionFromBroadcast(payload: QuestionBroadcast): Question {
+  return {
+    id: payload.id,
+    eventId: payload.eventId,
+    authorName: payload.authorName,
+    text: payload.text,
+    status: payload.status,
+    isAnonymous: payload.isAnonymous,
+    lgpdAccepted: true,
+    createdAt: payload.createdAt,
+  };
+}
 
 type Tab = "unread" | "all" | "hidden";
 
@@ -122,14 +142,24 @@ export function MediatorDashboard() {
     const supabase = createBrowserClient();
     const channel = supabase.channel(`event:${eventId}:questions`)
       .on("broadcast", { event: "question:new" }, ({ payload }) => {
-        setQuestions((qs) => [payload as Question, ...qs]);
+        const parsed = questionBroadcastSchema.safeParse(payload);
+        if (!parsed.success) return;
+        setQuestions((qs) => [questionFromBroadcast(parsed.data), ...qs]);
         toast("Nova pergunta recebida.");
       })
       .on("broadcast", { event: "question:updated" }, ({ payload }) => {
-        setQuestions((qs) => qs.map((q) => q.id === (payload as Question).id ? (payload as Question) : q));
+        const parsed = questionBroadcastSchema.safeParse(payload);
+        if (!parsed.success) return;
+        const incoming = parsed.data;
+        // Preserve any moderator-only fields already loaded; overwrite the
+        // public fields carried by the broadcast.
+        setQuestions((qs) => qs.map((q) => q.id === incoming.id ? { ...q, ...questionFromBroadcast(incoming) } : q));
       })
       .on("broadcast", { event: "question:deleted" }, ({ payload }) => {
-        setQuestions((qs) => qs.filter((q) => q.id !== (payload as { id: string }).id));
+        const parsed = questionDeletedBroadcastSchema.safeParse(payload);
+        if (!parsed.success) return;
+        const { id } = parsed.data;
+        setQuestions((qs) => qs.filter((q) => q.id !== id));
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };

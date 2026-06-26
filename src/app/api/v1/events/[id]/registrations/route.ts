@@ -2,12 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase";
 import { requireEventAccess } from "@/lib/api/auth-guard";
 import { createRegistrationSchema } from "@/lib/schemas";
+import type { Database } from "@/lib/db/database.types";
 
 const RATE_LIMIT_MAX = 5;
 const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000; // 1 hour
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function mapRegistration(row: Record<string, any>) {
+type RegistrationRow = Database["public"]["Tables"]["registrations"]["Row"];
+
+function mapRegistration(row: RegistrationRow) {
   return {
     id: row.id,
     eventId: row.event_id,
@@ -60,8 +62,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: { code: "NOT_FOUND", message: "Evento não encontrado." } }, { status: 404 });
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const regConfig = (event.config as Record<string, any>)?.registration ?? {};
+  const regConfig = event.config?.registration ?? {};
 
   if (!regConfig.enabled) {
     return NextResponse.json({ error: { code: "REGISTRATION_CLOSED", message: "Inscrições não estão abertas." } }, { status: 422 });

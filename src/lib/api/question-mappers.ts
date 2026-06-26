@@ -14,8 +14,23 @@
  * Anonymous questions display "Anônimo". Email, contact and IP are never
  * exposed here. See ADR 011.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function mapQuestionPublic(row: Record<string, any>) {
+/**
+ * Minimal question row shape consumed by {@link mapQuestionPublic}.
+ *
+ * `is_anonymous` is optional because the mapper is also fed by Realtime payloads
+ * where the flag may be absent — it defaults to `false` (not anonymous).
+ */
+export interface QuestionPublicSource {
+  id: string;
+  event_id: string;
+  text: string;
+  is_anonymous?: boolean;
+  author_name: string;
+  status: string;
+  created_at: string;
+}
+
+export function mapQuestionPublic(row: QuestionPublicSource) {
   const isAnonymous = row.is_anonymous ?? false;
   return {
     id: row.id,

@@ -31,7 +31,7 @@ function EntrarForm() {
         return;
       }
       const session = await getSession();
-      const role = (session?.user as { role?: string })?.role;
+      const role = session?.user?.role;
       if (role === "superadmin") router.push("/plataforma");
       else if (role === "admin") router.push("/admin/eventos");
       else if (role === "owner") router.push("/dashboard");

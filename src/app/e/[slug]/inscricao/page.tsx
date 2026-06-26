@@ -1,10 +1,10 @@
 import { notFound } from "next/navigation";
 import { createServerClient } from "@/lib/supabase";
 import type { Event } from "@/lib/types";
+import type { Database } from "@/lib/db/database.types";
 import { InscricaoForm } from "./form";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function mapEvent(row: Record<string, any>): Event {
+function mapEvent(row: Database["public"]["Tables"]["events"]["Row"]): Event {
   return {
     id: row.id, slug: row.slug, name: row.name, startsAt: row.starts_at, endsAt: row.ends_at,
     place: row.place, address: row.address, status: row.status, about: row.about,

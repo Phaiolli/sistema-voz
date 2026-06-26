@@ -4,6 +4,17 @@ import { submitQuestionSchema } from "@/lib/schemas";
 import { getOwnerPlan, getEventQuestionCount, FREE_QUESTION_LIMIT } from "@/lib/plan-limits";
 import { requireEventAccess } from "@/lib/api/auth-guard";
 import { mapQuestionPublic } from "@/lib/api/question-mappers";
+import type { QuestionPublicSource } from "@/lib/api/question-mappers";
+import type { Database } from "@/lib/db/database.types";
+
+type QuestionRow = Database["public"]["Tables"]["questions"]["Row"];
+type QuestionStatus = QuestionRow["status"];
+
+const QUESTION_STATUSES: readonly QuestionStatus[] = ["pending", "next", "answered", "hidden"];
+
+function isQuestionStatus(value: string): value is QuestionStatus {
+  return (QUESTION_STATUSES as readonly string[]).includes(value);
+}
 
 const RATE_LIMIT_MAX = 10;
 const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000; // 1 hour
@@ -16,8 +27,10 @@ function error(code: string, message: string, status: number, details?: object) 
   return NextResponse.json({ error: { code, message, ...details } }, { status });
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function mapQuestion(row: Record<string, any>) {
+/** Full (non-IP) projection returned to authorized moderators/owners. */
+type QuestionFullRow = Omit<QuestionRow, "author_ip">;
+
+function mapQuestion(row: QuestionFullRow) {
   return {
     id: row.id,
     eventId: row.event_id,
@@ -135,19 +148,25 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ even
   const authorized = !("err" in guard);
 
   const supabase = createServerClient();
+  // The select column list is decided at runtime, so the parsed row type cannot
+  // be inferred from the literal; we narrow it explicitly per branch below.
+  const columns = authorized ? QUESTION_COLUMNS : "id, event_id, author_name, text, status, is_anonymous";
   let query = supabase
     .from("questions")
-    .select(authorized ? QUESTION_COLUMNS : "id, event_id, author_name, text, status, is_anonymous")
+    .select(columns)
     .eq("event_id", eventId)
     .order("created_at");
 
-  if (status) {
+  if (status && isQuestionStatus(status)) {
     query = query.eq("status", status);
   }
 
   const { data: rows, error: fetchErr } = await query;
   if (fetchErr) throw fetchErr;
 
-  const questions = (rows ?? []).map(authorized ? mapQuestion : mapQuestionPublic);
+  const safeRows = (rows ?? []) as unknown[];
+  const questions = authorized
+    ? (safeRows as QuestionFullRow[]).map(mapQuestion)
+    : (safeRows as QuestionPublicSource[]).map(mapQuestionPublic);
   return NextResponse.json({ questions });
 }

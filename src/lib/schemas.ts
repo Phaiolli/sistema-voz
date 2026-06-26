@@ -46,6 +46,10 @@ export const createEventSchema = z.object({
 });
 export const patchEventSchema = createEventSchema.partial();
 
+// `superadmin` é o papel de plataforma de maior privilégio e NÃO pode ser
+// criado/atribuído via API de usuários (mitiga escalonamento de privilégio —
+// BFLA). O tipo `UserRole` em `@/lib/types` inclui `superadmin` para leitura,
+// mas a criação fica restrita a provisionamento controlado (seed/manual).
 export const createUserSchema = z.object({
   name: z.string().min(2, "Nome muito curto.").max(100),
   email: z.string().email("E-mail inválido."),
@@ -98,3 +102,26 @@ export type PatchUserBody = z.infer<typeof patchUserSchema>;
 export type AssignMediatorBody = z.infer<typeof assignMediatorSchema>;
 export type CreateRegistrationBody = z.infer<typeof createRegistrationSchema>;
 export type PatchRegistrationBody = z.infer<typeof patchRegistrationSchema>;
+
+/**
+ * Shape of the public question payload sent over Realtime broadcasts, aligned
+ * with `mapQuestionPublic`. Clients MUST validate incoming broadcast payloads
+ * with this schema before trusting them — the channel is signed with the anon
+ * key, so any subscriber could publish a forged message.
+ */
+export const questionBroadcastSchema = z.object({
+  id: z.string().min(1),
+  eventId: z.string().min(1),
+  text: z.string(),
+  isAnonymous: z.boolean(),
+  authorName: z.string(),
+  status: z.enum(["pending", "next", "answered", "hidden"]),
+  createdAt: z.string(),
+});
+export type QuestionBroadcast = z.infer<typeof questionBroadcastSchema>;
+
+/** Payload of a `question:deleted` broadcast (only the id is needed). */
+export const questionDeletedBroadcastSchema = z.object({
+  id: z.string().min(1),
+});
+export type QuestionDeletedBroadcast = z.infer<typeof questionDeletedBroadcastSchema>;

@@ -16,13 +16,11 @@ interface GuardUser {
 /**
  * Reads `id` and `role` off the session user.
  *
- * The NextAuth `Session.user` augmentation lives in Lote 3; until then the
- * extra fields are not on the typed shape, so this is the single isolated cast.
+ * The fields are provided by the NextAuth `Session.user` augmentation in
+ * `types/next-auth.d.ts`.
  */
-// NOTE: cast isolado até a augmentation de next-auth (Lote 3 — tipos)
 function getSessionUser(session: Session): GuardUser {
-  const user = session.user as unknown as { id: string; role: Role };
-  return { id: user.id, role: user.role };
+  return { id: session.user.id, role: session.user.role };
 }
 
 function unauthorized(): NextResponse {

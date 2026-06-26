@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase";
 import { auth } from "@/lib/auth";
+import type { Database } from "@/lib/db/database.types";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function mapEvent(row: Record<string, any>) {
+type EventRow = Database["public"]["Tables"]["events"]["Row"];
+
+function mapEvent(row: EventRow) {
   return {
     id: row.id,
     slug: row.slug,
@@ -32,7 +34,7 @@ export async function GET(_req?: Request) {
     );
   }
 
-  const user = session.user as { id: string; role?: string };
+  const user = session.user;
   const supabase = createServerClient();
 
   if (user.role === "admin") {
@@ -53,9 +55,12 @@ export async function GET(_req?: Request) {
 
   if (assignErr) throw assignErr;
 
-  const result = (assignments ?? []).map((row) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const eventRow = Array.isArray(row.events) ? row.events[0] : (row.events as Record<string, any>);
+  // The embedded `events` relation cannot be inferred from the hand-written
+  // Database type (no Relationships metadata), so we describe the join shape.
+  type AssignmentJoinRow = { event_id: string; created_at: string; events: EventRow | EventRow[] | null };
+
+  const result = ((assignments ?? []) as unknown as AssignmentJoinRow[]).map((row) => {
+    const eventRow = Array.isArray(row.events) ? row.events[0] : row.events;
     return {
       eventId: row.event_id,
       assignedAt: row.created_at,

@@ -15,8 +15,7 @@ export default async function ApresentarPage({ params }: { params: Promise<{ eve
 
   if (!data) notFound();
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const theme = (data.theme ?? {}) as Record<string, any>;
+  const theme = data.theme ?? {};
 
   return (
     <ProjectionView

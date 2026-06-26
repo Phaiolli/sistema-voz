@@ -153,9 +153,24 @@ export interface Registration {
   createdAt: string;
 }
 
+/**
+ * Public projection of a question as broadcast over Realtime. Mirrors
+ * `mapQuestionPublic` — it deliberately excludes PII (email/contact/IP).
+ */
+export interface QuestionBroadcastPayload {
+  id: string;
+  eventId: string;
+  text: string;
+  isAnonymous: boolean;
+  authorName: string;
+  status: QuestionStatus;
+  createdAt: string;
+}
+
 export type WSMessage =
-  | { type: "question:new"; payload: Question }
-  | { type: "question:updated"; payload: Question }
+  | { type: "question:new"; payload: QuestionBroadcastPayload }
+  | { type: "question:updated"; payload: QuestionBroadcastPayload }
+  | { type: "question:deleted"; payload: { id: string } }
   | { type: "presenter:setCurrent"; payload: { questionId: string } }
   | { type: "presenter:setIndex"; payload: { index: number } };
 

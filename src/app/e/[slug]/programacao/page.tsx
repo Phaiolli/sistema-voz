@@ -4,9 +4,9 @@ import { ArrowLeft, Clock } from "lucide-react";
 import { createServerClient } from "@/lib/supabase";
 import { VozWordmark } from "@/components/voz/wordmark";
 import type { Event, EventPage, EventPageScheduleItem } from "@/lib/types";
+import type { Database } from "@/lib/db/database.types";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function mapEvent(row: Record<string, any>): Event {
+function mapEvent(row: Database["public"]["Tables"]["events"]["Row"]): Event {
   return {
     id: row.id, slug: row.slug, name: row.name, startsAt: row.starts_at, endsAt: row.ends_at,
     place: row.place, address: row.address, status: row.status, about: row.about,

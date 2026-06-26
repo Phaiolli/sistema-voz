@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth";
 import { patchEventSchema } from "@/lib/schemas";
 import { isEventOwnedBy } from "@/lib/plan-limits";
 import type { EventStatus, EventTheme, EventConfig } from "@/lib/types";
+import type { Database } from "@/lib/db/database.types";
 
 interface EventRow {
   id: string;
@@ -51,7 +52,7 @@ async function requireAuth(roles: string[]) {
       ),
     };
   }
-  const role = (session.user as { role?: string }).role ?? "";
+  const role = session.user.role;
   if (!roles.includes(role)) {
     return {
       err: NextResponse.json(
@@ -147,7 +148,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     }
   }
 
-  const patch: Record<string, unknown> = {};
+  const patch: Database["public"]["Tables"]["events"]["Update"] = {};
   if (body.name !== undefined) patch.name = body.name;
   if (body.slug !== undefined) patch.slug = body.slug;
   if (body.startsAt !== undefined) patch.starts_at = body.startsAt;
@@ -156,8 +157,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (body.address !== undefined) patch.address = body.address;
   if (body.status !== undefined) patch.status = body.status;
   if (body.about !== undefined) patch.about = body.about;
-  if (body.theme !== undefined) patch.theme = body.theme;
-  if (body.config !== undefined) patch.config = body.config;
+  if (body.theme !== undefined) patch.theme = body.theme as EventTheme;
+  if (body.config !== undefined) patch.config = body.config as EventConfig;
   patch.updated_at = new Date().toISOString();
 
   const { data: row, error: updateErr } = await supabase

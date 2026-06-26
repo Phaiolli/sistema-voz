@@ -2,9 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase";
 import { requireEventAccess } from "@/lib/api/auth-guard";
 import { assignMediatorSchema } from "@/lib/schemas";
+import type { Database } from "@/lib/db/database.types";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function mapUser(row: Record<string, any>) {
+type UserRow = Database["public"]["Tables"]["users"]["Row"];
+type MediatorUser = Pick<UserRow, "id" | "name" | "email" | "role" | "created_at" | "last_seen_at">;
+
+function mapUser(row: MediatorUser) {
   return {
     id: row.id,
     name: row.name,
@@ -23,17 +26,21 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 
   const supabase = createServerClient();
 
-  const { data: rows, error: fetchErr } = await supabase
+  const { data, error: fetchErr } = await supabase
     .from("mediator_assignments")
     .select("user_id, created_at, users(id, name, email, role, created_at, last_seen_at)")
     .eq("event_id", eventId);
 
   if (fetchErr) throw fetchErr;
 
-  const mediators = (rows ?? [])
+  // The embedded `users` relation cannot be inferred from the hand-written
+  // Database type (no Relationships metadata), so we describe the join shape.
+  type AssignmentJoinRow = { users: MediatorUser | MediatorUser[] | null };
+  const rows = (data ?? []) as unknown as AssignmentJoinRow[];
+
+  const mediators = rows
     .map((row) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const user = Array.isArray(row.users) ? row.users[0] : (row.users as Record<string, any>);
+      const user = Array.isArray(row.users) ? row.users[0] : row.users;
       return user ? mapUser(user) : null;
     })
     .filter(Boolean);

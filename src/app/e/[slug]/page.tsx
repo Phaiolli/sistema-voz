@@ -5,9 +5,9 @@ import { Calendar, MapPin, Mic, Lock, UserPlus } from "lucide-react";
 import { createServerClient } from "@/lib/supabase";
 import { VozWordmark } from "@/components/voz/wordmark";
 import type { Event, EventPage } from "@/lib/types";
+import type { Database } from "@/lib/db/database.types";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function mapEvent(row: Record<string, any>): Event {
+function mapEvent(row: Database["public"]["Tables"]["events"]["Row"]): Event {
   return {
     id: row.id,
     slug: row.slug,

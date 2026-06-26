@@ -3,9 +3,12 @@ import { createServerClient } from "@/lib/supabase";
 import { auth } from "@/lib/auth";
 import { createUserSchema } from "@/lib/schemas";
 import bcrypt from "bcryptjs";
+import type { Database } from "@/lib/db/database.types";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function mapUser(row: Record<string, any>) {
+type UserRow = Database["public"]["Tables"]["users"]["Row"];
+type UserPublic = Pick<UserRow, "id" | "name" | "email" | "role" | "created_at" | "last_seen_at">;
+
+function mapUser(row: UserPublic) {
   return {
     id: row.id,
     name: row.name,
@@ -26,7 +29,7 @@ async function requireAdmin() {
       ),
     };
   }
-  const role = (session.user as { role?: string }).role;
+  const role = session.user.role;
   if (role !== "admin") {
     return {
       err: NextResponse.json(

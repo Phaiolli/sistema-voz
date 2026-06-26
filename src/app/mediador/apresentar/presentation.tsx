@@ -6,6 +6,7 @@ import { ArrowLeft, ArrowRight, Check, X } from "lucide-react";
 import { VozLockup } from "@/components/voz/wordmark";
 import { createBrowserClient } from "@/lib/supabase";
 import type { Question } from "@/lib/types";
+import { questionBroadcastSchema } from "@/lib/schemas";
 
 export function PresentationMode() {
   const router = useRouter();
@@ -39,14 +40,19 @@ export function PresentationMode() {
     const channel = supabase
       .channel(`event:${eventId}:questions`)
       .on("broadcast", { event: "question:updated" }, ({ payload }) => {
+        const parsed = questionBroadcastSchema.safeParse(payload);
+        if (!parsed.success) return;
+        const incoming = parsed.data;
         setQueue((prev) => {
-          const updated = payload as Question;
-          if (updated.status === "next" || updated.status === "pending") {
-            const exists = prev.some((q) => q.id === updated.id);
-            if (exists) return prev.map((q) => (q.id === updated.id ? updated : q));
+          if (incoming.status === "next" || incoming.status === "pending") {
+            const existing = prev.find((q) => q.id === incoming.id);
+            const updated: Question = existing
+              ? { ...existing, ...incoming }
+              : { ...incoming, lgpdAccepted: true };
+            if (existing) return prev.map((q) => (q.id === incoming.id ? updated : q));
             return [...prev, updated];
           }
-          return prev.filter((q) => q.id !== updated.id);
+          return prev.filter((q) => q.id !== incoming.id);
         });
       })
       .subscribe();

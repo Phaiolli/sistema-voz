@@ -19,10 +19,10 @@ interface TabParticipantesProps {
 export function TabParticipantes({ participants, participantsLoading, slug, eventId }: TabParticipantesProps) {
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+      <div className="flex justify-between items-center mb-5">
         <div>
-          <h2 style={{ fontFamily: '"Archivo", sans-serif', fontWeight: 700, fontSize: 22, margin: 0 }}>Participantes</h2>
-          <p style={{ fontSize: 13, color: "hsl(var(--muted-foreground))", margin: "4px 0 0" }}>
+          <h2 className="font-bold text-[22px] m-0" style={{ fontFamily: '"Archivo", sans-serif' }}>Participantes</h2>
+          <p className="text-[13px] text-muted-foreground mt-1 mb-0 mx-0">
             Pessoas que enviaram perguntas neste evento — {participants.length} no total.
           </p>
         </div>
@@ -40,35 +40,35 @@ export function TabParticipantes({ participants, participantsLoading, slug, even
             a.download = `participantes-${slug || eventId}.csv`;
             a.click();
           }}
-          style={{ display: "inline-flex", alignItems: "center", gap: 6, height: 36, padding: "0 14px", borderRadius: 8, border: "1px solid hsl(var(--border))", background: "transparent", fontSize: 13, cursor: "pointer" }}
+          className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-lg border border-border bg-transparent text-[13px] cursor-pointer"
         >
           <Download size={14} aria-hidden /> Exportar CSV
         </button>
       </div>
-      <div style={{ border: "1px solid hsl(var(--border))", borderRadius: 10, overflow: "hidden" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
+      <div className="border border-border rounded-lg overflow-hidden">
+        <table className="w-full border-collapse text-sm">
           <thead>
-            <tr style={{ background: "hsl(var(--muted))", borderBottom: "1px solid hsl(var(--border))" }}>
+            <tr className="bg-muted border-b border-border">
               {["Nome", "WhatsApp", "E-mail", "Pergunta", "Anônimo?", "LGPD"].map((h) => (
-                <th key={h} style={{ padding: "10px 16px", textAlign: "left", fontWeight: 600, fontSize: 13 }}>{h}</th>
+                <th key={h} className="py-2.5 px-4 text-left font-semibold text-[13px]">{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {participantsLoading && (
-              <tr><td colSpan={6} style={{ padding: "24px 16px", textAlign: "center", color: "hsl(var(--muted-foreground))", fontSize: 13 }}>Carregando…</td></tr>
+              <tr><td colSpan={6} className="py-6 px-4 text-center text-muted-foreground text-[13px]">Carregando…</td></tr>
             )}
             {!participantsLoading && participants.length === 0 && (
-              <tr><td colSpan={6} style={{ padding: "24px 16px", textAlign: "center", color: "hsl(var(--muted-foreground))", fontSize: 13 }}>Nenhum participante ainda.</td></tr>
+              <tr><td colSpan={6} className="py-6 px-4 text-center text-muted-foreground text-[13px]">Nenhum participante ainda.</td></tr>
             )}
             {!participantsLoading && participants.map((p, i) => (
-              <tr key={i} style={{ borderTop: i === 0 ? undefined : "1px solid hsl(var(--border))" }}>
-                <td style={{ padding: "10px 16px", fontWeight: 500, whiteSpace: "nowrap" }}>{p.name}</td>
-                <td style={{ padding: "10px 16px", color: "hsl(var(--muted-foreground))", whiteSpace: "nowrap" }}>{p.whatsapp ?? "—"}</td>
-                <td style={{ padding: "10px 16px", color: "hsl(var(--muted-foreground))", whiteSpace: "nowrap" }}>{p.email ?? "—"}</td>
-                <td style={{ padding: "10px 16px", color: "hsl(var(--muted-foreground))", maxWidth: 320, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.questionText}</td>
-                <td style={{ padding: "10px 16px", textAlign: "center", whiteSpace: "nowrap", color: p.isAnonymous ? "hsl(var(--muted-foreground))" : "hsl(142 71% 45%)" }}>{p.isAnonymous ? "Sim" : "Não"}</td>
-                <td style={{ padding: "10px 16px", textAlign: "center", whiteSpace: "nowrap", color: p.lgpdAccepted ? "hsl(142 71% 45%)" : "hsl(var(--destructive))" }}>{p.lgpdAccepted ? "Sim" : "Não"}</td>
+              <tr key={i} className={i === 0 ? undefined : "border-t border-border"}>
+                <td className="py-2.5 px-4 font-medium whitespace-nowrap">{p.name}</td>
+                <td className="py-2.5 px-4 text-muted-foreground whitespace-nowrap">{p.whatsapp ?? "—"}</td>
+                <td className="py-2.5 px-4 text-muted-foreground whitespace-nowrap">{p.email ?? "—"}</td>
+                <td className="py-2.5 px-4 text-muted-foreground overflow-hidden whitespace-nowrap" style={{ maxWidth: 320, textOverflow: "ellipsis" }}>{p.questionText}</td>
+                <td className="py-2.5 px-4 text-center whitespace-nowrap" style={{ color: p.isAnonymous ? "hsl(var(--muted-foreground))" : "hsl(142 71% 45%)" }}>{p.isAnonymous ? "Sim" : "Não"}</td>
+                <td className="py-2.5 px-4 text-center whitespace-nowrap" style={{ color: p.lgpdAccepted ? "hsl(142 71% 45%)" : "hsl(var(--destructive))" }}>{p.lgpdAccepted ? "Sim" : "Não"}</td>
               </tr>
             ))}
           </tbody>

@@ -61,34 +61,34 @@ export function QuestionForm({ slug, eventId, eventName }: Props) {
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", minHeight: "100dvh" }}>
+    <div className="flex min-h-[100dvh] flex-col">
       <a href="#form-pergunta" className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:p-3 focus:bg-background focus:text-foreground">
         Pular para o formulário
       </a>
 
-      <header style={{ height: 52, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 12px", flexShrink: 0 }}>
-        <Link href={`/e/${slug}`} style={{ display: "inline-flex", alignItems: "center", gap: 6, color: "#fff", textDecoration: "none", fontSize: 14, padding: "8px", borderRadius: 8 }}>
+      <header className="flex h-[52px] shrink-0 items-center justify-between px-3">
+        <Link href={`/e/${slug}`} className="inline-flex items-center gap-1.5 rounded-lg p-2 text-sm text-white no-underline">
           <ArrowLeft size={20} aria-hidden />
           Voltar
         </Link>
         <VozLockup eventName={eventName} size={16} inverse />
-        <div style={{ width: 72 }} aria-hidden />
+        <div className="w-[72px]" aria-hidden />
       </header>
 
-      <main id="form-pergunta" style={{ flex: 1, padding: "8px 24px 24px", display: "flex", flexDirection: "column", gap: 20 }}>
+      <main id="form-pergunta" className="flex flex-1 flex-col gap-5 px-6 pt-2 pb-6">
         <div>
-          <h1 style={{ fontFamily: '"Archivo", sans-serif', fontWeight: 700, fontSize: 26, lineHeight: 1.15, color: "#fff", margin: 0 }}>
+          <h1 className="m-0 text-[26px] font-bold leading-[1.15] text-white" style={{ fontFamily: '"Archivo", sans-serif' }}>
             Sua pergunta vai{" "}
-            <span style={{ color: "hsl(var(--accent))" }}>direto</span> para o mediador.
+            <span className="text-accent">direto</span> para o mediador.
           </h1>
-          <p style={{ color: "hsl(var(--muted-foreground))", fontSize: 14, marginTop: 6 }}>
+          <p className="mt-1.5 text-sm text-muted-foreground">
             {anonymous
-              ? <>Sua pergunta será lida como <strong style={{ color: "#fff" }}>&quot;Anônimo&quot;</strong> no palco.</>
+              ? <>Sua pergunta será lida como <strong className="text-white">&quot;Anônimo&quot;</strong> no palco.</>
               : "Seu nome aparece no palco quando ela for lida."}
           </p>
         </div>
 
-        <form onSubmit={submit} noValidate style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+        <form onSubmit={submit} noValidate className="flex flex-col gap-4">
           <Field
             label="Seu nome"
             labelSuffix={anonymous ? "· só para o mediador, não será exibido" : undefined}
@@ -108,19 +108,17 @@ export function QuestionForm({ slug, eventId, eventName }: Props) {
           </Field>
 
           {/* Toggle anônimo */}
-          <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", marginTop: -8 }}>
+          <label className="-mt-2 flex cursor-pointer items-center gap-2.5">
             <div
               role="checkbox"
               aria-checked={anonymous}
               tabIndex={0}
               onClick={() => setAnonymous((v) => !v)}
               onKeyDown={(e) => { if (e.key === " " || e.key === "Enter") { e.preventDefault(); setAnonymous((v) => !v); } }}
+              className="flex h-5 w-5 shrink-0 cursor-pointer items-center justify-center rounded border-[1.5px] border-solid"
               style={{
-                width: 20, height: 20, borderRadius: 4, flexShrink: 0,
-                border: "1.5px solid", cursor: "pointer",
                 borderColor: anonymous ? "hsl(var(--accent))" : "hsl(var(--border))",
                 background: anonymous ? "hsl(var(--accent))" : "hsl(var(--muted))",
-                display: "flex", alignItems: "center", justifyContent: "center",
               }}
             >
               {anonymous && (
@@ -129,17 +127,17 @@ export function QuestionForm({ slug, eventId, eventName }: Props) {
                 </svg>
               )}
             </div>
-            <span style={{ fontSize: 14, color: "#fff" }}>
+            <span className="text-sm text-white">
               Enviar como anônimo
-              <span style={{ color: "hsl(var(--muted-foreground))", fontSize: 13 }}> · seu nome não será exibido no palco</span>
+              <span className="text-[13px] text-muted-foreground"> · seu nome não será exibido no palco</span>
             </span>
           </label>
 
           {anonymous && (
-            <div style={{ display: "flex", alignItems: "flex-start", gap: 8, padding: "10px 14px", borderRadius: 8, background: "hsl(var(--muted))", border: "1px solid hsl(var(--border))", marginTop: -8 }}>
-              <EyeOff size={15} style={{ color: "hsl(var(--muted-foreground))", flexShrink: 0, marginTop: 1 }} aria-hidden />
-              <p style={{ fontSize: 13, color: "hsl(var(--muted-foreground))", margin: 0, lineHeight: 1.5 }}>
-                Seu nome e contato ficam apenas com o mediador do evento. A pergunta aparece como <strong style={{ color: "#fff" }}>&quot;Anônimo&quot;</strong> para a plateia.
+            <div className="-mt-2 flex items-start gap-2 rounded-lg border border-border bg-muted px-3.5 py-2.5">
+              <EyeOff size={15} className="mt-px shrink-0 text-muted-foreground" aria-hidden />
+              <p className="m-0 text-[13px] leading-normal text-muted-foreground">
+                Seu nome e contato ficam apenas com o mediador do evento. A pergunta aparece como <strong className="text-white">&quot;Anônimo&quot;</strong> para a plateia.
               </p>
             </div>
           )}
@@ -197,25 +195,24 @@ export function QuestionForm({ slug, eventId, eventName }: Props) {
             <div
               id="f-q-counter"
               aria-live="polite"
-              style={{ fontSize: 13, marginTop: 4, textAlign: "right", color: overChars ? "hsl(var(--destructive))" : "hsl(var(--muted-foreground))", fontWeight: overChars ? 600 : 400 }}
+              className="mt-1 text-right text-[13px]"
+              style={{ color: overChars ? "hsl(var(--destructive))" : "hsl(var(--muted-foreground))", fontWeight: overChars ? 600 : 400 }}
             >
               {chars} / {MAX}
             </div>
           </Field>
 
-          <label style={{ display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer", color: "#fff", fontSize: 14 }}>
+          <label className="flex cursor-pointer items-start gap-2.5 text-sm text-white">
             <div
               role="checkbox"
               aria-checked={lgpd}
               tabIndex={0}
               onClick={() => setLgpd((v) => !v)}
               onKeyDown={(e) => { if (e.key === " " || e.key === "Enter") { e.preventDefault(); setLgpd((v) => !v); } }}
+              className="mt-px flex h-5 w-5 shrink-0 cursor-pointer items-center justify-center rounded border-[1.5px] border-solid"
               style={{
-                width: 20, height: 20, borderRadius: 4, flexShrink: 0, marginTop: 1,
-                border: "1.5px solid", cursor: "pointer",
                 borderColor: lgpd ? "hsl(var(--accent))" : "hsl(var(--border))",
                 background: lgpd ? "hsl(var(--accent))" : "hsl(var(--muted))",
-                display: "flex", alignItems: "center", justifyContent: "center",
               }}
             >
               {lgpd && (
@@ -226,19 +223,19 @@ export function QuestionForm({ slug, eventId, eventName }: Props) {
             </div>
             <span>
               Concordo com o uso dos meus dados para este evento.{" "}
-              <span style={{ color: "hsl(var(--muted-foreground))" }}>(LGPD)</span>
+              <span className="text-muted-foreground">(LGPD)</span>
             </span>
           </label>
           {showErr(lgpd) && (
-            <p style={{ color: "hsl(var(--destructive))", fontSize: 13, display: "flex", alignItems: "center", gap: 6, margin: "-8px 0 0" }}>
+            <p className="-mt-2 flex items-center gap-1.5 text-[13px] text-destructive">
               <AlertCircle size={12} aria-hidden /> É preciso aceitar para enviar.
             </p>
           )}
 
-          <div style={{ flex: 1, minHeight: 8 }} />
+          <div className="min-h-2 flex-1" />
 
           {!lgpd && (
-            <p style={{ textAlign: "center", color: "hsl(var(--muted-foreground))", fontSize: 13, margin: "-4px 0 0" }}>
+            <p className="-mt-1 text-center text-[13px] text-muted-foreground">
               Aceite os termos acima para enviar.
             </p>
           )}
@@ -246,13 +243,8 @@ export function QuestionForm({ slug, eventId, eventName }: Props) {
           <button
             type="submit"
             disabled={sending || !lgpd}
-            style={{
-              height: 52, width: "100%", borderRadius: 10, border: "none", cursor: (sending || !lgpd) ? "not-allowed" : "pointer",
-              display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-              fontSize: 16, fontWeight: 700,
-              background: "hsl(var(--accent))", color: "hsl(var(--accent-foreground))",
-              opacity: (sending || !lgpd) ? 0.4 : 1, transition: "opacity .15s",
-            }}
+            className="flex h-[52px] w-full cursor-pointer items-center justify-center gap-2 rounded-[10px] border-0 bg-accent text-base font-bold text-accent-foreground disabled:cursor-not-allowed disabled:opacity-40"
+            style={{ transition: "opacity .15s" }}
           >
             {sending ? "Enviando…" : <><Send size={18} aria-hidden /> Enviar pergunta</>}
           </button>
@@ -289,14 +281,14 @@ interface FieldProps {
 
 function Field({ label, labelSuffix, htmlFor, error, children }: FieldProps) {
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-      <label htmlFor={htmlFor} style={{ fontSize: 14, fontWeight: 500, color: "#fff" }}>
+    <div className="flex flex-col gap-1.5">
+      <label htmlFor={htmlFor} className="text-sm font-medium text-white">
         {label}
-        {labelSuffix && <span style={{ color: "hsl(var(--muted-foreground))", fontWeight: 400 }}> {labelSuffix}</span>}
+        {labelSuffix && <span className="font-normal text-muted-foreground"> {labelSuffix}</span>}
       </label>
       {children}
       {error && (
-        <p role="alert" id={`${htmlFor}-err`} style={{ color: "hsl(var(--destructive))", fontSize: 13, display: "flex", alignItems: "center", gap: 6, margin: 0 }}>
+        <p role="alert" id={`${htmlFor}-err`} className="m-0 flex items-center gap-1.5 text-[13px] text-destructive">
           <AlertCircle size={12} aria-hidden /> {error}
         </p>
       )}

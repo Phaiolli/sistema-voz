@@ -9,24 +9,25 @@ interface TabQrcodeProps {
 export function TabQrcode({ qrDataUrl, slug, downloadQr }: TabQrcodeProps) {
   return (
     <div style={{ maxWidth: 500 }}>
-      <h2 style={{ fontFamily: '"Archivo", sans-serif', fontWeight: 700, fontSize: 22, margin: "0 0 20px" }}>QR Code</h2>
-      <div style={{ background: "#fff", border: "1px solid hsl(var(--border))", borderRadius: 16, padding: 24, textAlign: "center", marginBottom: 16 }}>
+      <h2 className="font-bold text-[22px] mt-0 mb-5 mx-0" style={{ fontFamily: '"Archivo", sans-serif' }}>QR Code</h2>
+      <div className="bg-white border border-border rounded-2xl p-6 text-center mb-4">
         {qrDataUrl ? (
-          <img src={qrDataUrl} alt={`QR Code para /e/${slug}`} width={280} height={280} style={{ display: "block", margin: "0 auto" }} />
+          <img src={qrDataUrl} alt={`QR Code para /e/${slug}`} width={280} height={280} className="block mx-auto" />
         ) : (
-          <div style={{ width: 280, height: 280, margin: "0 auto", background: "hsl(var(--muted))", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", color: "hsl(var(--muted-foreground))", fontSize: 13 }}>
+          <div className="w-[280px] h-[280px] mx-auto bg-muted rounded-lg flex items-center justify-center text-muted-foreground text-[13px]">
             {slug ? "Gerando…" : "Salve o slug primeiro"}
           </div>
         )}
       </div>
-      <p style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 12, color: "hsl(var(--muted-foreground))", textAlign: "center", marginBottom: 16 }}>
+      <p className="text-xs text-muted-foreground text-center mb-4" style={{ fontFamily: '"JetBrains Mono", monospace' }}>
         {window?.location?.origin ?? "https://sistema-voz-beta.vercel.app"}/e/{slug || "slug-do-evento"}
       </p>
-      <div style={{ display: "flex", gap: 8 }}>
+      <div className="flex gap-2">
         <button
           onClick={() => downloadQr("png")}
           disabled={!qrDataUrl}
-          style={{ flex: 1, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6, height: 40, borderRadius: 8, border: "1px solid hsl(var(--border))", background: "transparent", fontSize: 14, cursor: qrDataUrl ? "pointer" : "not-allowed", opacity: qrDataUrl ? 1 : 0.5 }}
+          className="flex-1 inline-flex items-center justify-center gap-1.5 h-10 rounded-lg border border-border bg-transparent text-sm"
+          style={{ cursor: qrDataUrl ? "pointer" : "not-allowed", opacity: qrDataUrl ? 1 : 0.5 }}
         >
           <Download size={14} aria-hidden /> Baixar PNG
         </button>

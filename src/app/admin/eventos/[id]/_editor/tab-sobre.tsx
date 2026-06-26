@@ -39,61 +39,63 @@ export function TabSobre({
   addScheduleItem, updateScheduleItem, removeScheduleItem,
 }: TabSobreProps) {
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 28, maxWidth: 700 }}>
-      <h2 style={{ fontFamily: '"Archivo", sans-serif', fontWeight: 700, fontSize: 22, margin: 0 }}>Página do evento</h2>
+    <div className="flex flex-col gap-7" style={{ maxWidth: 700 }}>
+      <h2 className="font-bold text-[22px] m-0" style={{ fontFamily: '"Archivo", sans-serif' }}>Página do evento</h2>
 
       {/* Logo */}
       <SectionBlock title="Logo do evento">
-        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+        <div className="flex items-center gap-4">
           {logo && (
-            <div style={{ width: 80, height: 80, borderRadius: 10, border: "1px solid hsl(var(--border))", overflow: "hidden", background: "hsl(var(--muted))", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <Image src={logo} alt="Logo" width={80} height={80} style={{ objectFit: "contain", width: "100%", height: "100%" }} unoptimized />
+            <div className="w-20 h-20 rounded-lg border border-border overflow-hidden bg-muted shrink-0 flex items-center justify-center">
+              <Image src={logo} alt="Logo" width={80} height={80} className="object-contain w-full h-full" unoptimized />
             </div>
           )}
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            <input ref={logoInputRef} type="file" accept="image/*" style={{ display: "none" }} id="logo-upload" onChange={handleLogoUpload} />
+          <div className="flex flex-col gap-2">
+            <input ref={logoInputRef} type="file" accept="image/*" className="hidden" id="logo-upload" onChange={handleLogoUpload} />
             <label
               htmlFor="logo-upload"
-              style={{ display: "inline-flex", alignItems: "center", gap: 6, height: 36, padding: "0 14px", borderRadius: 8, border: "1px solid hsl(var(--border))", background: "transparent", fontSize: 13, cursor: logoUploading ? "not-allowed" : "pointer", opacity: logoUploading ? 0.6 : 1 }}
+              className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-lg border border-border bg-transparent text-[13px]"
+              style={{ cursor: logoUploading ? "not-allowed" : "pointer", opacity: logoUploading ? 0.6 : 1 }}
             >
               <Upload size={14} aria-hidden /> {logoUploading ? "Enviando…" : logo ? "Trocar logo" : "Fazer upload"}
             </label>
             {logo && (
-              <button onClick={() => setLogo("")} style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 12, color: "hsl(var(--destructive))", border: "none", background: "none", cursor: "pointer", padding: 0 }}>
+              <button onClick={() => setLogo("")} className="inline-flex items-center gap-1 text-xs text-destructive border-0 bg-none cursor-pointer p-0">
                 <X size={12} /> Remover
               </button>
             )}
-            <p style={{ fontSize: 12, color: "hsl(var(--muted-foreground))", margin: 0 }}>PNG, JPG, SVG · max 3 MB</p>
+            <p className="text-xs text-muted-foreground m-0">PNG, JPG, SVG · max 3 MB</p>
           </div>
         </div>
       </SectionBlock>
 
       {/* Imagem de capa */}
       <SectionBlock title="Imagem de capa">
-        <div style={{ display: "flex", alignItems: "flex-start", gap: 16 }}>
+        <div className="flex items-start gap-4">
           {coverUrl ? (
-            <div style={{ width: 120, height: 68, borderRadius: 8, overflow: "hidden", border: "1px solid hsl(var(--border))", flexShrink: 0 }}>
-              <Image src={coverUrl} alt="Capa" width={120} height={68} style={{ objectFit: "cover", width: "100%", height: "100%" }} unoptimized />
+            <div className="w-[120px] h-[68px] rounded-lg overflow-hidden border border-border shrink-0">
+              <Image src={coverUrl} alt="Capa" width={120} height={68} className="object-cover w-full h-full" unoptimized />
             </div>
           ) : (
-            <div style={{ width: 120, height: 68, borderRadius: 8, border: "1px dashed hsl(var(--border))", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, color: "hsl(var(--muted-foreground))" }}>
+            <div className="w-[120px] h-[68px] rounded-lg border border-dashed border-border flex items-center justify-center shrink-0 text-muted-foreground">
               <ImagePlus size={22} aria-hidden />
             </div>
           )}
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            <input ref={coverInputRef} type="file" accept="image/*" style={{ display: "none" }} id="cover-upload" onChange={handleCoverUpload} />
+          <div className="flex flex-col gap-2">
+            <input ref={coverInputRef} type="file" accept="image/*" className="hidden" id="cover-upload" onChange={handleCoverUpload} />
             <label
               htmlFor="cover-upload"
-              style={{ display: "inline-flex", alignItems: "center", gap: 6, height: 36, padding: "0 14px", borderRadius: 8, border: "1px solid hsl(var(--border))", background: "transparent", fontSize: 13, cursor: coverUploading ? "not-allowed" : "pointer", opacity: coverUploading ? 0.6 : 1 }}
+              className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-lg border border-border bg-transparent text-[13px]"
+              style={{ cursor: coverUploading ? "not-allowed" : "pointer", opacity: coverUploading ? 0.6 : 1 }}
             >
               <Upload size={14} aria-hidden /> {coverUploading ? "Enviando…" : coverUrl ? "Trocar capa" : "Fazer upload"}
             </label>
             {coverUrl && (
-              <button onClick={() => setCoverUrl("")} style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 12, color: "hsl(var(--destructive))", border: "none", background: "none", cursor: "pointer", padding: 0 }}>
+              <button onClick={() => setCoverUrl("")} className="inline-flex items-center gap-1 text-xs text-destructive border-0 bg-none cursor-pointer p-0">
                 <X size={12} /> Remover
               </button>
             )}
-            <p style={{ fontSize: 12, color: "hsl(var(--muted-foreground))", margin: 0 }}>Exibida como banner no evento · max 3 MB</p>
+            <p className="text-xs text-muted-foreground m-0">Exibida como banner no evento · max 3 MB</p>
           </div>
         </div>
       </SectionBlock>
@@ -112,7 +114,7 @@ export function TabSobre({
 
       {/* Organizador */}
       <SectionBlock title="Realização">
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+        <div className="grid grid-cols-2 gap-3">
           <Field label="Organização" htmlFor="ev-org">
             <input id="ev-org" value={organizer} onChange={(e) => setOrganizer(e.target.value)} style={smInp} placeholder="Nome da organização" />
           </Field>
@@ -123,17 +125,17 @@ export function TabSobre({
       </SectionBlock>
 
       {/* Programação */}
-      <SectionBlock title="Programação" action={<button onClick={addScheduleItem} style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 13, height: 30, padding: "0 10px", borderRadius: 6, border: "1px solid hsl(var(--border))", background: "transparent", cursor: "pointer" }}><Plus size={12} /> Adicionar</button>}>
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      <SectionBlock title="Programação" action={<button onClick={addScheduleItem} className="inline-flex items-center gap-1 text-[13px] h-[30px] px-2.5 rounded-md border border-border bg-transparent cursor-pointer"><Plus size={12} /> Adicionar</button>}>
+        <div className="flex flex-col gap-2.5">
           {schedule.length === 0 && (
-            <p style={{ fontSize: 13, color: "hsl(var(--muted-foreground))" }}>Nenhum item. Clique em &quot;Adicionar&quot; para incluir.</p>
+            <p className="text-[13px] text-muted-foreground">Nenhum item. Clique em &quot;Adicionar&quot; para incluir.</p>
           )}
           {schedule.map((item) => (
-            <div key={item.id} style={{ display: "grid", gridTemplateColumns: "80px 1fr 1fr auto", gap: 8, alignItems: "start", padding: 12, background: "hsl(var(--muted))", borderRadius: 8 }}>
+            <div key={item.id} className="grid gap-2 items-start p-3 bg-muted rounded-lg" style={{ gridTemplateColumns: "80px 1fr 1fr auto" }}>
               <input value={item.time} onChange={(e) => updateScheduleItem(item.id, { time: e.target.value })} placeholder="14h00" style={smInp} aria-label="Horário" />
               <input value={item.title} onChange={(e) => updateScheduleItem(item.id, { title: e.target.value })} placeholder="Título" style={smInp} aria-label="Título" />
               <input value={item.description ?? ""} onChange={(e) => updateScheduleItem(item.id, { description: e.target.value })} placeholder="Descrição (opcional)" style={smInp} aria-label="Descrição" />
-              <button onClick={() => removeScheduleItem(item.id)} aria-label="Remover" style={{ height: 36, width: 36, borderRadius: 6, border: "1px solid hsl(var(--border))", background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "hsl(var(--destructive))", flexShrink: 0 }}>
+              <button onClick={() => removeScheduleItem(item.id)} aria-label="Remover" className="h-9 w-9 rounded-md border border-border bg-transparent cursor-pointer flex items-center justify-center text-destructive shrink-0">
                 <X size={14} />
               </button>
             </div>
@@ -142,36 +144,36 @@ export function TabSobre({
       </SectionBlock>
 
       {/* Palestrantes */}
-      <SectionBlock title="Palestrantes" action={<button onClick={addSpeaker} style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 13, height: 30, padding: "0 10px", borderRadius: 6, border: "1px solid hsl(var(--border))", background: "transparent", cursor: "pointer" }}><Plus size={12} /> Adicionar</button>}>
-        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+      <SectionBlock title="Palestrantes" action={<button onClick={addSpeaker} className="inline-flex items-center gap-1 text-[13px] h-[30px] px-2.5 rounded-md border border-border bg-transparent cursor-pointer"><Plus size={12} /> Adicionar</button>}>
+        <div className="flex flex-col gap-3.5">
           {speakers.length === 0 && (
-            <p style={{ fontSize: 13, color: "hsl(var(--muted-foreground))" }}>Nenhum palestrante. Clique em &quot;Adicionar&quot; para incluir.</p>
+            <p className="text-[13px] text-muted-foreground">Nenhum palestrante. Clique em &quot;Adicionar&quot; para incluir.</p>
           )}
           {speakers.map((sp) => (
-            <div key={sp.id} style={{ padding: 14, background: "hsl(var(--muted))", borderRadius: 10, border: "1px solid hsl(var(--border))" }}>
-              <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+            <div key={sp.id} className="p-3.5 bg-muted rounded-lg border border-border">
+              <div className="flex gap-3 items-start">
                 {/* Photo */}
-                <div style={{ flexShrink: 0 }}>
-                  <div style={{ width: 60, height: 60, borderRadius: "50%", overflow: "hidden", background: "hsl(var(--background))", border: "1px solid hsl(var(--border))", marginBottom: 6, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <div className="shrink-0">
+                  <div className="w-[60px] h-[60px] rounded-full overflow-hidden bg-background border border-border mb-1.5 flex items-center justify-center">
                     {sp.photoUrl ? (
-                      <Image src={sp.photoUrl} alt={sp.name || "Palestrante"} width={60} height={60} style={{ objectFit: "cover", width: "100%", height: "100%" }} unoptimized />
+                      <Image src={sp.photoUrl} alt={sp.name || "Palestrante"} width={60} height={60} className="object-cover w-full h-full" unoptimized />
                     ) : (
-                      <span style={{ fontSize: 10, color: "hsl(var(--muted-foreground))" }}>foto</span>
+                      <span className="text-[10px] text-muted-foreground">foto</span>
                     )}
                   </div>
-                  <label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, cursor: "pointer", color: "hsl(var(--muted-foreground))" }}>
+                  <label className="flex items-center gap-1 text-[11px] cursor-pointer text-muted-foreground">
                     <Upload size={10} />
-                    <input type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadSpeakerPhoto(sp.id, f); e.target.value = ""; }} />
+                    <input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadSpeakerPhoto(sp.id, f); e.target.value = ""; }} />
                     Foto
                   </label>
                 </div>
                 {/* Fields */}
-                <div style={{ flex: 1, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                <div className="flex-1 grid grid-cols-2 gap-2">
                   <input value={sp.name} onChange={(e) => updateSpeaker(sp.id, { name: e.target.value })} placeholder="Nome" style={smInp} aria-label="Nome do palestrante" />
                   <input value={sp.role} onChange={(e) => updateSpeaker(sp.id, { role: e.target.value })} placeholder="Cargo / especialidade" style={smInp} aria-label="Cargo" />
                   <textarea value={sp.bio ?? ""} onChange={(e) => updateSpeaker(sp.id, { bio: e.target.value })} placeholder="Mini bio" rows={2} style={{ ...smInp, gridColumn: "1 / -1", resize: "vertical" }} aria-label="Bio" />
                 </div>
-                <button onClick={() => removeSpeaker(sp.id)} aria-label="Remover palestrante" style={{ height: 30, width: 30, borderRadius: 6, border: "1px solid hsl(var(--border))", background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "hsl(var(--destructive))", flexShrink: 0 }}>
+                <button onClick={() => removeSpeaker(sp.id)} aria-label="Remover palestrante" className="h-[30px] w-[30px] rounded-md border border-border bg-transparent cursor-pointer flex items-center justify-center text-destructive shrink-0">
                   <X size={14} />
                 </button>
               </div>

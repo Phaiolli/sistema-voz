@@ -59,12 +59,12 @@ export function QuestionSlot({ q, role, projectedId, onClick, onPrev, onNext, on
     >
       {/* Active projection indicator bar */}
       {isProjected && (
-        <div style={{ position: "absolute", top: 0, left: 3, right: 0, height: 2, background: "hsl(var(--primary))" }} aria-hidden />
+        <div className="absolute top-0 right-0 left-[3px] h-0.5 bg-primary" aria-hidden />
       )}
 
       {/* Position label chip */}
       {labelText && (
-        <div style={{ padding: "6px 12px 0 12px" }}>
+        <div className="pt-1.5 px-3">
           <span style={{
             display: "inline-block", padding: "1px 7px", borderRadius: 4,
             background: labelColor.bg, color: labelColor.text,
@@ -113,7 +113,7 @@ export function QuestionSlot({ q, role, projectedId, onClick, onPrev, onNext, on
 
       {/* Action bar — single row, never wraps */}
       {isCurrent && (
-        <div style={{ padding: "10px 16px 14px", borderTop: "1px solid hsl(var(--border))", display: "flex", gap: 8 }}>
+        <div className="flex gap-2 border-t border-border" style={{ padding: "10px 16px 14px" }}>
           <button
             onClick={onPrev}
             disabled={!onPrev}

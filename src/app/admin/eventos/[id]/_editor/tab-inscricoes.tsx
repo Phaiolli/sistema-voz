@@ -24,17 +24,17 @@ export function TabInscricoes({
 }: TabInscricoesProps) {
   return (
     <div style={{ maxWidth: 800 }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
-        <h2 style={{ fontFamily: '"Archivo", sans-serif', fontWeight: 700, fontSize: 22, margin: 0 }}>Inscrições</h2>
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="font-bold text-[22px] m-0" style={{ fontFamily: '"Archivo", sans-serif' }}>Inscrições</h2>
         {slug && (
-          <a href={`/e/${slug}/inscricao`} target="_blank" rel="noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 6, height: 34, padding: "0 12px", borderRadius: 8, border: "1px solid hsl(var(--border))", fontSize: 13, color: "hsl(var(--foreground))", textDecoration: "none" }}>
+          <a href={`/e/${slug}/inscricao`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 h-[34px] px-3 rounded-lg border border-border text-[13px] text-foreground no-underline">
             <ExternalLink size={13} /> Ver formulário
           </a>
         )}
       </div>
 
       {/* Config */}
-      <div style={{ padding: 20, background: "hsl(var(--muted) / .4)", border: "1px solid hsl(var(--border))", borderRadius: 12, marginBottom: 24, display: "flex", flexDirection: "column", gap: 16 }}>
+      <div className="p-5 bg-muted/40 border border-border rounded-xl mb-6 flex flex-col gap-4">
         <Toggle
           label="Inscrições abertas"
           description="Habilita o formulário público de inscrição."
@@ -42,7 +42,7 @@ export function TabInscricoes({
           onToggle={() => setRegEnabled((v) => !v)}
         />
         {regEnabled && (
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+          <div className="grid grid-cols-2 gap-4">
             <Field label="Abertura das inscrições" htmlFor="reg-opens">
               <input id="reg-opens" type="datetime-local" value={regOpensAt} onChange={(e) => setRegOpensAt(e.target.value)} style={inp} />
             </Field>
@@ -54,57 +54,58 @@ export function TabInscricoes({
         <button
           onClick={handleSave}
           disabled={saving}
-          style={{ alignSelf: "flex-start", display: "inline-flex", alignItems: "center", gap: 6, height: 36, padding: "0 14px", borderRadius: 8, border: "none", background: "hsl(var(--primary))", color: "hsl(var(--primary-foreground))", fontSize: 13, fontWeight: 600, cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.7 : 1 }}
+          className="self-start inline-flex items-center gap-1.5 h-9 px-3.5 rounded-lg border-0 bg-primary text-primary-foreground text-[13px] font-semibold"
+          style={{ cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.7 : 1 }}
         >
           <Save size={13} /> {saving ? "Salvando…" : "Salvar configurações"}
         </button>
       </div>
 
       {/* List */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-        <p style={{ fontWeight: 600, fontSize: 15, margin: 0 }}>{registrations.length} inscritos</p>
+      <div className="flex items-center justify-between mb-3">
+        <p className="font-semibold text-[15px] m-0">{registrations.length} inscritos</p>
         {registrations.length > 0 && (
           <button
             onClick={exportCsv}
-            style={{ display: "inline-flex", alignItems: "center", gap: 6, height: 34, padding: "0 12px", borderRadius: 8, border: "1px solid hsl(var(--border))", background: "transparent", fontSize: 13, cursor: "pointer" }}
+            className="inline-flex items-center gap-1.5 h-[34px] px-3 rounded-lg border border-border bg-transparent text-[13px] cursor-pointer"
           >
             <FileDown size={14} aria-hidden /> Exportar CSV
           </button>
         )}
       </div>
-      {regsLoading && <div style={{ padding: 32, textAlign: "center", color: "hsl(var(--muted-foreground))" }}>Carregando…</div>}
+      {regsLoading && <div className="p-8 text-center text-muted-foreground">Carregando…</div>}
       {!regsLoading && registrations.length === 0 && (
-        <div style={{ padding: 32, textAlign: "center", color: "hsl(var(--muted-foreground))" }}>Nenhum inscrito ainda.</div>
+        <div className="p-8 text-center text-muted-foreground">Nenhum inscrito ainda.</div>
       )}
       {!regsLoading && registrations.length > 0 && (
-        <div style={{ border: "1px solid hsl(var(--border))", borderRadius: 12, overflow: "hidden" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+        <div className="border border-border rounded-xl overflow-hidden">
+          <table className="w-full border-collapse text-[13px]">
             <thead>
-              <tr style={{ background: "hsl(var(--muted))", borderBottom: "1px solid hsl(var(--border))" }}>
+              <tr className="bg-muted border-b border-border">
                 {["Nome", "E-mail", "Telefone", "CPF", "Check-in", "Kit", "Ações"].map((h) => (
-                  <th key={h} style={{ padding: "10px 14px", textAlign: "left", fontWeight: 600 }}>{h}</th>
+                  <th key={h} className="py-2.5 px-3.5 text-left font-semibold">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {registrations.map((reg, i) => (
-                <tr key={reg.id} style={{ borderBottom: i < registrations.length - 1 ? "1px solid hsl(var(--border))" : "none" }}>
-                  <td style={{ padding: "10px 14px", fontWeight: 500 }}>{reg.name}</td>
-                  <td style={{ padding: "10px 14px", color: "hsl(var(--muted-foreground))" }}>{reg.email}</td>
-                  <td style={{ padding: "10px 14px", color: "hsl(var(--muted-foreground))" }}>{reg.phone ?? "—"}</td>
-                  <td style={{ padding: "10px 14px", color: "hsl(var(--muted-foreground))" }}>{reg.document ?? "—"}</td>
-                  <td style={{ padding: "10px 14px" }}>
+                <tr key={reg.id} className={i < registrations.length - 1 ? "border-b border-border" : undefined}>
+                  <td className="py-2.5 px-3.5 font-medium">{reg.name}</td>
+                  <td className="py-2.5 px-3.5 text-muted-foreground">{reg.email}</td>
+                  <td className="py-2.5 px-3.5 text-muted-foreground">{reg.phone ?? "—"}</td>
+                  <td className="py-2.5 px-3.5 text-muted-foreground">{reg.document ?? "—"}</td>
+                  <td className="py-2.5 px-3.5">
                     <Badge active={reg.checkedIn} label={reg.checkedIn ? "Sim" : "Não"} />
                   </td>
-                  <td style={{ padding: "10px 14px" }}>
+                  <td className="py-2.5 px-3.5">
                     <Badge active={reg.kitDelivered} label={reg.kitDelivered ? "Sim" : "Não"} />
                   </td>
-                  <td style={{ padding: "10px 14px" }}>
-                    <div style={{ display: "flex", gap: 6 }}>
-                      <button onClick={() => toggleRegistrationField(reg, "checkedIn")} style={{ display: "inline-flex", alignItems: "center", gap: 4, height: 28, padding: "0 8px", borderRadius: 6, border: "1px solid hsl(var(--border))", background: "transparent", fontSize: 11, cursor: "pointer" }}>
+                  <td className="py-2.5 px-3.5">
+                    <div className="flex gap-1.5">
+                      <button onClick={() => toggleRegistrationField(reg, "checkedIn")} className="inline-flex items-center gap-1 h-7 px-2 rounded-md border border-border bg-transparent text-[11px] cursor-pointer">
                         <CheckCircle2 size={11} /> {reg.checkedIn ? "Desfazer" : "Check-in"}
                       </button>
-                      <button onClick={() => toggleRegistrationField(reg, "kitDelivered")} style={{ display: "inline-flex", alignItems: "center", gap: 4, height: 28, padding: "0 8px", borderRadius: 6, border: "1px solid hsl(var(--border))", background: "transparent", fontSize: 11, cursor: "pointer" }}>
+                      <button onClick={() => toggleRegistrationField(reg, "kitDelivered")} className="inline-flex items-center gap-1 h-7 px-2 rounded-md border border-border bg-transparent text-[11px] cursor-pointer">
                         <Package size={11} /> {reg.kitDelivered ? "Desfazer kit" : "Kit"}
                       </button>
                     </div>

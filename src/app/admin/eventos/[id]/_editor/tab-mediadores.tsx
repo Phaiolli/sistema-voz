@@ -20,12 +20,12 @@ interface TabMediadoresProps {
 export function TabMediadores({ handleCreateMediator, newMed, setNewMed, mediatorsLoading, mediators, handleRemoveMediator }: TabMediadoresProps) {
   return (
     <div style={{ maxWidth: 600 }}>
-      <h2 style={{ fontFamily: '"Archivo", sans-serif', fontWeight: 700, fontSize: 22, margin: "0 0 20px" }}>Mediadores</h2>
+      <h2 className="font-bold text-[22px] mt-0 mb-5 mx-0" style={{ fontFamily: '"Archivo", sans-serif' }}>Mediadores</h2>
 
       {/* Create form */}
-      <form onSubmit={handleCreateMediator} style={{ padding: 16, background: "hsl(var(--muted))", borderRadius: 10, border: "1px solid hsl(var(--border))", marginBottom: 24, display: "flex", flexDirection: "column", gap: 12 }}>
-        <p style={{ fontSize: 14, fontWeight: 600, margin: 0 }}>Novo mediador</p>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+      <form onSubmit={handleCreateMediator} className="p-4 bg-muted rounded-lg border border-border mb-6 flex flex-col gap-3">
+        <p className="text-sm font-semibold m-0">Novo mediador</p>
+        <div className="grid grid-cols-2 gap-2.5">
           <Field label="Nome" htmlFor="med-name">
             <input id="med-name" required value={newMed.name} onChange={(e) => setNewMed((m) => ({ ...m, name: e.target.value }))} style={smInp} placeholder="Nome completo" />
           </Field>
@@ -39,29 +39,30 @@ export function TabMediadores({ handleCreateMediator, newMed, setNewMed, mediato
         <button
           type="submit"
           disabled={newMed.submitting}
-          style={{ alignSelf: "flex-start", display: "inline-flex", alignItems: "center", gap: 6, height: 36, padding: "0 14px", borderRadius: 8, border: "none", background: "hsl(var(--primary))", color: "hsl(var(--primary-foreground))", fontSize: 13, fontWeight: 600, cursor: newMed.submitting ? "not-allowed" : "pointer", opacity: newMed.submitting ? 0.7 : 1 }}
+          className="self-start inline-flex items-center gap-1.5 h-9 px-3.5 rounded-lg border-0 bg-primary text-primary-foreground text-[13px] font-semibold"
+          style={{ cursor: newMed.submitting ? "not-allowed" : "pointer", opacity: newMed.submitting ? 0.7 : 1 }}
         >
           <Plus size={14} aria-hidden /> {newMed.submitting ? "Criando…" : "Criar e atribuir"}
         </button>
       </form>
 
       {/* List */}
-      {mediatorsLoading && <div style={{ padding: 24, textAlign: "center", color: "hsl(var(--muted-foreground))" }}>Carregando…</div>}
+      {mediatorsLoading && <div className="p-6 text-center text-muted-foreground">Carregando…</div>}
       {!mediatorsLoading && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        <div className="flex flex-col gap-2">
           {mediators.length === 0 && (
-            <p style={{ fontSize: 14, color: "hsl(var(--muted-foreground))", textAlign: "center", padding: 24 }}>Nenhum mediador atribuído.</p>
+            <p className="text-sm text-muted-foreground text-center p-6">Nenhum mediador atribuído.</p>
           )}
           {mediators.map((m) => (
-            <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", background: "hsl(var(--muted))", borderRadius: 10, border: "1px solid hsl(var(--border))" }}>
-              <div style={{ width: 36, height: 36, borderRadius: "50%", background: "hsl(var(--primary) / .15)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700, flexShrink: 0 }}>
+            <div key={m.id} className="flex items-center gap-3 py-3 px-4 bg-muted rounded-lg border border-border">
+              <div className="w-9 h-9 rounded-full bg-primary/15 flex items-center justify-center text-xs font-bold shrink-0">
                 {m.name.split(" ").map((w) => w[0]).slice(0, 2).join("")}
               </div>
-              <div style={{ flex: 1 }}>
-                <p style={{ fontWeight: 600, fontSize: 14, margin: 0 }}>{m.name}</p>
-                <p style={{ fontSize: 12, color: "hsl(var(--muted-foreground))", margin: 0 }}>{m.email}</p>
+              <div className="flex-1">
+                <p className="font-semibold text-sm m-0">{m.name}</p>
+                <p className="text-xs text-muted-foreground m-0">{m.email}</p>
               </div>
-              <button onClick={() => handleRemoveMediator(m.id)} style={{ height: 32, padding: "0 10px", borderRadius: 6, border: "1px solid hsl(var(--border))", background: "transparent", fontSize: 12, cursor: "pointer", color: "hsl(var(--destructive))" }}>
+              <button onClick={() => handleRemoveMediator(m.id)} className="h-8 px-2.5 rounded-md border border-border bg-transparent text-xs cursor-pointer text-destructive">
                 Remover
               </button>
             </div>

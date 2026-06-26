@@ -268,41 +268,43 @@ export function QRModal({ slug, eventName, theme = {}, onClose }: QRModalProps) 
       aria-modal="true"
       aria-labelledby="qr-title"
       onClick={onClose}
-      style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.65)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100, backdropFilter: "blur(6px)", padding: 16 }}
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+      style={{ background: "rgba(0,0,0,.65)", backdropFilter: "blur(6px)" }}
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        style={{ background: "hsl(var(--background))", borderRadius: 20, padding: 24, maxWidth: 480, width: "100%", boxShadow: "0 24px 80px rgba(0,0,0,.4)", display: "flex", flexDirection: "column", gap: 16, maxHeight: "calc(100dvh - 32px)", overflow: "auto" }}
+        className="flex flex-col gap-4 w-full p-6 rounded-[20px] overflow-auto bg-background"
+        style={{ maxWidth: 480, boxShadow: "0 24px 80px rgba(0,0,0,.4)", maxHeight: "calc(100dvh - 32px)" }}
       >
         {/* Header */}
-        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+        <div className="flex items-start justify-between gap-3">
           <div>
-            <h2 id="qr-title" style={{ fontFamily: '"Archivo", sans-serif', fontWeight: 700, fontSize: 20, margin: 0 }}>Poster do evento</h2>
-            <p style={{ fontSize: 13, color: "hsl(var(--muted-foreground))", margin: "4px 0 0" }}>
+            <h2 id="qr-title" className="m-0 font-bold text-xl" style={{ fontFamily: '"Archivo", sans-serif' }}>Poster do evento</h2>
+            <p className="text-[13px] text-muted-foreground" style={{ margin: "4px 0 0" }}>
               Formato A5 · identidade visual do evento
             </p>
           </div>
-          <button onClick={onClose} aria-label="Fechar" style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 36, height: 36, borderRadius: 8, border: "1px solid hsl(var(--border))", background: "transparent", cursor: "pointer", flexShrink: 0 }}>
+          <button onClick={onClose} aria-label="Fechar" className="flex items-center justify-center w-9 h-9 shrink-0 rounded-lg border border-border bg-transparent cursor-pointer">
             <X size={16} aria-hidden />
           </button>
         </div>
 
         {/* Poster preview */}
-        <div style={{ borderRadius: 12, overflow: "hidden", background: "hsl(var(--muted))", aspectRatio: "148 / 210", display: "flex", alignItems: "center", justifyContent: "center", minHeight: 200 }}>
+        <div className="flex items-center justify-center overflow-hidden rounded-xl bg-muted" style={{ aspectRatio: "148 / 210", minHeight: 200 }}>
           {previewDataUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={previewDataUrl}
               alt="Poster do evento"
-              style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }}
+              className="block w-full h-full object-contain"
             />
           ) : (
-            <span style={{ fontSize: 13, color: "hsl(var(--muted-foreground))" }}>Gerando poster…</span>
+            <span className="text-[13px] text-muted-foreground">Gerando poster…</span>
           )}
         </div>
 
         {/* Actions */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+        <div className="grid gap-2" style={{ gridTemplateColumns: "1fr 1fr 1fr" }}>
           <ActionButton
             icon={<Download size={15} aria-hidden />}
             label="Baixar PDF"

@@ -63,21 +63,21 @@ export default function FinanceiroPage() {
     : 0;
 
   return (
-    <div style={{ minHeight: "100dvh", background: "hsl(var(--background))", color: "hsl(var(--foreground))" }}>
+    <div className="bg-background text-foreground" style={{ minHeight: "100dvh" }}>
       <PlataformaHeader active="financeiro" />
 
-      <main style={{ maxWidth: 1200, margin: "0 auto", padding: "32px 24px" }}>
-        <div style={{ marginBottom: 28 }}>
-          <h1 style={{ fontFamily: '"Archivo", sans-serif', fontWeight: 700, fontSize: 24, margin: "0 0 4px" }}>
+      <main className="mx-auto px-6 py-8" style={{ maxWidth: 1200 }}>
+        <div className="mb-7">
+          <h1 className="font-bold" style={{ fontFamily: '"Archivo", sans-serif', fontSize: 24, margin: "0 0 4px" }}>
             Financeiro
           </h1>
-          <p style={{ fontSize: 13, color: "hsl(var(--muted-foreground))", margin: 0 }}>
+          <p className="text-muted-foreground" style={{ fontSize: 13, margin: 0 }}>
             Receita e pagamentos da plataforma via Stripe.
           </p>
         </div>
 
         {/* Summary cards */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16, marginBottom: 28 }}>
+        <div className="grid gap-4 mb-7" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))" }}>
           <SummaryCard label="Receita total" value={loading ? "—" : brl(stats?.revenue.total ?? 0)} />
           <SummaryCard
             label="Este mês"
@@ -96,23 +96,23 @@ export default function FinanceiroPage() {
         </div>
 
         {/* Monthly revenue chart */}
-        <div style={{ background: "hsl(var(--muted))", border: "1px solid hsl(var(--border))", borderRadius: 16, padding: 24, marginBottom: 28 }}>
-          <p style={{ fontFamily: '"Archivo", sans-serif', fontWeight: 600, fontSize: 15, margin: "0 0 24px" }}>
+        <div className="bg-muted border border-border rounded-2xl p-6 mb-7">
+          <p className="font-semibold" style={{ fontFamily: '"Archivo", sans-serif', fontSize: 15, margin: "0 0 24px" }}>
             Receita mensal — últimos 6 meses
           </p>
           {loading ? (
-            <p style={{ fontSize: 13, color: "hsl(var(--muted-foreground))" }}>Carregando…</p>
+            <p className="text-muted-foreground" style={{ fontSize: 13 }}>Carregando…</p>
           ) : (
-            <div style={{ display: "flex", alignItems: "flex-end", gap: 12, height: 140 }}>
+            <div className="flex items-end gap-3" style={{ height: 140 }}>
               {stats?.monthlyRevenue.map(m => {
                 const h = maxMonthly > 0 ? Math.max(6, Math.round((m.amount / maxMonthly) * 120)) : 6;
                 return (
-                  <div key={m.month} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
-                    <span style={{ fontSize: 11, fontWeight: 600, color: m.amount > 0 ? "hsl(var(--foreground))" : "hsl(var(--muted-foreground))" }}>
+                  <div key={m.month} className="flex-1 flex flex-col items-center gap-2">
+                    <span className="font-semibold" style={{ fontSize: 11, color: m.amount > 0 ? "hsl(var(--foreground))" : "hsl(var(--muted-foreground))" }}>
                       {m.amount > 0 ? brl(m.amount) : "—"}
                     </span>
-                    <div style={{ width: "100%", height: h, borderRadius: 6, background: m.amount > 0 ? "hsl(var(--primary))" : "hsl(var(--border))" }} />
-                    <span style={{ fontSize: 12, color: "hsl(var(--muted-foreground))", whiteSpace: "nowrap", textTransform: "capitalize" }}>{m.label}</span>
+                    <div className="w-full rounded-md" style={{ height: h, background: m.amount > 0 ? "hsl(var(--primary))" : "hsl(var(--border))" }} />
+                    <span className="text-muted-foreground whitespace-nowrap capitalize" style={{ fontSize: 12 }}>{m.label}</span>
                   </div>
                 );
               })}
@@ -121,19 +121,19 @@ export default function FinanceiroPage() {
         </div>
 
         {/* Payments table */}
-        <div style={{ background: "hsl(var(--muted))", border: "1px solid hsl(var(--border))", borderRadius: 16, padding: 24 }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20, flexWrap: "wrap", gap: 12 }}>
-            <p style={{ fontFamily: '"Archivo", sans-serif', fontWeight: 600, fontSize: 15, margin: 0 }}>
+        <div className="bg-muted border border-border rounded-2xl p-6">
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
+            <p className="font-semibold m-0" style={{ fontFamily: '"Archivo", sans-serif', fontSize: 15 }}>
               Todos os pagamentos ({filtered.length})
             </p>
-            <div style={{ display: "flex", gap: 6 }}>
+            <div className="flex gap-1.5">
               {(["all", "paid", "pending"] as const).map(f => (
-                <button key={f} onClick={() => setFilter(f)} style={{
-                  height: 32, padding: "0 12px", borderRadius: 8, border: "1px solid hsl(var(--border))",
-                  background: filter === f ? "hsl(var(--primary))" : "hsl(var(--background))",
-                  color: filter === f ? "#fff" : "hsl(var(--muted-foreground))",
-                  fontSize: 13, fontWeight: 500, cursor: "pointer", fontFamily: "inherit",
-                }}>
+                <button
+                  key={f}
+                  onClick={() => setFilter(f)}
+                  className={`h-8 px-3 rounded-lg border border-border font-medium cursor-pointer ${filter === f ? "bg-primary" : "bg-background text-muted-foreground"}`}
+                  style={{ fontSize: 13, fontFamily: "inherit", color: filter === f ? "#fff" : undefined }}
+                >
                   {{ all: "Todos", paid: "Pagos", pending: "Pendentes" }[f]}
                 </button>
               ))}
@@ -141,30 +141,30 @@ export default function FinanceiroPage() {
           </div>
 
           {loading ? (
-            <p style={{ fontSize: 13, color: "hsl(var(--muted-foreground))" }}>Carregando…</p>
+            <p className="text-muted-foreground" style={{ fontSize: 13 }}>Carregando…</p>
           ) : filtered.length === 0 ? (
-            <p style={{ fontSize: 13, color: "hsl(var(--muted-foreground))", textAlign: "center", padding: "32px 0" }}>
+            <p className="text-center text-muted-foreground py-8" style={{ fontSize: 13 }}>
               Nenhum pagamento encontrado.
             </p>
           ) : (
             <div style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+              <table className="w-full" style={{ borderCollapse: "collapse", fontSize: 13 }}>
                 <thead>
-                  <tr style={{ borderBottom: "1px solid hsl(var(--border))" }}>
+                  <tr className="border-b border-border">
                     {["Usuário", "Evento", "Valor", "Status", "Stripe", "Data"].map(h => (
-                      <th key={h} style={{ padding: "0 12px 12px 0", textAlign: "left", fontWeight: 600, color: "hsl(var(--muted-foreground))", fontSize: 12, textTransform: "uppercase", letterSpacing: ".05em" }}>{h}</th>
+                      <th key={h} className="text-left font-semibold text-muted-foreground uppercase" style={{ padding: "0 12px 12px 0", fontSize: 12, letterSpacing: ".05em" }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {filtered.map(p => (
-                    <tr key={p.id} style={{ borderBottom: "1px solid hsl(var(--border))" }}>
+                    <tr key={p.id} className="border-b border-border">
                       <td style={{ padding: "12px 12px 12px 0" }}>
-                        <p style={{ margin: 0, fontWeight: 500 }}>{p.ownerName}</p>
-                        <p style={{ margin: 0, color: "hsl(var(--muted-foreground))", fontSize: 12 }}>{p.ownerEmail}</p>
+                        <p className="m-0 font-medium">{p.ownerName}</p>
+                        <p className="m-0 text-muted-foreground" style={{ fontSize: 12 }}>{p.ownerEmail}</p>
                       </td>
-                      <td style={{ padding: "12px 12px 12px 0", color: "hsl(var(--muted-foreground))", maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.eventName}</td>
-                      <td style={{ padding: "12px 12px 12px 0", fontWeight: 700 }}>{brl(p.amount)}</td>
+                      <td className="text-muted-foreground overflow-hidden whitespace-nowrap" style={{ padding: "12px 12px 12px 0", maxWidth: 160, textOverflow: "ellipsis" }}>{p.eventName}</td>
+                      <td className="font-bold" style={{ padding: "12px 12px 12px 0" }}>{brl(p.amount)}</td>
                       <td style={{ padding: "12px 12px 12px 0" }}>
                         <StatusBadge status={p.status} />
                       </td>
@@ -174,15 +174,16 @@ export default function FinanceiroPage() {
                             href={`https://dashboard.stripe.com/payments/${p.stripePaymentIntentId}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            style={{ display: "inline-flex", alignItems: "center", gap: 4, color: "hsl(var(--primary))", textDecoration: "none", fontSize: 12 }}
+                            className="inline-flex items-center gap-1 text-primary no-underline"
+                            style={{ fontSize: 12 }}
                           >
                             {p.stripePaymentIntentId.slice(0, 14)}… <ExternalLink size={10} />
                           </a>
                         ) : (
-                          <span style={{ color: "hsl(var(--muted-foreground))", fontSize: 12 }}>—</span>
+                          <span className="text-muted-foreground" style={{ fontSize: 12 }}>—</span>
                         )}
                       </td>
-                      <td style={{ padding: "12px 0 12px 0", color: "hsl(var(--muted-foreground))", fontSize: 12, whiteSpace: "nowrap" }}>
+                      <td className="text-muted-foreground whitespace-nowrap" style={{ padding: "12px 0 12px 0", fontSize: 12 }}>
                         {new Date(p.paidAt ?? p.createdAt).toLocaleDateString("pt-BR")}
                       </td>
                     </tr>
@@ -201,12 +202,12 @@ function SummaryCard({ label, value, badge, badgePositive, accent }: {
   label: string; value: string; badge?: string; badgePositive?: boolean; accent?: boolean;
 }) {
   return (
-    <div style={{ background: accent ? "hsl(38 92% 54% / .08)" : "hsl(var(--background))", border: `1px solid ${accent ? "hsl(38 92% 54% / .3)" : "hsl(var(--border))"}`, borderRadius: 12, padding: "16px 20px" }}>
-      <p style={{ fontSize: 12, fontWeight: 600, color: "hsl(var(--muted-foreground))", textTransform: "uppercase", letterSpacing: ".06em", margin: "0 0 8px" }}>{label}</p>
-      <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-        <span style={{ fontFamily: '"Archivo", sans-serif', fontWeight: 700, fontSize: 22 }}>{value}</span>
+    <div className="rounded-xl py-4 px-5 border" style={{ background: accent ? "hsl(38 92% 54% / .08)" : "hsl(var(--background))", borderColor: accent ? "hsl(38 92% 54% / .3)" : "hsl(var(--border))" }}>
+      <p className="font-semibold text-muted-foreground uppercase" style={{ fontSize: 12, letterSpacing: ".06em", margin: "0 0 8px" }}>{label}</p>
+      <div className="flex items-baseline gap-2">
+        <span className="font-bold" style={{ fontFamily: '"Archivo", sans-serif', fontSize: 22 }}>{value}</span>
         {badge && (
-          <span style={{ fontSize: 12, fontWeight: 600, color: badgePositive ? "hsl(142 71% 36%)" : "hsl(0 72% 51%)" }}>
+          <span className="font-semibold" style={{ fontSize: 12, color: badgePositive ? "hsl(142 71% 36%)" : "hsl(0 72% 51%)" }}>
             {badge}
           </span>
         )}
@@ -223,7 +224,7 @@ function StatusBadge({ status }: { status: string }) {
   };
   const s = map[status] ?? map.pending;
   return (
-    <span style={{ padding: "3px 10px", borderRadius: 999, fontSize: 12, fontWeight: 600, color: s.color, background: s.bg }}>
+    <span className="py-1 px-2.5 rounded-full font-semibold" style={{ fontSize: 12, color: s.color, background: s.bg }}>
       {s.label}
     </span>
   );

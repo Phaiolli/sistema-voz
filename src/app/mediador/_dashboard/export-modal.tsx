@@ -79,18 +79,19 @@ export function ExportModal({ eventId, eventSlug, onClose }: { eventId: string; 
       role="dialog"
       aria-modal
       aria-labelledby="export-modal-title"
-      style={{ position: "fixed", inset: 0, background: "hsl(var(--background) / .75)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50, backdropFilter: "blur(4px)" }}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-background/75"
+      style={{ backdropFilter: "blur(4px)" }}
     >
-      <div style={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 14, padding: 24, maxWidth: 680, width: "calc(100% - 32px)", display: "flex", flexDirection: "column", gap: 16, maxHeight: "80dvh" }}>
+      <div className="flex flex-col gap-4 p-6 rounded-[14px] border border-border" style={{ background: "hsl(var(--card))", maxWidth: 680, width: "calc(100% - 32px)", maxHeight: "80dvh" }}>
 
         {/* Header */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
-          <p id="export-modal-title" style={{ fontFamily: '"Archivo", sans-serif', fontWeight: 600, fontSize: 16, margin: 0 }}>Exportar dados</p>
+        <div className="flex items-center justify-between shrink-0">
+          <p id="export-modal-title" className="m-0 font-semibold text-base" style={{ fontFamily: '"Archivo", sans-serif' }}>Exportar dados</p>
           <button onClick={onClose} style={{ ...ghostSmallStyle, padding: "0 10px", fontSize: 16 }} aria-label="Fechar">✕</button>
         </div>
 
         {/* Tabs */}
-        <div style={{ display: "flex", gap: 0, borderBottom: "1px solid hsl(var(--border))", flexShrink: 0 }}>
+        <div className="flex shrink-0 border-b border-border">
           {(["participantes", "inscritos"] as const).map((t) => {
             const count = t === "participantes" ? participants.length : registrations.length;
             const isActive = tab === t;
@@ -111,7 +112,7 @@ export function ExportModal({ eventId, eventSlug, onClose }: { eventId: string; 
               >
                 {t === "participantes" ? "Participantes" : "Inscritos"}
                 {!loading && (
-                  <span style={{ marginLeft: 6, fontSize: 11, padding: "1px 6px", borderRadius: 10, background: "hsl(var(--muted))", color: "hsl(var(--muted-foreground))" }}>
+                  <span className="ml-1.5 text-[11px] px-1.5 py-px rounded-[10px] bg-muted text-muted-foreground">
                     {count}
                   </span>
                 )}
@@ -121,21 +122,21 @@ export function ExportModal({ eventId, eventSlug, onClose }: { eventId: string; 
         </div>
 
         {/* Table */}
-        <div style={{ flex: 1, overflowY: "auto", border: "1px solid hsl(var(--border))", borderRadius: 8, minHeight: 0 }}>
+        <div className="flex-1 min-h-0 overflow-y-auto rounded-lg border border-border">
           {loading ? (
-            <div style={{ padding: 32, textAlign: "center", color: "hsl(var(--muted-foreground))", fontSize: 13 }}>Carregando…</div>
+            <div className="p-8 text-center text-[13px] text-muted-foreground">Carregando…</div>
           ) : tab === "participantes" ? (
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+            <table className="w-full text-[13px]" style={{ borderCollapse: "collapse" }}>
               <thead>
-                <tr style={{ background: "hsl(var(--muted))", borderBottom: "1px solid hsl(var(--border))" }}>
+                <tr className="bg-muted border-b border-border">
                   {["Nome", "WhatsApp", "E-mail", "Pergunta", "Anônimo?", "LGPD"].map((h) => (
-                    <th key={h} style={{ padding: "8px 12px", textAlign: "left", fontWeight: 600, fontSize: 12 }}>{h}</th>
+                    <th key={h} className="py-2 px-3 text-left font-semibold text-xs">{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {participants.length === 0 ? (
-                  <tr><td colSpan={6} style={{ padding: "24px 12px", textAlign: "center", color: "hsl(var(--muted-foreground))" }}>Nenhum participante identificado.</td></tr>
+                  <tr><td colSpan={6} className="py-6 px-3 text-center text-muted-foreground">Nenhum participante identificado.</td></tr>
                 ) : participants.map((p, i) => (
                   <tr key={i} style={{ borderTop: i === 0 ? undefined : "1px solid hsl(var(--border) / .5)" }}>
                     <td style={{ padding: "8px 12px", fontWeight: 500, whiteSpace: "nowrap" }}>{p.name}</td>
@@ -149,17 +150,17 @@ export function ExportModal({ eventId, eventSlug, onClose }: { eventId: string; 
               </tbody>
             </table>
           ) : (
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+            <table className="w-full text-[13px]" style={{ borderCollapse: "collapse" }}>
               <thead>
-                <tr style={{ background: "hsl(var(--muted))", borderBottom: "1px solid hsl(var(--border))" }}>
+                <tr className="bg-muted border-b border-border">
                   {["Nome", "E-mail", "Telefone", "Presença"].map((h) => (
-                    <th key={h} style={{ padding: "8px 12px", textAlign: "left", fontWeight: 600, fontSize: 12 }}>{h}</th>
+                    <th key={h} className="py-2 px-3 text-left font-semibold text-xs">{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {registrations.length === 0 ? (
-                  <tr><td colSpan={4} style={{ padding: "24px 12px", textAlign: "center", color: "hsl(var(--muted-foreground))" }}>Nenhum inscrito ainda.</td></tr>
+                  <tr><td colSpan={4} className="py-6 px-3 text-center text-muted-foreground">Nenhum inscrito ainda.</td></tr>
                 ) : registrations.map((r, i) => (
                   <tr key={i} style={{ borderTop: i === 0 ? undefined : "1px solid hsl(var(--border) / .5)" }}>
                     <td style={{ padding: "8px 12px", fontWeight: 500 }}>{r.name}</td>
@@ -176,7 +177,7 @@ export function ExportModal({ eventId, eventSlug, onClose }: { eventId: string; 
         </div>
 
         {/* Footer */}
-        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", flexShrink: 0 }}>
+        <div className="flex gap-2 justify-end shrink-0">
           <button onClick={onClose} style={outlineBtnStyle}>Fechar</button>
           <button
             onClick={handleDownload}

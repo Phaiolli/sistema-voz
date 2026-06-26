@@ -28,8 +28,8 @@ export const smInp: React.CSSProperties = { ...inp, fontSize: 14, padding: "8px 
 
 export function Field({ label, htmlFor, children }: { label: string; htmlFor: string; children: React.ReactNode }) {
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-      <label htmlFor={htmlFor} style={{ fontSize: 14, fontWeight: 500 }}>{label}</label>
+    <div className="flex flex-col gap-1.5">
+      <label htmlFor={htmlFor} className="text-sm font-medium">{label}</label>
       {children}
     </div>
   );
@@ -37,9 +37,9 @@ export function Field({ label, htmlFor, children }: { label: string; htmlFor: st
 
 export function SectionBlock({ title, children, action }: { title: string; children: React.ReactNode; action?: React.ReactNode }) {
   return (
-    <div style={{ padding: 20, background: "hsl(var(--muted) / .4)", border: "1px solid hsl(var(--border))", borderRadius: 12 }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-        <p style={{ fontSize: 14, fontWeight: 600, margin: 0 }}>{title}</p>
+    <div className="p-5 bg-muted/40 border border-border rounded-xl">
+      <div className="flex items-center justify-between mb-3.5">
+        <p className="text-sm font-semibold m-0">{title}</p>
         {action}
       </div>
       {children}
@@ -50,10 +50,10 @@ export function SectionBlock({ title, children, action }: { title: string; child
 export function ConfigToggle({ label, description, defaultChecked }: { label: string; description: string; defaultChecked?: boolean }) {
   const [checked, setChecked] = useState(defaultChecked ?? false);
   return (
-    <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16 }}>
+    <div className="flex items-start justify-between gap-4">
       <div>
-        <p style={{ fontWeight: 500, fontSize: 15, margin: "0 0 2px" }}>{label}</p>
-        <p style={{ fontSize: 13, color: "hsl(var(--muted-foreground))", margin: 0 }}>{description}</p>
+        <p className="font-medium text-[15px] mt-0 mb-0.5 mx-0">{label}</p>
+        <p className="text-[13px] text-muted-foreground m-0">{description}</p>
       </div>
       <Toggle checked={checked} onToggle={() => setChecked((v) => !v)} />
     </div>
@@ -62,20 +62,20 @@ export function ConfigToggle({ label, description, defaultChecked }: { label: st
 
 export function Toggle({ label, description, checked, onToggle }: { label?: string; description?: string; checked: boolean; onToggle: () => void }) {
   return (
-    <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16, width: "100%" }}>
+    <div className="flex items-start justify-between gap-4 w-full">
       {(label || description) && (
         <div>
-          {label && <p style={{ fontWeight: 500, fontSize: 15, margin: "0 0 2px" }}>{label}</p>}
-          {description && <p style={{ fontSize: 13, color: "hsl(var(--muted-foreground))", margin: 0 }}>{description}</p>}
+          {label && <p className="font-medium text-[15px] mt-0 mb-0.5 mx-0">{label}</p>}
+          {description && <p className="text-[13px] text-muted-foreground m-0">{description}</p>}
         </div>
       )}
       <button
         role="switch"
         aria-checked={checked}
         onClick={onToggle}
-        style={{ width: 44, height: 24, borderRadius: 999, border: "none", cursor: "pointer", position: "relative", flexShrink: 0, background: checked ? "hsl(var(--primary))" : "hsl(var(--muted))" }}
+        className={`w-11 h-6 rounded-full border-0 cursor-pointer relative shrink-0 ${checked ? "bg-primary" : "bg-muted"}`}
       >
-        <span style={{ position: "absolute", top: 2, left: checked ? 22 : 2, width: 20, height: 20, borderRadius: "50%", background: "#fff" }} />
+        <span className="absolute top-0.5 w-5 h-5 rounded-full bg-white" style={{ left: checked ? 22 : 2 }} />
       </button>
     </div>
   );
@@ -83,7 +83,10 @@ export function Toggle({ label, description, checked, onToggle }: { label?: stri
 
 export function Badge({ active, label }: { active: boolean; label: string }) {
   return (
-    <span style={{ padding: "3px 8px", borderRadius: 999, fontSize: 11, fontWeight: 600, background: active ? "hsl(142 71% 45% / .12)" : "hsl(var(--muted))", color: active ? "hsl(142 71% 35%)" : "hsl(var(--muted-foreground))" }}>
+    <span
+      className="rounded-full text-[11px] font-semibold"
+      style={{ padding: "3px 8px", background: active ? "hsl(142 71% 45% / .12)" : "hsl(var(--muted))", color: active ? "hsl(142 71% 35%)" : "hsl(var(--muted-foreground))" }}
+    >
       {label}
     </span>
   );

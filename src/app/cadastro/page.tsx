@@ -71,7 +71,7 @@ export default function CadastroPage() {
           {/* Brand panel — desktop only */}
           <aside className="lo-brand" aria-hidden="true">
             <VozWordmark size={28} inverse />
-            <div style={{ flex: 1 }} />
+            <div className="flex-1" />
             <div>
               <p className="lo-hero">
                 Crie<span className="lo-dot">.</span><br />

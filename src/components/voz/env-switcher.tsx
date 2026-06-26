@@ -38,26 +38,14 @@ export function EnvSwitcher({ active }: EnvSwitcherProps) {
     <div
       role="tablist"
       aria-label="Alternar ambiente"
-      style={{
-        display: "inline-flex",
-        background: "hsl(var(--muted))",
-        border: "1px solid hsl(var(--border))",
-        borderRadius: 9,
-        padding: 3,
-        gap: 2,
-        flexShrink: 0,
-      }}
+      className="inline-flex shrink-0 gap-0.5 rounded-[9px] border border-border bg-muted p-0.5"
     >
       <Link
         role="tab"
         aria-selected={active === "admin"}
         href="/admin/eventos"
+        className="rounded-md px-3.5 py-1 text-[13px] font-semibold no-underline"
         style={{
-          padding: "5px 14px",
-          borderRadius: 7,
-          fontSize: 13,
-          fontWeight: 600,
-          textDecoration: "none",
           background: active === "admin" ? "hsl(var(--background))" : "transparent",
           color: active === "admin" ? "hsl(var(--foreground))" : "hsl(var(--muted-foreground))",
           boxShadow: active === "admin" ? "0 1px 3px rgba(0,0,0,.1)" : "none",
@@ -69,12 +57,8 @@ export function EnvSwitcher({ active }: EnvSwitcherProps) {
         role="tab"
         aria-selected={active === "mediador"}
         href="/mediador"
+        className="rounded-md px-3.5 py-1 text-[13px] font-semibold no-underline"
         style={{
-          padding: "5px 14px",
-          borderRadius: 7,
-          fontSize: 13,
-          fontWeight: 600,
-          textDecoration: "none",
           background: active === "mediador" ? "hsl(var(--background))" : "transparent",
           color: active === "mediador" ? "hsl(var(--foreground))" : "hsl(var(--muted-foreground))",
           boxShadow: active === "mediador" ? "0 1px 3px rgba(0,0,0,.1)" : "none",

@@ -37,31 +37,18 @@ export function HeaderControls() {
   const abbr = initials(name, email);
 
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+    <div className="flex items-center gap-1.5">
       {email && (
-        <div className="hc-user" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <div className="hc-user flex items-center gap-2">
           <div
             aria-hidden
-            style={{
-              width: 32,
-              height: 32,
-              borderRadius: "50%",
-              background: "hsl(var(--primary))",
-              color: "hsl(var(--primary-foreground))",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: 12,
-              fontWeight: 700,
-              flexShrink: 0,
-              userSelect: "none",
-            }}
+            className="flex h-8 w-8 shrink-0 select-none items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-bold"
           >
             {abbr}
           </div>
-          <div className="hc-name" style={{ display: "flex", flexDirection: "column", lineHeight: 1.2 }}>
-            {name && <span style={{ fontSize: 13, fontWeight: 600, color: "hsl(var(--foreground))", whiteSpace: "nowrap", maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis" }}>{name}</span>}
-            <span style={{ fontSize: 11, color: "hsl(var(--muted-foreground))", whiteSpace: "nowrap", maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis" }}>{email}</span>
+          <div className="hc-name flex flex-col leading-[1.2]">
+            {name && <span className="overflow-hidden text-ellipsis whitespace-nowrap max-w-[160px] text-[13px] font-semibold text-foreground">{name}</span>}
+            <span className="overflow-hidden text-ellipsis whitespace-nowrap max-w-[160px] text-[11px] text-muted-foreground">{email}</span>
           </div>
         </div>
       )}
@@ -69,7 +56,7 @@ export function HeaderControls() {
         onClick={() => signOut({ callbackUrl: "/entrar" })}
         aria-label="Sair da conta"
         title="Sair"
-        style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6, height: 44, padding: "0 12px", borderRadius: 8, border: "1px solid hsl(var(--border))", background: "transparent", fontSize: 13, cursor: "pointer", color: "hsl(var(--foreground))", flexShrink: 0 }}
+        className="inline-flex h-11 shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-border bg-transparent px-3 text-[13px] text-foreground"
       >
         <LogOut size={15} aria-hidden />
         <span className="hc-logout-label">Sair</span>

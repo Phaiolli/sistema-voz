@@ -134,38 +134,39 @@ export default function ContaPage() {
   const isPaid = (planData?.plan ?? u?.plan) === "paid";
 
   return (
-    <div style={{ minHeight: "100dvh", background: "hsl(var(--background))", color: "hsl(var(--foreground))", paddingBottom: 88 }}>
+    <div className="bg-background text-foreground" style={{ minHeight: "100dvh", paddingBottom: 88 }}>
       {/* Header */}
-      <header style={{ height: 56, borderBottom: "1px solid hsl(var(--border))", display: "flex", alignItems: "center", padding: "0 16px", gap: 10, position: "sticky", top: 0, background: "hsl(var(--background))", zIndex: 10 }}>
+      <header className="flex items-center gap-2.5 border-b border-border px-4 sticky top-0 bg-background z-10" style={{ height: 56 }}>
         <VozWordmark size={20} />
         <EnvSwitcher active="admin" />
-        <div style={{ flex: 1 }} />
+        <div className="flex-1" />
         <button
           onClick={() => signOut({ callbackUrl: "/entrar" })}
-          style={{ display: "inline-flex", alignItems: "center", gap: 6, height: 44, padding: "0 14px", borderRadius: 8, border: "1px solid hsl(var(--border))", background: "transparent", fontSize: 13, cursor: "pointer", color: "hsl(var(--foreground))" }}
+          className="inline-flex items-center gap-1.5 px-3.5 rounded-lg border border-border bg-transparent text-[13px] cursor-pointer text-foreground"
+          style={{ height: 44 }}
         >
           <LogOut size={14} aria-hidden />
           <span className="conta-logout-lbl">Sair</span>
         </button>
       </header>
 
-      <main style={{ maxWidth: 560, margin: "0 auto", padding: "32px 16px", display: "flex", flexDirection: "column", gap: 24 }}>
-        <h1 style={{ fontFamily: '"Archivo", sans-serif', fontWeight: 700, fontSize: "clamp(22px, 5vw, 28px)", margin: 0 }}>Minha conta</h1>
+      <main className="mx-auto py-8 px-4 flex flex-col gap-6" style={{ maxWidth: 560 }}>
+        <h1 className="font-bold m-0" style={{ fontFamily: '"Archivo", sans-serif', fontSize: "clamp(22px, 5vw, 28px)" }}>Minha conta</h1>
 
         {/* Avatar + info */}
-        <div style={{ display: "flex", alignItems: "center", gap: 16, padding: 20, background: "hsl(var(--muted))", borderRadius: 12, border: "1px solid hsl(var(--border))" }}>
-          <div style={{ width: 56, height: 56, borderRadius: "50%", background: "hsl(var(--primary))", color: "hsl(var(--primary-foreground))", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, fontWeight: 700, flexShrink: 0 }}>
+        <div className="flex items-center gap-4 p-5 bg-muted rounded-xl border border-border">
+          <div className="flex items-center justify-center shrink-0 rounded-full bg-primary text-primary-foreground text-xl font-bold" style={{ width: 56, height: 56 }}>
             {abbr}
           </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <p style={{ fontWeight: 600, fontSize: 16, margin: "0 0 4px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{u?.name ?? "—"}</p>
-            <p style={{ fontSize: 13, color: "hsl(var(--muted-foreground))", margin: "0 0 6px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{u?.email ?? "—"}</p>
-            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-              <span style={{ padding: "3px 8px", borderRadius: 999, fontSize: 12, fontWeight: 600, background: "hsl(var(--primary) / .12)", color: "hsl(var(--primary))" }}>
+          <div className="flex-1 min-w-0">
+            <p className="font-semibold text-base mb-1 overflow-hidden text-ellipsis whitespace-nowrap">{u?.name ?? "—"}</p>
+            <p className="text-[13px] text-muted-foreground mb-1.5 overflow-hidden text-ellipsis whitespace-nowrap">{u?.email ?? "—"}</p>
+            <div className="flex gap-1.5 flex-wrap">
+              <span className="py-0.5 px-2 rounded-full text-xs font-semibold text-primary" style={{ background: "hsl(var(--primary) / .12)" }}>
                 {roleLabel(u?.role)}
               </span>
               {!planLoading && (
-                <span style={{ padding: "3px 8px", borderRadius: 999, fontSize: 12, fontWeight: 600, background: isPaid ? "hsl(142 71% 45% / .12)" : "hsl(var(--muted))", color: isPaid ? "hsl(142 71% 32%)" : "hsl(var(--muted-foreground))" }}>
+                <span className="py-0.5 px-2 rounded-full text-xs font-semibold" style={{ background: isPaid ? "hsl(142 71% 45% / .12)" : "hsl(var(--muted))", color: isPaid ? "hsl(142 71% 32%)" : "hsl(var(--muted-foreground))" }}>
                   {isPaid ? "Plano pago" : "Plano gratuito"}
                 </span>
               )}
@@ -176,48 +177,48 @@ export default function ContaPage() {
         {/* Plano e pagamentos */}
         <Section icon={<CreditCard size={16} />} title="Plano e pagamentos">
           {planLoading ? (
-            <p style={{ fontSize: 13, color: "hsl(var(--muted-foreground))", margin: 0 }}>Carregando…</p>
+            <p className="text-[13px] text-muted-foreground m-0">Carregando…</p>
           ) : planData ? (
             <>
               {/* Resumo */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <div className="grid gap-3" style={{ gridTemplateColumns: "1fr 1fr" }}>
                 <StatCard label="Eventos realizados" value={String(planData.totalEvents)} />
                 <StatCard label="Total investido" value={fmtBRL(planData.totalSpent)} />
               </div>
 
               {/* Modelo de preço */}
-              <div style={{ padding: "12px 16px", borderRadius: 10, border: "1px solid hsl(var(--border))", background: "hsl(var(--background))", display: "flex", alignItems: "center", gap: 12 }}>
-                <div style={{ flex: 1 }}>
-                  <p style={{ fontWeight: 600, fontSize: 14, margin: "0 0 2px" }}>R$ 59,90 por evento</p>
-                  <p style={{ fontSize: 12, color: "hsl(var(--muted-foreground))", margin: 0 }}>Pagamento único · Sem assinatura mensal</p>
+              <div className="py-3 px-4 border border-border bg-background flex items-center gap-3" style={{ borderRadius: 10 }}>
+                <div className="flex-1">
+                  <p className="font-semibold text-sm mb-0.5">R$ 59,90 por evento</p>
+                  <p className="text-xs text-muted-foreground m-0">Pagamento único · Sem assinatura mensal</p>
                 </div>
-                <ExternalLink size={14} style={{ color: "hsl(var(--muted-foreground))", flexShrink: 0 }} aria-hidden />
+                <ExternalLink size={14} className="text-muted-foreground shrink-0" aria-hidden />
               </div>
 
               {/* Histórico */}
               {planData.payments.length > 0 && (
                 <div>
-                  <p style={{ fontSize: 13, fontWeight: 600, margin: "0 0 10px" }}>Histórico</p>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  <p className="text-[13px] font-semibold mb-2.5">Histórico</p>
+                  <div className="flex flex-col gap-2">
                     {planData.payments.map((p) => (
-                      <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", background: "hsl(var(--background))", border: "1px solid hsl(var(--border))", borderRadius: 9 }}>
-                        <div style={{ flexShrink: 0 }}>
+                      <div key={p.id} className="flex items-center gap-2.5 py-2.5 px-3.5 bg-background border border-border rounded-[9px]">
+                        <div className="shrink-0">
                           {p.status === "paid"
                             ? <CheckCircle size={16} style={{ color: "hsl(142 71% 45%)" }} aria-hidden />
-                            : <Clock size={16} style={{ color: "hsl(var(--muted-foreground))" }} aria-hidden />
+                            : <Clock size={16} className="text-muted-foreground" aria-hidden />
                           }
                         </div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <p style={{ fontSize: 13, fontWeight: 500, margin: "0 0 2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[13px] font-medium mb-0.5 overflow-hidden text-ellipsis whitespace-nowrap">
                             {p.eventName ?? "Evento"}
                           </p>
-                          <p style={{ fontSize: 11, color: "hsl(var(--muted-foreground))", margin: 0 }}>
+                          <p className="text-[11px] text-muted-foreground m-0">
                             {fmtDate(p.paidAt ?? p.createdAt)}
                           </p>
                         </div>
-                        <div style={{ textAlign: "right", flexShrink: 0 }}>
-                          <p style={{ fontSize: 13, fontWeight: 600, margin: "0 0 2px" }}>{fmtBRL(p.amount)}</p>
-                          <p style={{ fontSize: 11, margin: 0, color: p.status === "paid" ? "hsl(142 71% 32%)" : "hsl(var(--muted-foreground))" }}>
+                        <div className="text-right shrink-0">
+                          <p className="text-[13px] font-semibold mb-0.5">{fmtBRL(p.amount)}</p>
+                          <p className="text-[11px] m-0" style={{ color: p.status === "paid" ? "hsl(142 71% 32%)" : "hsl(var(--muted-foreground))" }}>
                             {p.status === "paid" ? "Pago" : "Pendente"}
                           </p>
                         </div>
@@ -228,19 +229,19 @@ export default function ContaPage() {
               )}
 
               {planData.payments.length === 0 && (
-                <p style={{ fontSize: 13, color: "hsl(var(--muted-foreground))", margin: 0, textAlign: "center", padding: "8px 0" }}>
+                <p className="text-[13px] text-muted-foreground m-0 text-center py-2">
                   Nenhum evento pago ainda. Crie seu primeiro evento no painel Admin.
                 </p>
               )}
             </>
           ) : (
-            <p style={{ fontSize: 13, color: "hsl(var(--muted-foreground))", margin: 0 }}>Não foi possível carregar os dados do plano.</p>
+            <p className="text-[13px] text-muted-foreground m-0">Não foi possível carregar os dados do plano.</p>
           )}
         </Section>
 
         {/* Dados pessoais */}
         <Section icon={<User size={16} />} title="Dados pessoais">
-          <form onSubmit={handleSaveName} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <form onSubmit={handleSaveName} className="flex flex-col gap-3">
             <FormField label="Nome" htmlFor="c-name">
               <input id="c-name" required value={name} onChange={(e) => setName(e.target.value)} style={inp} />
             </FormField>
@@ -251,7 +252,8 @@ export default function ContaPage() {
               <button
                 type="submit"
                 disabled={savingName}
-                style={{ height: 44, padding: "0 20px", borderRadius: 9, border: "none", background: "hsl(var(--primary))", color: "hsl(var(--primary-foreground))", fontSize: 14, fontWeight: 600, cursor: savingName ? "not-allowed" : "pointer", opacity: savingName ? 0.7 : 1 }}
+                className="px-5 rounded-[9px] border-0 bg-primary text-primary-foreground text-sm font-semibold"
+                style={{ height: 44, cursor: savingName ? "not-allowed" : "pointer", opacity: savingName ? 0.7 : 1 }}
               >
                 {savingName ? "Salvando…" : "Salvar nome"}
               </button>
@@ -261,7 +263,7 @@ export default function ContaPage() {
 
         {/* Alterar senha */}
         <Section icon={<KeyRound size={16} />} title="Alterar senha">
-          <form onSubmit={handleSavePwd} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <form onSubmit={handleSavePwd} className="flex flex-col gap-3">
             <FormField label="Senha atual" htmlFor="c-curr-pwd">
               <input id="c-curr-pwd" type="password" required value={currentPwd} onChange={(e) => setCurrentPwd(e.target.value)} style={inp} />
             </FormField>
@@ -275,7 +277,8 @@ export default function ContaPage() {
               <button
                 type="submit"
                 disabled={savingPwd}
-                style={{ height: 44, padding: "0 20px", borderRadius: 9, border: "none", background: "hsl(var(--primary))", color: "hsl(var(--primary-foreground))", fontSize: 14, fontWeight: 600, cursor: savingPwd ? "not-allowed" : "pointer", opacity: savingPwd ? 0.7 : 1 }}
+                className="px-5 rounded-[9px] border-0 bg-primary text-primary-foreground text-sm font-semibold"
+                style={{ height: 44, cursor: savingPwd ? "not-allowed" : "pointer", opacity: savingPwd ? 0.7 : 1 }}
               >
                 {savingPwd ? "Salvando…" : "Alterar senha"}
               </button>
@@ -284,10 +287,11 @@ export default function ContaPage() {
         </Section>
 
         {/* Sair */}
-        <div style={{ paddingTop: 8 }}>
+        <div className="pt-2">
           <button
             onClick={() => signOut({ callbackUrl: "/entrar" })}
-            style={{ display: "inline-flex", alignItems: "center", gap: 8, height: 44, padding: "0 20px", borderRadius: 9, border: "1px solid hsl(var(--destructive) / .4)", background: "transparent", fontSize: 14, cursor: "pointer", color: "hsl(var(--destructive))", fontWeight: 500 }}
+            className="inline-flex items-center gap-2 px-5 rounded-[9px] border bg-transparent text-sm cursor-pointer text-destructive font-medium"
+            style={{ height: 44, borderColor: "hsl(var(--destructive) / .4)" }}
           >
             <LogOut size={15} aria-hidden />
             Sair da conta
@@ -305,19 +309,19 @@ export default function ContaPage() {
 
 function StatCard({ label, value }: { label: string; value: string }) {
   return (
-    <div style={{ padding: "14px 16px", background: "hsl(var(--background))", border: "1px solid hsl(var(--border))", borderRadius: 10 }}>
-      <p style={{ fontSize: 20, fontWeight: 700, fontFamily: '"Archivo", sans-serif', margin: "0 0 4px", fontVariantNumeric: "tabular-nums" }}>{value}</p>
-      <p style={{ fontSize: 12, color: "hsl(var(--muted-foreground))", margin: 0 }}>{label}</p>
+    <div className="py-3.5 px-4 bg-background border border-border" style={{ borderRadius: 10 }}>
+      <p className="text-xl font-bold mb-1" style={{ fontFamily: '"Archivo", sans-serif', fontVariantNumeric: "tabular-nums" }}>{value}</p>
+      <p className="text-xs text-muted-foreground m-0">{label}</p>
     </div>
   );
 }
 
 function Section({ icon, title, children }: { icon: React.ReactNode; title: string; children: React.ReactNode }) {
   return (
-    <div style={{ padding: 20, background: "hsl(var(--muted))", borderRadius: 12, border: "1px solid hsl(var(--border))", display: "flex", flexDirection: "column", gap: 16 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        <span style={{ color: "hsl(var(--primary))" }}>{icon}</span>
-        <h2 style={{ fontFamily: '"Archivo", sans-serif', fontWeight: 600, fontSize: 15, margin: 0 }}>{title}</h2>
+    <div className="p-5 bg-muted rounded-xl border border-border flex flex-col gap-4">
+      <div className="flex items-center gap-2">
+        <span className="text-primary">{icon}</span>
+        <h2 className="font-semibold text-[15px] m-0" style={{ fontFamily: '"Archivo", sans-serif' }}>{title}</h2>
       </div>
       {children}
     </div>
@@ -326,8 +330,8 @@ function Section({ icon, title, children }: { icon: React.ReactNode; title: stri
 
 function FormField({ label, htmlFor, children }: { label: string; htmlFor: string; children: React.ReactNode }) {
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-      <label htmlFor={htmlFor} style={{ fontSize: 13, fontWeight: 500 }}>{label}</label>
+    <div className="flex flex-col gap-1.5">
+      <label htmlFor={htmlFor} className="text-[13px] font-medium">{label}</label>
       {children}
     </div>
   );

@@ -30,46 +30,47 @@ function ConfirmationContent() {
 
   if (error || !regId) {
     return (
-      <div style={{ padding: 40, textAlign: "center", color: "hsl(var(--muted-foreground))" }}>
+      <div className="p-10 text-center text-muted-foreground">
         Link de confirmação inválido.
       </div>
     );
   }
 
   return (
-    <div style={{ minHeight: "100dvh", display: "flex", flexDirection: "column", alignItems: "center", padding: "40px 24px" }}>
-      <div style={{ width: "100%", maxWidth: 420, textAlign: "center" }}>
-        <div style={{ marginBottom: 28, textAlign: "left" }}>
+    <div className="flex min-h-[100dvh] flex-col items-center px-6 py-10">
+      <div className="w-full max-w-[420px] text-center">
+        <div className="mb-7 text-left">
           <VozWordmark size={22} />
         </div>
 
-        <div style={{ display: "inline-flex", alignItems: "center", gap: 8, color: "hsl(142 71% 40%)", marginBottom: 16 }}>
+        <div className="mb-4 inline-flex items-center gap-2" style={{ color: "hsl(142 71% 40%)" }}>
           <CheckCircle2 size={22} />
-          <span style={{ fontFamily: '"Archivo", sans-serif', fontWeight: 700, fontSize: 18 }}>Inscrição confirmada!</span>
+          <span className="text-lg font-bold" style={{ fontFamily: '"Archivo", sans-serif' }}>Inscrição confirmada!</span>
         </div>
 
-        <p style={{ fontSize: 14, color: "hsl(var(--muted-foreground))", margin: "0 0 28px" }}>
+        <p className="mb-7 text-sm text-muted-foreground">
           Apresente este QR Code no credenciamento para retirar seu kit.
         </p>
 
-        <div style={{ background: "#fff", border: "1px solid hsl(var(--border))", borderRadius: 16, padding: 28, marginBottom: 16, display: "inline-block" }}>
+        <div className="mb-4 inline-block rounded-2xl border border-border bg-white p-7">
           {qrDataUrl ? (
-            <img src={qrDataUrl} alt="QR Code de credenciamento" width={240} height={240} style={{ display: "block" }} />
+            <img src={qrDataUrl} alt="QR Code de credenciamento" width={240} height={240} className="block" />
           ) : (
-            <div style={{ width: 240, height: 240, background: "hsl(var(--muted))", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", color: "hsl(var(--muted-foreground))", fontSize: 13 }}>
+            <div className="flex h-[240px] w-[240px] items-center justify-center rounded-lg bg-muted text-[13px] text-muted-foreground">
               Gerando QR…
             </div>
           )}
         </div>
 
-        <p style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 11, color: "hsl(var(--muted-foreground))", marginBottom: 20, wordBreak: "break-all" }}>
+        <p className="mb-5 break-all text-[11px] text-muted-foreground" style={{ fontFamily: '"JetBrains Mono", monospace' }}>
           ID: {regId}
         </p>
 
         <button
           onClick={downloadQr}
           disabled={!qrDataUrl}
-          style={{ display: "inline-flex", alignItems: "center", gap: 8, height: 44, padding: "0 20px", borderRadius: 10, border: "1px solid hsl(var(--border))", background: "transparent", fontSize: 14, cursor: qrDataUrl ? "pointer" : "not-allowed", opacity: qrDataUrl ? 1 : 0.5 }}
+          className="inline-flex h-11 items-center gap-2 rounded-[10px] border border-border bg-transparent px-5 text-sm disabled:opacity-50"
+          style={{ cursor: qrDataUrl ? "pointer" : "not-allowed" }}
         >
           <Download size={15} aria-hidden /> Salvar QR Code
         </button>
@@ -80,7 +81,7 @@ function ConfirmationContent() {
 
 export default function ConfirmacaoPage() {
   return (
-    <Suspense fallback={<div style={{ padding: 40, textAlign: "center" }}>Carregando…</div>}>
+    <Suspense fallback={<div className="p-10 text-center">Carregando…</div>}>
       <ConfirmationContent />
     </Suspense>
   );

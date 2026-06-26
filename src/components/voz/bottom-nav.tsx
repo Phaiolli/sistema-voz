@@ -23,24 +23,14 @@ function NavItem({ href, icon, label, active }: { href: string; icon: React.Reac
   return (
     <Link
       href={href}
+      className={`flex min-w-0 flex-1 flex-col items-center justify-center gap-1 px-1 text-[11px] no-underline ${active ? "font-semibold" : "font-medium"}`}
       style={{
-        flex: 1,
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: 3,
-        textDecoration: "none",
         color: active ? "hsl(var(--primary))" : "hsl(var(--muted-foreground))",
-        fontSize: 11,
-        fontWeight: active ? 600 : 500,
-        minWidth: 0,
-        padding: "0 4px",
       }}
       aria-current={active ? "page" : undefined}
     >
       {icon}
-      <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "100%" }}>{label}</span>
+      <span className="overflow-hidden text-ellipsis whitespace-nowrap max-w-full">{label}</span>
     </Link>
   );
 }
@@ -80,19 +70,8 @@ export function BottomNav() {
   return (
     <>
       <nav
-        className="app-bottom-nav"
+        className="app-bottom-nav fixed inset-x-0 bottom-0 z-30 flex h-[68px] border-t border-border bg-background"
         aria-label="Navegação principal"
-        style={{
-          position: "fixed",
-          bottom: 0,
-          left: 0,
-          right: 0,
-          height: 68,
-          background: "hsl(var(--background))",
-          borderTop: "1px solid hsl(var(--border))",
-          display: "flex",
-          zIndex: 30,
-        }}
       >
         {isAdmin && (
           <>

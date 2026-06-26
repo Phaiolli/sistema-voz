@@ -132,27 +132,27 @@ export default function AdminUsuariosPage() {
   }
 
   return (
-    <div style={{ minHeight: "100dvh", background: "hsl(var(--background))", color: "hsl(var(--foreground))", paddingBottom: 80 }}>
+    <div className="min-h-[100dvh] bg-background text-foreground pb-20">
       {/* Header */}
-      <header style={{ height: 56, borderBottom: "1px solid hsl(var(--border))", display: "flex", alignItems: "center", padding: "0 16px", gap: 10, position: "sticky", top: 0, background: "hsl(var(--background))", zIndex: 10 }}>
+      <header className="h-14 flex items-center gap-2.5 px-4 sticky top-0 bg-background z-10" style={{ borderBottom: "1px solid hsl(var(--border))" }}>
         <VozWordmark size={20} />
         <EnvSwitcher active="admin" />
-        <div style={{ flex: 1 }} />
+        <div className="flex-1" />
         <HeaderControls />
       </header>
 
       {/* Desktop sub-nav */}
-      <div className="admin-subnav" style={{ borderBottom: "1px solid hsl(var(--border))", display: "flex", alignItems: "center", padding: "0 16px", gap: 4, background: "hsl(var(--background))" }}>
+      <div className="admin-subnav flex items-center px-4 gap-1 bg-background" style={{ borderBottom: "1px solid hsl(var(--border))" }}>
         <NavLink href="/admin/eventos">Eventos</NavLink>
         <NavLink href="/admin/usuarios" active>Usuários</NavLink>
       </div>
 
-      <main style={{ maxWidth: 800, margin: "0 auto", padding: "24px 16px" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+      <main className="max-w-[800px] mx-auto px-4 py-6">
+        <div className="flex items-center justify-between mb-5">
           <h1 style={{ fontFamily: '"Archivo", sans-serif', fontWeight: 700, fontSize: "clamp(22px, 5vw, 28px)", margin: 0 }}>Administradores</h1>
           <button
             onClick={openCreate}
-            style={{ display: "inline-flex", alignItems: "center", gap: 6, height: 44, padding: "0 16px", borderRadius: 10, border: "none", background: "hsl(var(--primary))", color: "hsl(var(--primary-foreground))", fontSize: 14, fontWeight: 600, cursor: "pointer" }}
+            className="inline-flex items-center gap-1.5 h-11 px-4 rounded-[10px] border-0 bg-primary text-primary-foreground text-sm font-semibold cursor-pointer"
           >
             <Plus size={15} aria-hidden /> <span className="btn-label">Novo administrador</span>
           </button>
@@ -161,12 +161,13 @@ export default function AdminUsuariosPage() {
         {showForm && (
           <form
             onSubmit={handleSubmit}
-            style={{ marginBottom: 24, padding: 20, background: "hsl(var(--muted))", borderRadius: 12, border: "1px solid hsl(var(--border))", display: "flex", flexDirection: "column", gap: 14 }}
+            className="mb-6 p-5 bg-muted rounded-xl flex flex-col gap-3.5"
+            style={{ border: "1px solid hsl(var(--border))" }}
           >
-            <h2 style={{ fontFamily: '"Archivo", sans-serif', fontWeight: 600, fontSize: 16, margin: 0 }}>
+            <h2 className="text-base font-semibold m-0" style={{ fontFamily: '"Archivo", sans-serif' }}>
               {editingId ? "Editar usuário" : "Novo usuário"}
             </h2>
-            <div className="form-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <div className="form-grid grid gap-3" style={{ gridTemplateColumns: "1fr 1fr" }}>
               <FormField label="Nome" htmlFor="u-name">
                 <input id="u-name" required value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} style={inp} />
               </FormField>
@@ -188,18 +189,20 @@ export default function AdminUsuariosPage() {
                 <input id="u-role" value="admin" readOnly style={{ ...inp, color: "hsl(var(--muted-foreground))" }} />
               </FormField>
             </div>
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <div className="flex gap-2 flex-wrap">
               <button
                 type="submit"
                 disabled={submitting}
-                style={{ height: 44, padding: "0 20px", borderRadius: 9, border: "none", background: "hsl(var(--primary))", color: "hsl(var(--primary-foreground))", fontSize: 14, fontWeight: 600, cursor: submitting ? "not-allowed" : "pointer", opacity: submitting ? 0.7 : 1 }}
+                className="h-11 px-5 rounded-[9px] border-0 bg-primary text-primary-foreground text-sm font-semibold"
+                style={{ cursor: submitting ? "not-allowed" : "pointer", opacity: submitting ? 0.7 : 1 }}
               >
                 {submitting ? "Salvando…" : editingId ? "Salvar alterações" : "Criar usuário"}
               </button>
               <button
                 type="button"
                 onClick={cancelForm}
-                style={{ height: 44, padding: "0 16px", borderRadius: 9, border: "1px solid hsl(var(--border))", background: "transparent", fontSize: 14, cursor: "pointer" }}
+                className="h-11 px-4 rounded-[9px] bg-transparent text-sm cursor-pointer"
+                style={{ border: "1px solid hsl(var(--border))" }}
               >
                 Cancelar
               </button>
@@ -208,45 +211,45 @@ export default function AdminUsuariosPage() {
         )}
 
         {loading && (
-          <div style={{ padding: 48, textAlign: "center", color: "hsl(var(--muted-foreground))" }}>Carregando usuários…</div>
+          <div className="p-12 text-center text-muted-foreground">Carregando usuários…</div>
         )}
 
         {!loading && users.length === 0 && (
-          <div style={{ padding: 48, textAlign: "center", color: "hsl(var(--muted-foreground))" }}>Nenhum usuário cadastrado.</div>
+          <div className="p-12 text-center text-muted-foreground">Nenhum usuário cadastrado.</div>
         )}
 
         {/* Desktop table */}
         {!loading && users.length > 0 && (
           <>
-            <div className="users-table" style={{ border: "1px solid hsl(var(--border))", borderRadius: 12, overflow: "hidden" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
+            <div className="users-table rounded-xl overflow-hidden" style={{ border: "1px solid hsl(var(--border))" }}>
+              <table className="w-full text-sm" style={{ borderCollapse: "collapse" }}>
                 <thead>
-                  <tr style={{ background: "hsl(var(--muted))", borderBottom: "1px solid hsl(var(--border))" }}>
+                  <tr className="bg-muted" style={{ borderBottom: "1px solid hsl(var(--border))" }}>
                     {["Nome", "Email", "Função", "Último acesso", "Ações"].map((h) => (
-                      <th key={h} style={{ padding: "10px 16px", textAlign: "left", fontWeight: 600, fontSize: 13 }}>{h}</th>
+                      <th key={h} className="px-4 py-2.5 text-left font-semibold text-[13px]">{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {users.map((u, i) => (
                     <tr key={u.id} style={{ borderBottom: i < users.length - 1 ? "1px solid hsl(var(--border))" : "none" }}>
-                      <td style={{ padding: "12px 16px" }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2.5">
                           <UserAvatar name={u.name} size={32} />
-                          <span style={{ fontWeight: 500 }}>{u.name}</span>
+                          <span className="font-medium">{u.name}</span>
                         </div>
                       </td>
-                      <td style={{ padding: "12px 16px", color: "hsl(var(--muted-foreground))" }}>{u.email}</td>
-                      <td style={{ padding: "12px 16px" }}>
+                      <td className="px-4 py-3 text-muted-foreground">{u.email}</td>
+                      <td className="px-4 py-3">
                         <RoleBadge role={u.role} />
                       </td>
-                      <td style={{ padding: "12px 16px", color: "hsl(var(--muted-foreground))", fontSize: 13 }}>
+                      <td className="px-4 py-3 text-muted-foreground text-[13px]">
                         {u.lastSeenAt ? new Date(u.lastSeenAt).toLocaleDateString("pt-BR") : "nunca"}
                       </td>
-                      <td style={{ padding: "12px 16px" }}>
-                        <div style={{ display: "flex", gap: 6 }}>
-                          <button onClick={() => openEdit(u)} style={{ height: 36, padding: "0 12px", borderRadius: 7, border: "1px solid hsl(var(--border))", background: "transparent", fontSize: 12, cursor: "pointer" }}>Editar</button>
-                          <button onClick={() => handleDelete(u)} style={{ height: 36, padding: "0 12px", borderRadius: 7, border: "1px solid hsl(var(--border))", background: "transparent", fontSize: 12, cursor: "pointer", color: "hsl(var(--destructive))" }}>Remover</button>
+                      <td className="px-4 py-3">
+                        <div className="flex gap-1.5">
+                          <button onClick={() => openEdit(u)} className="h-9 px-3 rounded-md bg-transparent text-xs cursor-pointer" style={{ border: "1px solid hsl(var(--border))" }}>Editar</button>
+                          <button onClick={() => handleDelete(u)} className="h-9 px-3 rounded-md bg-transparent text-xs cursor-pointer text-destructive" style={{ border: "1px solid hsl(var(--border))" }}>Remover</button>
                         </div>
                       </td>
                     </tr>
@@ -256,24 +259,24 @@ export default function AdminUsuariosPage() {
             </div>
 
             {/* Mobile cards */}
-            <div className="users-cards" style={{ display: "none", flexDirection: "column", gap: 10 }}>
+            <div className="users-cards hidden flex-col gap-2.5">
               {users.map((u) => (
-                <div key={u.id} style={{ background: "hsl(var(--muted))", border: "1px solid hsl(var(--border))", borderRadius: 12, padding: 16 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
+                <div key={u.id} className="bg-muted rounded-xl p-4" style={{ border: "1px solid hsl(var(--border))" }}>
+                  <div className="flex items-center gap-3 mb-3">
                     <UserAvatar name={u.name} size={40} />
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <p style={{ fontWeight: 600, fontSize: 15, margin: "0 0 2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{u.name}</p>
-                      <p style={{ fontSize: 13, color: "hsl(var(--muted-foreground))", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{u.email}</p>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-[15px] overflow-hidden whitespace-nowrap" style={{ margin: "0 0 2px", textOverflow: "ellipsis" }}>{u.name}</p>
+                      <p className="text-[13px] text-muted-foreground m-0 overflow-hidden whitespace-nowrap" style={{ textOverflow: "ellipsis" }}>{u.email}</p>
                     </div>
                     <RoleBadge role={u.role} />
                   </div>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                    <span style={{ fontSize: 12, color: "hsl(var(--muted-foreground))" }}>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-muted-foreground">
                       Acesso: {u.lastSeenAt ? new Date(u.lastSeenAt).toLocaleDateString("pt-BR") : "nunca"}
                     </span>
-                    <div style={{ display: "flex", gap: 8 }}>
-                      <button onClick={() => openEdit(u)} style={{ height: 44, padding: "0 14px", borderRadius: 9, border: "1px solid hsl(var(--border))", background: "transparent", fontSize: 13, cursor: "pointer" }}>Editar</button>
-                      <button onClick={() => handleDelete(u)} style={{ height: 44, padding: "0 14px", borderRadius: 9, border: "1px solid hsl(var(--border))", background: "transparent", fontSize: 13, cursor: "pointer", color: "hsl(var(--destructive))" }}>Remover</button>
+                    <div className="flex gap-2">
+                      <button onClick={() => openEdit(u)} className="h-11 px-3.5 rounded-[9px] bg-transparent text-[13px] cursor-pointer" style={{ border: "1px solid hsl(var(--border))" }}>Editar</button>
+                      <button onClick={() => handleDelete(u)} className="h-11 px-3.5 rounded-[9px] bg-transparent text-[13px] cursor-pointer text-destructive" style={{ border: "1px solid hsl(var(--border))" }}>Remover</button>
                     </div>
                   </div>
                 </div>
@@ -305,7 +308,10 @@ export default function AdminUsuariosPage() {
 function UserAvatar({ name, size }: { name: string; size: number }) {
   const abbr = name.split(" ").map((w) => w[0]).filter(Boolean).slice(0, 2).join("").toUpperCase();
   return (
-    <div style={{ width: size, height: size, borderRadius: "50%", background: "hsl(var(--primary) / .12)", color: "hsl(var(--primary))", display: "flex", alignItems: "center", justifyContent: "center", fontSize: size * 0.35, fontWeight: 700, border: "1px solid hsl(var(--primary) / .2)", flexShrink: 0 }}>
+    <div
+      className="rounded-full text-primary flex items-center justify-center font-bold shrink-0"
+      style={{ width: size, height: size, background: "hsl(var(--primary) / .12)", fontSize: size * 0.35, border: "1px solid hsl(var(--primary) / .2)" }}
+    >
       {abbr}
     </div>
   );
@@ -313,7 +319,10 @@ function UserAvatar({ name, size }: { name: string; size: number }) {
 
 function RoleBadge({ role }: { role: UserRole }) {
   return (
-    <span style={{ padding: "3px 8px", borderRadius: 999, fontSize: 12, fontWeight: 600, background: role === "admin" ? "hsl(var(--primary) / .12)" : "hsl(var(--muted))", color: role === "admin" ? "hsl(var(--primary))" : "hsl(var(--foreground))", whiteSpace: "nowrap" }}>
+    <span
+      className="rounded-full text-xs font-semibold whitespace-nowrap"
+      style={{ padding: "3px 8px", background: role === "admin" ? "hsl(var(--primary) / .12)" : "hsl(var(--muted))", color: role === "admin" ? "hsl(var(--primary))" : "hsl(var(--foreground))" }}
+    >
       {role}
     </span>
   );
@@ -323,7 +332,8 @@ function NavLink({ href, children, active }: { href: string; children: React.Rea
   return (
     <Link
       href={href}
-      style={{ padding: "12px 14px", fontSize: 14, fontWeight: 500, textDecoration: "none", borderBottom: active ? "2px solid hsl(var(--primary))" : "2px solid transparent", color: active ? "hsl(var(--primary))" : "hsl(var(--muted-foreground))", marginBottom: -1 }}
+      className="text-sm font-medium no-underline"
+      style={{ padding: "12px 14px", borderBottom: active ? "2px solid hsl(var(--primary))" : "2px solid transparent", color: active ? "hsl(var(--primary))" : "hsl(var(--muted-foreground))", marginBottom: -1 }}
     >
       {children}
     </Link>
@@ -332,8 +342,8 @@ function NavLink({ href, children, active }: { href: string; children: React.Rea
 
 function FormField({ label, htmlFor, children }: { label: string; htmlFor: string; children: React.ReactNode }) {
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-      <label htmlFor={htmlFor} style={{ fontSize: 13, fontWeight: 500 }}>{label}</label>
+    <div className="flex flex-col gap-1.5">
+      <label htmlFor={htmlFor} className="text-[13px] font-medium">{label}</label>
       {children}
     </div>
   );

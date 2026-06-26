@@ -441,27 +441,26 @@ export function EventEditor({ eventId, isNew }: { eventId: string | null; isNew:
   }
 
   return (
-    <div style={{ minHeight: "100dvh", background: "hsl(var(--background))", color: "hsl(var(--foreground))" }}>
-      <header style={{ height: 56, borderBottom: "1px solid hsl(var(--border))", display: "flex", alignItems: "center", padding: "0 24px", gap: 12 }}>
-        <Link href="/admin/eventos" aria-label="Voltar" style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 36, height: 36, borderRadius: 8, border: "1px solid hsl(var(--border))", textDecoration: "none", color: "hsl(var(--foreground))" }}>
+    <div className="min-h-[100dvh] bg-background text-foreground">
+      <header className="h-14 flex items-center gap-3 px-6" style={{ borderBottom: "1px solid hsl(var(--border))" }}>
+        <Link href="/admin/eventos" aria-label="Voltar" className="flex items-center justify-center w-9 h-9 rounded-lg no-underline text-foreground" style={{ border: "1px solid hsl(var(--border))" }}>
           <ArrowLeft size={16} aria-hidden />
         </Link>
         <VozWordmark size={20} />
-        <div style={{ flex: 1 }} />
+        <div className="flex-1" />
         <HeaderControls />
       </header>
 
-      <div style={{ borderBottom: "1px solid hsl(var(--border))", padding: "0 24px", display: "flex", alignItems: "center", gap: 8 }}>
-        <div style={{ display: "flex", gap: 2, flex: 1, overflowX: "auto" }} role="tablist">
+      <div className="px-6 flex items-center gap-2" style={{ borderBottom: "1px solid hsl(var(--border))" }}>
+        <div className="flex gap-0.5 flex-1 overflow-x-auto" role="tablist">
           {TABS.map((t) => (
             <button
               key={t.id}
               role="tab"
               aria-selected={tab === t.id}
               onClick={() => setTab(t.id)}
+              className="px-4 py-3 border-0 cursor-pointer text-sm font-medium whitespace-nowrap bg-transparent"
               style={{
-                padding: "12px 16px", border: "none", cursor: "pointer", fontSize: 14, fontWeight: 500, whiteSpace: "nowrap",
-                background: "transparent",
                 color: tab === t.id ? "hsl(var(--foreground))" : "hsl(var(--muted-foreground))",
                 borderBottom: tab === t.id ? "2px solid hsl(var(--primary))" : "2px solid transparent",
               }}
@@ -470,15 +469,16 @@ export function EventEditor({ eventId, isNew }: { eventId: string | null; isNew:
             </button>
           ))}
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0, paddingLeft: 8, borderLeft: "1px solid hsl(var(--border))" }}>
-          <span style={{ fontSize: 13, color: "hsl(var(--muted-foreground))", maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+        <div className="flex items-center gap-2.5 shrink-0 pl-2" style={{ borderLeft: "1px solid hsl(var(--border))" }}>
+          <span className="text-[13px] text-muted-foreground max-w-[180px] overflow-hidden whitespace-nowrap" style={{ textOverflow: "ellipsis" }}>
             {isNew ? "Novo evento" : eventName || "…"}
           </span>
           {!isNew && (
             <button
               onClick={handleSave}
               disabled={saving}
-              style={{ display: "inline-flex", alignItems: "center", gap: 6, height: 32, padding: "0 12px", borderRadius: 8, border: "none", background: "hsl(var(--primary))", color: "hsl(var(--primary-foreground))", fontSize: 13, fontWeight: 600, cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.7 : 1 }}
+              className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border-0 bg-primary text-primary-foreground text-[13px] font-semibold"
+              style={{ cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.7 : 1 }}
             >
               <Save size={13} aria-hidden /> {saving ? "Salvando…" : "Salvar"}
             </button>
@@ -486,7 +486,7 @@ export function EventEditor({ eventId, isNew }: { eventId: string | null; isNew:
         </div>
       </div>
 
-      <main style={{ maxWidth: 960, margin: "0 auto", padding: "32px 24px" }} role="tabpanel">
+      <main className="max-w-[960px] mx-auto px-6 py-8" role="tabpanel">
 
         {tab === "geral" && (
           <TabGeral

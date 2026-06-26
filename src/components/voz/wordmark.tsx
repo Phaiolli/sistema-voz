@@ -17,7 +17,7 @@ export function VozWordmark({ size = 24, inverse = false, className }: Props) {
       aria-label="voz."
     >
       voz
-      <span style={{ color: "hsl(var(--accent))" }}>.</span>
+      <span className="text-accent">.</span>
     </span>
   );
 }
@@ -26,21 +26,14 @@ export function VozMonogram({ size = 32 }: { size?: number }) {
   return (
     <span
       aria-label="voz."
+      className="inline-flex shrink-0 items-center justify-center rounded-full bg-accent text-accent-foreground leading-none"
       style={{
-        display: "inline-flex",
-        alignItems: "center",
-        justifyContent: "center",
         width: size,
         height: size,
-        borderRadius: "50%",
-        background: "hsl(var(--accent))",
-        color: "hsl(var(--accent-foreground))",
         fontFamily: '"Archivo Black", sans-serif',
         fontWeight: 900,
         fontSize: size * 0.45,
         letterSpacing: "-0.02em",
-        lineHeight: 1,
-        flexShrink: 0,
       }}
     >
       v.

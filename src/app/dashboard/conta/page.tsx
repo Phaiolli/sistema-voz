@@ -54,49 +54,46 @@ export default function ContaPage() {
   }
 
   return (
-    <div style={{ minHeight: "100dvh", background: "hsl(var(--background))", color: "hsl(var(--foreground))" }}>
-      <header style={{ height: 56, borderBottom: "1px solid hsl(var(--border))", display: "flex", alignItems: "center", padding: "0 24px", gap: 16 }}>
+    <div className="bg-background text-foreground" style={{ minHeight: "100dvh" }}>
+      <header className="flex items-center gap-4 border-b border-border px-6" style={{ height: 56 }}>
         <VozWordmark size={22} />
-        <nav style={{ display: "flex", gap: 4 }} aria-label="Dashboard">
+        <nav className="flex gap-1" aria-label="Dashboard">
           <NavLink href="/dashboard">Eventos</NavLink>
           <NavLink href="/dashboard/conta" active>Conta</NavLink>
         </nav>
-        <div style={{ flex: 1 }} />
-        <div style={{ width: 1, height: 24, background: "hsl(var(--border))" }} aria-hidden />
+        <div className="flex-1" />
+        <div className="bg-border" style={{ width: 1, height: 24 }} aria-hidden />
         <HeaderControls />
       </header>
 
-      <main style={{ maxWidth: 720, margin: "0 auto", padding: "40px 24px", display: "flex", flexDirection: "column", gap: 32 }}>
+      <main className="mx-auto py-10 px-6 flex flex-col gap-8" style={{ maxWidth: 720 }}>
 
         {/* Section: Info da conta */}
         <section aria-labelledby="section-conta">
-          <h1 id="section-conta" style={{ fontFamily: '"Archivo", sans-serif', fontWeight: 700, fontSize: 28, margin: "0 0 20px" }}>
+          <h1 id="section-conta" className="font-bold text-[28px] mb-5" style={{ fontFamily: '"Archivo", sans-serif' }}>
             Minha Conta
           </h1>
-          <div style={{ background: "hsl(var(--muted))", border: "1px solid hsl(var(--border))", borderRadius: 12, padding: 24, display: "flex", flexDirection: "column", gap: 16 }}>
-            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-              <span style={{ fontSize: 12, fontWeight: 600, color: "hsl(var(--muted-foreground))", textTransform: "uppercase", letterSpacing: "0.06em" }}>Nome</span>
-              <span style={{ fontSize: 16, fontWeight: 500 }}>{userName}</span>
+          <div className="bg-muted border border-border rounded-xl p-6 flex flex-col gap-4">
+            <div className="flex flex-col gap-1">
+              <span className="text-xs font-semibold text-muted-foreground uppercase" style={{ letterSpacing: "0.06em" }}>Nome</span>
+              <span className="text-base font-medium">{userName}</span>
             </div>
-            <div style={{ height: 1, background: "hsl(var(--border))" }} aria-hidden />
-            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-              <span style={{ fontSize: 12, fontWeight: 600, color: "hsl(var(--muted-foreground))", textTransform: "uppercase", letterSpacing: "0.06em" }}>Email</span>
-              <span style={{ fontSize: 16, fontWeight: 500 }}>{userEmail}</span>
+            <div className="bg-border" style={{ height: 1 }} aria-hidden />
+            <div className="flex flex-col gap-1">
+              <span className="text-xs font-semibold text-muted-foreground uppercase" style={{ letterSpacing: "0.06em" }}>Email</span>
+              <span className="text-base font-medium">{userEmail}</span>
             </div>
-            <div style={{ height: 1, background: "hsl(var(--border))" }} aria-hidden />
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                <span style={{ fontSize: 12, fontWeight: 600, color: "hsl(var(--muted-foreground))", textTransform: "uppercase", letterSpacing: "0.06em" }}>Plano</span>
+            <div className="bg-border" style={{ height: 1 }} aria-hidden />
+            <div className="flex items-center justify-between">
+              <div className="flex flex-col gap-1">
+                <span className="text-xs font-semibold text-muted-foreground uppercase" style={{ letterSpacing: "0.06em" }}>Plano</span>
               </div>
               <span
+                className="rounded-full py-1 px-3 text-[13px] font-semibold border"
                 style={{
-                  padding: "4px 12px",
-                  borderRadius: 999,
-                  fontSize: 13,
-                  fontWeight: 600,
                   background: isPaid ? "hsl(var(--primary) / .12)" : "hsl(var(--muted-foreground) / .12)",
                   color: isPaid ? "hsl(var(--primary))" : "hsl(var(--muted-foreground))",
-                  border: isPaid ? "1px solid hsl(var(--primary) / .25)" : "1px solid hsl(var(--border))",
+                  borderColor: isPaid ? "hsl(var(--primary) / .25)" : "hsl(var(--border))",
                 }}
               >
                 {isPaid ? "Plano Pago" : "Plano Gratuito"}
@@ -107,43 +104,33 @@ export default function ContaPage() {
 
         {/* Section: Zona de Privacidade */}
         <section aria-labelledby="section-lgpd">
-          <div style={{ marginBottom: 20 }}>
-            <h2 id="section-lgpd" style={{ fontFamily: '"Archivo", sans-serif', fontWeight: 700, fontSize: 22, margin: "0 0 6px" }}>
+          <div className="mb-5">
+            <h2 id="section-lgpd" className="font-bold text-[22px] mb-1.5" style={{ fontFamily: '"Archivo", sans-serif' }}>
               Seus Dados
             </h2>
-            <p style={{ fontSize: 14, color: "hsl(var(--muted-foreground))", margin: 0 }}>
+            <p className="text-sm text-muted-foreground m-0">
               Em conformidade com a Lei Geral de Proteção de Dados (LGPD).
             </p>
           </div>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <div className="flex flex-col gap-3">
             {/* Card: Exportar */}
-            <div style={{ background: "hsl(var(--muted))", border: "1px solid hsl(var(--border))", borderRadius: 12, padding: 24, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
-              <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                <span style={{ fontWeight: 600, fontSize: 15 }}>Exportar meus dados</span>
-                <span style={{ fontSize: 13, color: "hsl(var(--muted-foreground))" }}>
+            <div className="bg-muted border border-border rounded-xl p-6 flex items-center justify-between gap-4 flex-wrap">
+              <div className="flex flex-col gap-1">
+                <span className="font-semibold text-[15px]">Exportar meus dados</span>
+                <span className="text-[13px] text-muted-foreground">
                   Baixe uma cópia completa de todos os seus dados em formato JSON.
                 </span>
               </div>
               <button
                 onClick={handleExport}
                 disabled={exportBusy}
+                className="inline-flex items-center gap-2 px-4 border border-border bg-background text-foreground text-sm font-semibold font-[inherit] shrink-0"
                 style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 8,
                   height: 40,
-                  padding: "0 16px",
                   borderRadius: 10,
-                  border: "1px solid hsl(var(--border))",
-                  background: "hsl(var(--background))",
-                  color: "hsl(var(--foreground))",
-                  fontSize: 14,
-                  fontWeight: 600,
-                  fontFamily: "inherit",
                   cursor: exportBusy ? "not-allowed" : "pointer",
                   opacity: exportBusy ? 0.65 : 1,
-                  flexShrink: 0,
                 }}
               >
                 <Download size={14} aria-hidden />
@@ -152,32 +139,23 @@ export default function ContaPage() {
             </div>
 
             {/* Card: Remover */}
-            <div style={{ background: "hsl(var(--muted))", border: "1px solid hsl(var(--border))", borderRadius: 12, padding: 24, display: "flex", flexDirection: "column", gap: 16 }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
-                <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                  <span style={{ fontWeight: 600, fontSize: 15 }}>Remover meus dados</span>
-                  <span style={{ fontSize: 13, color: "hsl(var(--muted-foreground))" }}>
+            <div className="bg-muted border border-border rounded-xl p-6 flex flex-col gap-4">
+              <div className="flex items-center justify-between gap-4 flex-wrap">
+                <div className="flex flex-col gap-1">
+                  <span className="font-semibold text-[15px]">Remover meus dados</span>
+                  <span className="text-[13px] text-muted-foreground">
                     Remove permanentemente sua conta e todos os dados associados.
                   </span>
                 </div>
                 {!confirmDelete && (
                   <button
                     onClick={() => setConfirmDelete(true)}
+                    className="inline-flex items-center gap-2 px-4 border text-destructive text-sm font-semibold font-[inherit] cursor-pointer shrink-0"
                     style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: 8,
                       height: 40,
-                      padding: "0 16px",
                       borderRadius: 10,
-                      border: "1px solid hsl(var(--destructive) / .4)",
+                      borderColor: "hsl(var(--destructive) / .4)",
                       background: "hsl(var(--destructive) / .08)",
-                      color: "hsl(var(--destructive))",
-                      fontSize: 14,
-                      fontWeight: 600,
-                      fontFamily: "inherit",
-                      cursor: "pointer",
-                      flexShrink: 0,
                     }}
                   >
                     <Trash2 size={14} aria-hidden />
@@ -189,38 +167,28 @@ export default function ContaPage() {
               {confirmDelete && (
                 <div
                   role="alert"
+                  className="p-5 flex flex-col gap-4 border"
                   style={{
-                    padding: 20,
                     borderRadius: 10,
                     background: "hsl(var(--destructive) / .06)",
-                    border: "1px solid hsl(var(--destructive) / .25)",
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 16,
+                    borderColor: "hsl(var(--destructive) / .25)",
                   }}
                 >
-                  <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                    <span style={{ fontWeight: 700, fontSize: 15, color: "hsl(var(--destructive))" }}>
+                  <div className="flex flex-col gap-1">
+                    <span className="font-bold text-[15px] text-destructive">
                       Tem certeza?
                     </span>
-                    <span style={{ fontSize: 13, color: "hsl(var(--muted-foreground))" }}>
+                    <span className="text-[13px] text-muted-foreground">
                       Esta ação é irreversível. Sua conta e todos os dados associados serão removidos permanentemente.
                     </span>
                   </div>
-                  <div style={{ display: "flex", gap: 8 }}>
+                  <div className="flex gap-2">
                     <button
                       onClick={handleDeleteConfirmed}
                       disabled={deleteBusy}
+                      className="px-4 rounded-lg border-0 bg-destructive text-white text-sm font-bold font-[inherit]"
                       style={{
                         height: 38,
-                        padding: "0 16px",
-                        borderRadius: 8,
-                        border: "none",
-                        background: "hsl(var(--destructive))",
-                        color: "#fff",
-                        fontSize: 14,
-                        fontWeight: 700,
-                        fontFamily: "inherit",
                         cursor: deleteBusy ? "not-allowed" : "pointer",
                         opacity: deleteBusy ? 0.65 : 1,
                       }}
@@ -230,16 +198,9 @@ export default function ContaPage() {
                     <button
                       onClick={() => setConfirmDelete(false)}
                       disabled={deleteBusy}
+                      className="px-4 rounded-lg border border-border bg-transparent text-foreground text-sm font-semibold font-[inherit]"
                       style={{
                         height: 38,
-                        padding: "0 16px",
-                        borderRadius: 8,
-                        border: "1px solid hsl(var(--border))",
-                        background: "transparent",
-                        color: "hsl(var(--foreground))",
-                        fontSize: 14,
-                        fontWeight: 600,
-                        fontFamily: "inherit",
                         cursor: deleteBusy ? "not-allowed" : "pointer",
                       }}
                     >
@@ -254,19 +215,19 @@ export default function ContaPage() {
 
         {/* Section: Informações LGPD */}
         <section aria-labelledby="section-lgpd-info">
-          <h2 id="section-lgpd-info" style={{ fontFamily: '"Archivo", sans-serif', fontWeight: 700, fontSize: 18, margin: "0 0 16px" }}>
+          <h2 id="section-lgpd-info" className="font-bold text-lg mb-4" style={{ fontFamily: '"Archivo", sans-serif' }}>
             Informações sobre privacidade
           </h2>
-          <div style={{ background: "hsl(var(--muted))", border: "1px solid hsl(var(--border))", borderRadius: 12, padding: 24, display: "flex", flexDirection: "column", gap: 12 }}>
+          <div className="bg-muted border border-border rounded-xl p-6 flex flex-col gap-3">
             <InfoLine label="Dados coletados" value="Nome, e-mail, dados dos eventos e perguntas." />
-            <div style={{ height: 1, background: "hsl(var(--border))" }} aria-hidden />
+            <div className="bg-border" style={{ height: 1 }} aria-hidden />
             <InfoLine label="Retenção" value="Dados de participantes são anonimizados 90 dias após o evento." />
-            <div style={{ height: 1, background: "hsl(var(--border))" }} aria-hidden />
+            <div className="bg-border" style={{ height: 1 }} aria-hidden />
             <InfoLine label="DPO / Contato de privacidade" value="privacidade@voz.app" isEmail />
-            <div style={{ height: 1, background: "hsl(var(--border))" }} aria-hidden />
-            <p style={{ fontSize: 13, color: "hsl(var(--muted-foreground))", margin: 0, lineHeight: 1.6 }}>
+            <div className="bg-border" style={{ height: 1 }} aria-hidden />
+            <p className="text-[13px] text-muted-foreground m-0" style={{ lineHeight: 1.6 }}>
               Para dúvidas sobre seus dados, envie e-mail para{" "}
-              <a href="mailto:privacidade@voz.app" style={{ color: "hsl(var(--primary))", textDecoration: "none", fontWeight: 500 }}>
+              <a href="mailto:privacidade@voz.app" className="text-primary no-underline font-medium">
                 privacidade@voz.app
               </a>
               .
@@ -283,15 +244,7 @@ function NavLink({ href, children, active }: { href: string; children: React.Rea
   return (
     <Link
       href={href}
-      style={{
-        padding: "6px 12px",
-        borderRadius: 8,
-        fontSize: 14,
-        fontWeight: 500,
-        textDecoration: "none",
-        background: active ? "hsl(var(--muted))" : "transparent",
-        color: active ? "hsl(var(--foreground))" : "hsl(var(--muted-foreground))",
-      }}
+      className={`py-1.5 px-3 rounded-lg text-sm font-medium no-underline ${active ? "bg-muted text-foreground" : "bg-transparent text-muted-foreground"}`}
     >
       {children}
     </Link>
@@ -300,16 +253,16 @@ function NavLink({ href, children, active }: { href: string; children: React.Rea
 
 function InfoLine({ label, value, isEmail }: { label: string; value: string; isEmail?: boolean }) {
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-      <span style={{ fontSize: 12, fontWeight: 600, color: "hsl(var(--muted-foreground))", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+    <div className="flex flex-col gap-0.5">
+      <span className="text-xs font-semibold text-muted-foreground uppercase" style={{ letterSpacing: "0.06em" }}>
         {label}
       </span>
       {isEmail ? (
-        <a href={`mailto:${value}`} style={{ fontSize: 14, color: "hsl(var(--primary))", textDecoration: "none", fontWeight: 500 }}>
+        <a href={`mailto:${value}`} className="text-sm text-primary no-underline font-medium">
           {value}
         </a>
       ) : (
-        <span style={{ fontSize: 14 }}>{value}</span>
+        <span className="text-sm">{value}</span>
       )}
     </div>
   );

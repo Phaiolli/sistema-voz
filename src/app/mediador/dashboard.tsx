@@ -302,7 +302,7 @@ export function MediatorDashboard() {
 
   if (loading) {
     return (
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100dvh", background: "hsl(var(--background))", color: "hsl(var(--muted-foreground))", fontSize: 15 }}>
+      <div className="flex items-center justify-center text-[15px] bg-background text-muted-foreground" style={{ height: "100dvh" }}>
         Carregando evento…
       </div>
     );
@@ -310,12 +310,12 @@ export function MediatorDashboard() {
 
   if (noEvent) {
     return (
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100dvh", background: "hsl(var(--background))", color: "hsl(var(--foreground))", gap: 16, textAlign: "center", padding: 24 }}>
-        <p style={{ fontFamily: '"Archivo", sans-serif', fontWeight: 600, fontSize: 20, margin: 0 }}>Nenhum evento atribuído.</p>
-        <p style={{ fontSize: 15, color: "hsl(var(--muted-foreground))", margin: 0 }}>Entre em contato com o administrador.</p>
+      <div className="flex flex-col items-center justify-center gap-4 p-6 text-center bg-background text-foreground" style={{ height: "100dvh" }}>
+        <p className="m-0 font-semibold text-xl" style={{ fontFamily: '"Archivo", sans-serif' }}>Nenhum evento atribuído.</p>
+        <p className="m-0 text-[15px] text-muted-foreground">Entre em contato com o administrador.</p>
         <button
           onClick={() => signOut()}
-          style={{ marginTop: 8, height: 40, padding: "0 20px", borderRadius: 8, border: "1px solid hsl(var(--border))", background: "transparent", fontSize: 14, cursor: "pointer", color: "hsl(var(--foreground))" }}
+          className="mt-2 h-10 px-5 rounded-lg border border-border bg-transparent text-sm cursor-pointer text-foreground"
         >
           Sair
         </button>
@@ -324,14 +324,14 @@ export function MediatorDashboard() {
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100dvh", background: "hsl(var(--background))", color: "hsl(var(--foreground))" }}>
+    <div className="flex flex-col bg-background text-foreground" style={{ height: "100dvh" }}>
 
       {/* Header — mesmo padrão do admin */}
-      <header style={{ height: 56, borderBottom: "1px solid hsl(var(--border))", display: "flex", alignItems: "center", padding: "0 16px", gap: 10, flexShrink: 0, background: "hsl(var(--background))", zIndex: 10 }}>
+      <header className="flex items-center gap-2.5 h-14 px-4 shrink-0 border-b border-border bg-background" style={{ zIndex: 10 }}>
         <VozWordmark size={20} />
-        <div style={{ flex: 1 }} />
+        <div className="flex-1" />
         {newBadge > 0 && (
-          <span aria-live="polite" aria-atomic="true" style={{ display: "inline-block", padding: "4px 10px", borderRadius: 999, background: "hsl(var(--accent) / .15)", color: "hsl(38 85% 32%)", fontSize: 13, fontWeight: 600, animation: "pulse 2s infinite", flexShrink: 0 }}>
+          <span aria-live="polite" aria-atomic="true" className="inline-block shrink-0 px-2.5 py-1 rounded-full text-[13px] font-semibold bg-accent/15" style={{ color: "hsl(38 85% 32%)", animation: "pulse 2s infinite" }}>
             {newBadge} nova{newBadge > 1 ? "s" : ""}
           </span>
         )}
@@ -339,18 +339,18 @@ export function MediatorDashboard() {
       </header>
 
       {/* Sub-nav: tabs + ações — mesmo padrão do admin */}
-      <div style={{ borderBottom: "1px solid hsl(var(--border))", display: "flex", alignItems: "center", padding: "0 16px", flexShrink: 0, background: "hsl(var(--background))", overflowX: "auto", scrollbarWidth: "none", gap: 0 }}>
+      <div className="flex items-center px-4 shrink-0 overflow-x-auto border-b border-border bg-background" style={{ scrollbarWidth: "none" }}>
         {/* Tabs de filtro */}
         <MedTab label="Perguntas" count={counts.unread} active={tab === "unread"} onClick={() => setTab("unread")} />
         <MedTab label="Todas" count={counts.all} active={tab === "all"} onClick={() => setTab("all")} />
         <MedTab label="Ocultas" count={counts.hidden} active={tab === "hidden"} onClick={() => setTab("hidden")} />
 
-        <div style={{ flex: 1 }} />
+        <div className="flex-1" />
 
         {/* Botões de ação */}
-        <div style={{ display: "flex", gap: 6, padding: "8px 0", flexShrink: 0 }}>
+        <div className="flex gap-1.5 py-2 shrink-0">
           {eventName && (
-            <span className="med-event-name" style={{ alignSelf: "center", fontSize: 13, color: "hsl(var(--muted-foreground))", fontWeight: 500, whiteSpace: "nowrap", maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis" }}>
+            <span className="med-event-name self-center text-[13px] font-medium text-muted-foreground whitespace-nowrap overflow-hidden" style={{ maxWidth: 180, textOverflow: "ellipsis" }}>
               {eventName}
             </span>
           )}
@@ -370,11 +370,11 @@ export function MediatorDashboard() {
       </div>
 
       {/* Main: single column — up to 2 prev + current + up to 3 next */}
-      <main className="med-main-content" style={{ flex: 1, overflowY: "auto", padding: "12px 16px", display: "flex", flexDirection: "column", gap: 6, width: "100%", boxSizing: "border-box" }}>
+      <main className="med-main-content flex flex-col flex-1 gap-1.5 w-full overflow-y-auto py-3 px-4 box-border">
         {listed.length === 0 && (
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", flex: 1, flexDirection: "column", gap: 8, color: "hsl(var(--muted-foreground))" }}>
-            <p style={{ fontFamily: '"Archivo", sans-serif', fontWeight: 600, fontSize: 16, color: "hsl(var(--foreground))", margin: 0 }}>Sem perguntas aqui</p>
-            <p style={{ fontSize: 13, margin: 0 }}>Compartilhe o QR Code com a plateia.</p>
+          <div className="flex flex-col items-center justify-center flex-1 gap-2 text-muted-foreground">
+            <p className="m-0 font-semibold text-base text-foreground" style={{ fontFamily: '"Archivo", sans-serif' }}>Sem perguntas aqui</p>
+            <p className="m-0 text-[13px]">Compartilhe o QR Code com a plateia.</p>
           </div>
         )}
 

@@ -181,44 +181,45 @@ function CredenciamentoTab({ eventId }: { eventId: string }) {
   const kitCount = registrations.filter((r) => r.kitDelivered).length;
 
   return (
-    <div style={{ padding: "24px" }}>
-      <div style={{ display: "flex", gap: 16, marginBottom: 20, flexWrap: "wrap" }}>
+    <div className="p-6">
+      <div className="flex flex-wrap gap-4 mb-5">
         <Stat label="Total inscritos" value={registrations.length} />
         <Stat label="Check-in feito" value={checkedInCount} accent />
         <Stat label="Kit entregue" value={kitCount} />
       </div>
 
-      <div style={{ position: "relative", marginBottom: 16 }}>
-        <Search size={15} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "hsl(var(--muted-foreground))", pointerEvents: "none" }} />
+      <div className="relative mb-4">
+        <Search size={15} className="absolute left-3 text-muted-foreground pointer-events-none" style={{ top: "50%", transform: "translateY(-50%)" }} />
         <input
           type="search"
           placeholder="Buscar por nome, e-mail ou CPF…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          style={{ width: "100%", height: 40, padding: "0 14px 0 36px", borderRadius: 8, border: "1px solid hsl(var(--border))", background: "hsl(var(--muted))", color: "hsl(var(--foreground))", fontSize: 14, fontFamily: "inherit", boxSizing: "border-box" }}
+          className="w-full h-10 pl-9 pr-3.5 rounded-lg border border-border bg-muted text-foreground text-sm box-border"
+          style={{ fontFamily: "inherit" }}
         />
       </div>
 
-      {loading && <div style={{ padding: 40, textAlign: "center", color: "hsl(var(--muted-foreground))" }}>Carregando inscritos…</div>}
+      {loading && <div className="p-10 text-center text-muted-foreground">Carregando inscritos…</div>}
 
       {!loading && filtered.length === 0 && (
-        <div style={{ padding: 40, textAlign: "center", color: "hsl(var(--muted-foreground))" }}>
+        <div className="p-10 text-center text-muted-foreground">
           {search ? "Nenhum resultado para a busca." : "Nenhum inscrito ainda."}
         </div>
       )}
 
       {!loading && filtered.length > 0 && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        <div className="flex flex-col gap-2">
           {filtered.map((reg) => (
-            <div key={reg.id} style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 16px", background: "hsl(var(--muted))", borderRadius: 10, border: "1px solid hsl(var(--border))" }}>
-              <div style={{ width: 40, height: 40, borderRadius: "50%", background: "hsl(var(--primary) / .12)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700, flexShrink: 0 }}>
+            <div key={reg.id} className="flex items-center gap-3.5 py-3.5 px-4 rounded-[10px] border border-border bg-muted">
+              <div className="flex items-center justify-center w-10 h-10 shrink-0 rounded-full text-[13px] font-bold bg-primary/10">
                 {reg.name.trim().split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase()}
               </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ fontWeight: 600, fontSize: 14, margin: "0 0 2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{reg.name}</p>
-                <p style={{ fontSize: 12, color: "hsl(var(--muted-foreground))", margin: 0 }}>{reg.email}{reg.document ? ` · ${reg.document}` : ""}</p>
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-sm overflow-hidden whitespace-nowrap" style={{ margin: "0 0 2px", textOverflow: "ellipsis" }}>{reg.name}</p>
+                <p className="m-0 text-xs text-muted-foreground">{reg.email}{reg.document ? ` · ${reg.document}` : ""}</p>
               </div>
-              <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+              <div className="flex gap-1.5 shrink-0">
                 <ToggleBtn
                   active={reg.checkedIn}
                   icon={<CheckCircle2 size={14} />}
@@ -284,14 +285,14 @@ export default function CredenciamentoPage() {
   });
 
   return (
-    <div style={{ minHeight: "100dvh", background: "hsl(var(--background))", color: "hsl(var(--foreground))" }}>
-      <header style={{ height: 56, borderBottom: "1px solid hsl(var(--border))", display: "flex", alignItems: "center", padding: "0 24px", gap: 16 }}>
+    <div className="bg-background text-foreground" style={{ minHeight: "100dvh" }}>
+      <header className="flex items-center gap-4 h-14 px-6 border-b border-border">
         <VozLockup eventName={eventName || "Credenciamento"} size={20} />
-        <div style={{ flex: 1 }} />
+        <div className="flex-1" />
         <HeaderControls />
       </header>
 
-      <div style={{ borderBottom: "1px solid hsl(var(--border))", padding: "0 24px", display: "flex", gap: 2 }} role="tablist">
+      <div className="flex gap-0.5 px-6 border-b border-border" role="tablist">
         <button role="tab" aria-selected={tab === "credenciamento"} onClick={() => setTab("credenciamento")} style={tabStyle(tab === "credenciamento")}>
           Credenciamento
         </button>
@@ -300,9 +301,9 @@ export default function CredenciamentoPage() {
         </button>
       </div>
 
-      <main style={{ maxWidth: 800, margin: "0 auto" }} role="tabpanel">
+      <main className="mx-auto" style={{ maxWidth: 800 }} role="tabpanel">
         {!eventId && (
-          <div style={{ padding: 48, textAlign: "center", color: "hsl(var(--muted-foreground))" }}>Carregando evento…</div>
+          <div className="p-12 text-center text-muted-foreground">Carregando evento…</div>
         )}
         {eventId && tab === "credenciamento" && <CredenciamentoTab eventId={eventId} />}
         {eventId && tab === "sorteio" && <SorteioTab eventId={eventId} />}

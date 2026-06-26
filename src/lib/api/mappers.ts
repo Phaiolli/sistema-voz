@@ -10,8 +10,8 @@
  * `./question-mappers` ({@link mapQuestionPublic}) and is re-exported below so
  * callers have a single import surface.
  */
-import type { Database } from "@/lib/db/database.types";
-import type { Event } from "@/lib/types";
+import type { Database, Json } from "@/lib/db/database.types";
+import type { Event, EventTheme, EventConfig } from "@/lib/types";
 
 export { mapQuestionPublic } from "@/lib/api/question-mappers";
 export type { QuestionPublicSource } from "@/lib/api/question-mappers";
@@ -24,10 +24,47 @@ type RegistrationRow = Database["public"]["Tables"]["registrations"]["Row"];
 export type QuestionFullRow = Omit<QuestionRow, "author_ip">;
 
 /**
+ * Narrows a `jsonb` value (typed as {@link Json} in the generated schema) to a
+ * domain object shape, defaulting to `{}` for `null`/array/primitive values.
+ *
+ * The DB enforces `NOT NULL DEFAULT '{}'` on `events.theme`/`events.config`, so
+ * in practice the value is always an object; this guard keeps callers total
+ * (and covers legacy rows) without resorting to `any`.
+ */
+function asJsonObject<T>(value: Json | null | undefined): T {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as T)
+    : ({} as T);
+}
+
+/** Narrows a `jsonb` `events.theme` value to {@link EventTheme} (defaults to `{}`). */
+export function asEventTheme(value: Json | null | undefined): EventTheme {
+  return asJsonObject<EventTheme>(value);
+}
+
+/** Narrows a `jsonb` `events.config` value to {@link EventConfig} (defaults to `{}`). */
+export function asEventConfig(value: Json | null | undefined): EventConfig {
+  return asJsonObject<EventConfig>(value);
+}
+
+/**
+ * Converts a domain object to {@link Json} for writing into a `jsonb` column.
+ *
+ * Domain interfaces (e.g. {@link EventTheme}) lack the implicit index signature
+ * `Json` requires, so this widens them at the single write boundary instead of
+ * scattering casts. Input is constrained to a (JSON-serialisable) object.
+ */
+export function toJson(value: object): Json {
+  return value as Json;
+}
+
+/**
  * Maps an event row to the {@link Event} domain type.
  *
- * `theme`/`config` fall back to `{}` defensively in case a legacy row stored
- * `null` before the `NOT NULL DEFAULT '{}'` constraint existed.
+ * `theme`/`config` are stored as `jsonb` (typed as {@link Json}); they are
+ * narrowed to their domain shapes via {@link asJsonObject}, which also falls
+ * back to `{}` for legacy rows that stored `null` before the
+ * `NOT NULL DEFAULT '{}'` constraint existed.
  */
 export function mapEvent(row: EventRow): Event {
   return {
@@ -40,8 +77,8 @@ export function mapEvent(row: EventRow): Event {
     address: row.address,
     status: row.status,
     about: row.about,
-    theme: row.theme ?? {},
-    config: row.config ?? {},
+    theme: asEventTheme(row.theme),
+    config: asEventConfig(row.config),
     organizerId: row.organizer_id,
     createdAt: row.created_at,
     updatedAt: row.updated_at,

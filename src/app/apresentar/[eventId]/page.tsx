@@ -1,5 +1,6 @@
 import { createServerClient } from "@/lib/supabase";
 import { notFound } from "next/navigation";
+import { asEventTheme } from "@/lib/api/mappers";
 import { ProjectionView } from "./view";
 
 export default async function ApresentarPage({ params }: { params: Promise<{ eventId: string }> }) {
@@ -15,7 +16,7 @@ export default async function ApresentarPage({ params }: { params: Promise<{ eve
 
   if (!data) notFound();
 
-  const theme = data.theme ?? {};
+  const theme = asEventTheme(data.theme);
 
   return (
     <ProjectionView

@@ -242,11 +242,32 @@ pnpm test:coverage    # Testes com relatório de cobertura
 pnpm typecheck        # Verificar tipos TypeScript
 pnpm lint             # Lint do código
 
+pnpm db:types         # Regenerar src/lib/db/database.types.ts a partir do banco
 pnpm db:generate      # Gerar migrations Drizzle
 pnpm db:migrate       # Executar migrations
 pnpm db:push          # Push do schema (dev)
 pnpm db:studio        # Abrir Drizzle Studio
 ```
+
+### Tipos do banco (`database.types.ts`)
+
+`src/lib/db/database.types.ts` é um **arquivo gerado** — não edite à mão. Ele
+tipa o client Supabase (`createClient<Database>()`) a partir do schema real do
+banco, incluindo as relações (`Relationships`), o que permite inferir joins
+embedded sem casts.
+
+Após aplicar qualquer migration (em `supabase/migrations/`), regenere os tipos:
+
+```bash
+pnpm db:types   # supabase gen types typescript --linked --schema public
+```
+
+Isso requer a CLI `supabase` autenticada e o projeto linkado (`supabase link`).
+Manter este arquivo gerado fecha o risco de drift entre `schema.ts` e os tipos
+do client apontado no ADR 012. As colunas `jsonb` (`events.theme`/`config`,
+`event_payments.event_data`) saem tipadas como `Json`; o narrowing para os tipos
+de domínio (`EventTheme`/`EventConfig`) é feito nos mappers
+(`src/lib/api/mappers.ts`).
 
 ## Arquitetura
 

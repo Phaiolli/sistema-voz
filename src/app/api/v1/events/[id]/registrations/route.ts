@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase";
 import { requireEventAccess } from "@/lib/api/auth-guard";
 import { createRegistrationSchema } from "@/lib/schemas";
-import { mapRegistration } from "@/lib/api/mappers";
+import { mapRegistration, asEventConfig } from "@/lib/api/mappers";
 
 const RATE_LIMIT_MAX = 5;
 const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000; // 1 hour
@@ -41,7 +41,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: { code: "NOT_FOUND", message: "Evento não encontrado." } }, { status: 404 });
   }
 
-  const regConfig = event.config?.registration ?? {};
+  const regConfig = asEventConfig(event.config).registration ?? {};
 
   if (!regConfig.enabled) {
     return NextResponse.json({ error: { code: "REGISTRATION_CLOSED", message: "Inscrições não estão abertas." } }, { status: 422 });

@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase";
 import bcrypt from "bcryptjs";
 import { eventIncluir } from "@/lib/fixtures";
+import { toJson } from "@/lib/api/mappers";
 import { randomBytes } from "crypto";
 
 export async function POST(req: NextRequest) {
@@ -36,8 +37,8 @@ export async function POST(req: NextRequest) {
       address: eventIncluir.address,
       status: eventIncluir.status,
       about: eventIncluir.about,
-      theme: eventIncluir.theme,
-      config: eventIncluir.config,
+      theme: toJson(eventIncluir.theme),
+      config: toJson(eventIncluir.config),
       organizer_id: eventIncluir.organizerId,
     });
     if (insertErr) throw insertErr;

@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { stripe, STRIPE_EVENT_PRICE_CENTS, STRIPE_CURRENCY } from "@/lib/stripe";
 import { createServerClient } from "@/lib/supabase";
 import { createEventSchema } from "@/lib/schemas";
+import { toJson } from "@/lib/api/mappers";
 
 export async function POST(req: NextRequest) {
   const session = await auth();
@@ -68,7 +69,7 @@ export async function POST(req: NextRequest) {
     id: paymentId,
     stripe_session_id: checkoutSession.id,
     owner_id: user.id,
-    event_data: eventData,
+    event_data: toJson(eventData),
     amount: STRIPE_EVENT_PRICE_CENTS,
     status: "pending",
   });

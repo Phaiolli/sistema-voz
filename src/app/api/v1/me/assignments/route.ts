@@ -2,9 +2,6 @@ import { NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase";
 import { auth } from "@/lib/auth";
 import { mapEvent } from "@/lib/api/mappers";
-import type { Database } from "@/lib/db/database.types";
-
-type EventRow = Database["public"]["Tables"]["events"]["Row"];
 
 export async function GET(_req?: Request) {
   const session = await auth();
@@ -37,11 +34,9 @@ export async function GET(_req?: Request) {
 
   if (assignErr) throw assignErr;
 
-  // The embedded `events` relation cannot be inferred from the hand-written
-  // Database type (no Relationships metadata), so we describe the join shape.
-  type AssignmentJoinRow = { event_id: string; created_at: string; events: EventRow | EventRow[] | null };
-
-  const result = ((assignments ?? []) as unknown as AssignmentJoinRow[]).map((row) => {
+  // The embedded `events` relation is inferred from the generated Database type
+  // (Relationships metadata), so no cast is needed.
+  const result = (assignments ?? []).map((row) => {
     const eventRow = Array.isArray(row.events) ? row.events[0] : row.events;
     return {
       eventId: row.event_id,

@@ -33,12 +33,9 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 
   if (fetchErr) throw fetchErr;
 
-  // The embedded `users` relation cannot be inferred from the hand-written
-  // Database type (no Relationships metadata), so we describe the join shape.
-  type AssignmentJoinRow = { users: MediatorUser | MediatorUser[] | null };
-  const rows = (data ?? []) as unknown as AssignmentJoinRow[];
-
-  const mediators = rows
+  // The embedded `users` relation is inferred from the generated Database type
+  // (Relationships metadata), so no cast is needed.
+  const mediators = (data ?? [])
     .map((row) => {
       const user = Array.isArray(row.users) ? row.users[0] : row.users;
       return user ? mapUser(user) : null;

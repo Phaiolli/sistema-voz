@@ -3,9 +3,8 @@ import { createServerClient } from "@/lib/supabase";
 import { auth } from "@/lib/auth";
 import { patchEventSchema } from "@/lib/schemas";
 import { isEventOwnedBy } from "@/lib/plan-limits";
-import type { EventTheme, EventConfig } from "@/lib/types";
 import type { Database } from "@/lib/db/database.types";
-import { mapEvent } from "@/lib/api/mappers";
+import { mapEvent, toJson } from "@/lib/api/mappers";
 
 async function requireAuth(roles: string[]) {
   const session = await auth();
@@ -122,8 +121,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (body.address !== undefined) patch.address = body.address;
   if (body.status !== undefined) patch.status = body.status;
   if (body.about !== undefined) patch.about = body.about;
-  if (body.theme !== undefined) patch.theme = body.theme as EventTheme;
-  if (body.config !== undefined) patch.config = body.config as EventConfig;
+  if (body.theme !== undefined) patch.theme = toJson(body.theme);
+  if (body.config !== undefined) patch.config = toJson(body.config);
   patch.updated_at = new Date().toISOString();
 
   const { data: row, error: updateErr } = await supabase

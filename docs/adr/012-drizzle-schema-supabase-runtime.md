@@ -35,27 +35,45 @@ produzir diffs incorretos/destrutivos.
 2. **O acesso a dados em runtime é via `@supabase/supabase-js`**, tipado com o
    tipo `Database` de `database.types.ts`. O query builder do Drizzle **não** é
    usado em runtime.
-3. **`database.types.ts` deve ser mantido em sincronia com `schema.ts`**
-   (manualmente por ora; idealmente gerado por `supabase gen types` quando
-   houver credenciais/CI). Toda alteração de coluna/enum em `schema.ts` exige a
-   atualização correspondente em `database.types.ts`.
-4. **Migrations**: quando o snapshot do `drizzle-kit` estiver em sincronia,
-   `drizzle-kit generate` pode ser usado; quando não estiver (caso atual), a
-   migration é escrita à mão em `supabase/migrations/` seguindo o padrão dos
-   Lotes 1+, sempre idempotente e com nota de rollback.
+3. **`database.types.ts` é GERADO a partir do banco** via
+   `supabase gen types typescript --linked` (script `npm run db:types`), não mais
+   mantido à mão. O arquivo passa a ter o shape canônico do Supabase, incluindo
+   `Relationships` (o que permite inferir joins embedded sem `as unknown as`). As
+   colunas `jsonb` saem tipadas como `Json`; o narrowing para os tipos de domínio
+   (`EventTheme`/`EventConfig`) é feito nos mappers (`src/lib/api/mappers.ts`),
+   não no tipo gerado. Após qualquer migration aplicada ao banco, rode
+   `npm run db:types` para regenerar — isso fecha o risco de drift entre o schema
+   real e o tipo do client.
+4. **Migrations**: continuam escritas à mão em `supabase/migrations/` (seguindo o
+   padrão dos Lotes 1+, sempre idempotentes e com nota de rollback). O snapshot
+   local do `drizzle-kit` (`drizzle/meta`) está defasado dessas migrations
+   manuais, então **`drizzle-kit generate`/`db:generate` NÃO deve ser usado** até
+   o snapshot ser reconciliado — o diff produzido seria incorreto/destrutivo.
+   Optou-se por **não** rodar `drizzle-kit pull` agora: a introspecção
+   sobrescreveria o histórico declarativo em `drizzle/` e poderia mascarar a
+   divergência, dando uma falsa sensação de que `generate` voltou a ser seguro. A
+   reconciliação do snapshot fica como trabalho futuro explícito.
 
 ## Consequences
 
 **Positivo**
 - Papéis claros: Drizzle modela; Supabase JS executa.
 - Um único client (Supabase) para dados, Realtime e storage no servidor.
-- `database.types.ts` dá segurança de tipo ao client sem depender de rede no CI.
+- `database.types.ts` dá segurança de tipo ao client, agora **gerado do banco**
+  (`npm run db:types`) — elimina o drift manual entre schema e tipo do client.
+- Com `Relationships` no tipo gerado, os joins embedded são inferidos pelo
+  supabase-js; os `as unknown as` que descreviam o shape do join foram removidos
+  (`me/assignments`, `events/[id]/mediators`).
 
 **Negativo / custo**
-- `schema.ts` e `database.types.ts` podem divergir se a sincronização manual for
-  esquecida. Mitigação: checklist no PR e, no futuro, geração automática.
-- O snapshot do `drizzle-kit` está defasado; até ser reconciliado, novas
-  migrations seguem manuais (não confiar cegamente no `generate`).
+- Regenerar `database.types.ts` depende da CLI `supabase` autenticada e do
+  projeto linkado (rede/credenciais). Mitigação: rodar `npm run db:types` após
+  cada migration; o arquivo gerado é versionado, então o CI continua sem precisar
+  de rede.
+- O snapshot do `drizzle-kit` (`drizzle/meta`) permanece defasado; até ser
+  reconciliado, `db:generate` não deve ser usado e novas migrations seguem
+  manuais. A reconciliação (via `drizzle-kit pull` controlado ou regeneração do
+  histórico) fica pendente como trabalho futuro.
 
 ## Alternatives Considered
 

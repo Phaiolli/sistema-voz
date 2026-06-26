@@ -3,7 +3,7 @@ import { createServerClient } from "@/lib/supabase";
 import { auth } from "@/lib/auth";
 import { createEventSchema } from "@/lib/schemas";
 import { getOwnerEventCount, FREE_EVENT_LIMIT } from "@/lib/plan-limits";
-import { mapEvent } from "@/lib/api/mappers";
+import { mapEvent, toJson } from "@/lib/api/mappers";
 
 async function requireAuth(roles: string[]) {
   const session = await auth();
@@ -114,8 +114,8 @@ export async function POST(req: NextRequest) {
       address: body.address,
       status: body.status,
       about: body.about,
-      theme: body.theme,
-      config: body.config,
+      theme: toJson(body.theme),
+      config: toJson(body.config),
       organizer_id: organizerId,
     })
     .select()

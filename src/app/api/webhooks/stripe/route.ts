@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe";
 import { createServerClient } from "@/lib/supabase";
 import { createEventSchema } from "@/lib/schemas";
+import { toJson } from "@/lib/api/mappers";
 import { logError } from "@/lib/log";
 import type Stripe from "stripe";
 
@@ -92,8 +93,8 @@ export async function POST(req: NextRequest) {
     address: parsedEventData.address,
     status: parsedEventData.status,
     about: parsedEventData.about,
-    theme: parsedEventData.theme,
-    config: parsedEventData.config,
+    theme: toJson(parsedEventData.theme),
+    config: toJson(parsedEventData.config),
     organizer_id: metadata.ownerId,
   });
 

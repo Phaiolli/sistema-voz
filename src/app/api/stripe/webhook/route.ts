@@ -201,9 +201,16 @@ export async function POST(req: NextRequest) {
   switch (event.type) {
     case "checkout.session.completed": {
       const session = event.data.object as Stripe.Checkout.Session;
-      // `pro` subscriptions are settled via the subscription/invoice events;
-      // here we only finalize the one-time per-event purchase.
-      if (session.mode === "subscription" || session.metadata?.plan_slug === "pro") {
+      // Shared Stripe account: this endpoint receives every project's checkout
+      // events. Finalize only voz's own one-time per-event purchases —
+      // positively tagged `app="voz"`. `pro` subscriptions settle via the
+      // subscription/invoice events; anything else (other apps) is acknowledged
+      // and ignored so it never triggers a 400/retry on the endpoint.
+      if (
+        session.metadata?.app !== STRIPE_APP ||
+        session.mode === "subscription" ||
+        session.metadata?.plan_slug === "pro"
+      ) {
         return NextResponse.json({ received: true });
       }
       return handleEventCheckout(supabase, session, deterministicEventId(session.id));

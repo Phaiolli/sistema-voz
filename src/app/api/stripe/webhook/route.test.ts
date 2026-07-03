@@ -144,6 +144,17 @@ describe("POST /api/stripe/webhook — checkout completed", () => {
     expect(mockSupabase.from).not.toHaveBeenCalled();
   });
 
+  it("ignores a payment checkout from another project (no app=voz tag)", async () => {
+    // Shared account: another project's payment event, no voz metadata.
+    mockConstructEvent.mockReturnValue({
+      type: "checkout.session.completed",
+      data: { object: { id: "cs_other", mode: "payment", metadata: { plan_slug: "something" } } },
+    });
+    const res = await POST(makeReq());
+    expect(res.status).toBe(200);
+    expect(mockSupabase.from).not.toHaveBeenCalled();
+  });
+
   it("finalizes a paid event: creates the event and marks the payment paid", async () => {
     // Sequence of from() calls in handleEventCheckout.
     const paymentsSelect = {

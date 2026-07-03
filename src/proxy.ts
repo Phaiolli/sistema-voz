@@ -6,9 +6,12 @@ import { NextResponse } from "next/server";
  *
  * The nonce lets Next.js's framework/bootstrap scripts run under a strict CSP
  * without `'unsafe-inline'` on `script-src`. `'strict-dynamic'` then trusts any
- * script those nonce'd scripts load, which is how Next propagates trust to its
- * chunk loader — and how Clerk's client, injected by the nonce'd Next bundle,
- * is trusted without host allow-listing. In dev, `'unsafe-eval'` is required
+ * script those nonce'd scripts load at runtime (via `createElement`), which is
+ * how Next propagates trust to its chunk loader. Note that `'strict-dynamic'`
+ * does NOT cover Clerk's `clerk.browser.js`/`ui.browser.js`: those are emitted
+ * as server-rendered (parser-inserted) `<script src>` tags, which need an
+ * explicit nonce — the layout forwards it to `<ClerkProvider nonce>` for that.
+ * In dev, `'unsafe-eval'` is required
  * because React uses `eval` for richer error overlays; it is never emitted in
  * production.
  *
@@ -17,7 +20,8 @@ import { NextResponse } from "next/server";
  * so the residual risk is low. See ADR 014 for the full rationale and the
  * dynamic-rendering trade-off this policy implies.
  *
- * Clerk directives (see ADR 017): `strict-dynamic` covers Clerk's scripts, but
+ * Clerk directives (see ADR 017): Clerk's script tags carry the request nonce
+ * (forwarded via `<ClerkProvider nonce>` in the root layout), while
  * `connect-src`/`img-src`/`worker-src`/`frame-src` are still enforced, so its
  * Frontend API, images, web workers and the Turnstile bot-check frame are
  * allow-listed here. `*.clerk.accounts.dev` serves development instances;

@@ -15,10 +15,16 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   // so Next injects the request's nonce into its framework scripts on every
   // page; static prerendering would emit scripts without a nonce, which the
   // strict `script-src 'strict-dynamic'` policy would then block at runtime.
-  await headers();
+  //
+  // The nonce is also forwarded to `<ClerkProvider>`: Clerk emits its
+  // `clerk.browser.js`/`ui.browser.js` as server-rendered `<script src>` tags,
+  // which are parser-inserted and therefore NOT covered by `'strict-dynamic'`
+  // propagation — they need an explicit `nonce` attribute or CSP blocks them.
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
 
   return (
     <ClerkProvider
+      nonce={nonce}
       localization={ptBR}
       signInUrl="/entrar"
       signUpUrl="/cadastro"

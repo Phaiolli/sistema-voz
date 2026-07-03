@@ -8,8 +8,8 @@ import { VozWordmark } from "@/components/voz/wordmark";
  */
 export default function EntrarPage() {
   return (
-    <main className="flex min-h-full flex-1 flex-col items-center justify-center gap-8 p-6">
-      <VozWordmark size={28} />
+    <main className="flex min-h-dvh flex-1 flex-col items-center justify-center gap-8 bg-primary p-6">
+      <VozWordmark size={28} inverse />
       <SignIn />
     </main>
   );

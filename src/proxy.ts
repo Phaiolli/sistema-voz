@@ -37,7 +37,7 @@ function buildCsp(nonce: string): string {
     "img-src 'self' data: blob: https://*.supabase.co https://img.clerk.com",
     "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.clerk.accounts.dev https://clerk.useavoz.app https://clerk-telemetry.com",
     "worker-src 'self' blob:",
-    "frame-src https://challenges.cloudflare.com",
+    "frame-src 'self' https://challenges.cloudflare.com https://clerk.useavoz.app",
     "base-uri 'self'",
     "form-action 'self'",
     "frame-ancestors 'none'",

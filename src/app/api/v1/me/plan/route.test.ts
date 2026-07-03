@@ -7,9 +7,12 @@ vi.mock("@/lib/auth", () => ({ auth: vi.fn() }));
 
 import { auth } from "@/lib/auth";
 
-function makeChain(data: unknown) {
+function makeChain(data: unknown, subData: unknown = null) {
   const chain: Record<string, unknown> = {};
   for (const m of ["select", "eq", "order", "limit"]) chain[m] = vi.fn(() => chain);
+  // Subscription lookup (from("users")…maybeSingle) resolves first; the payments
+  // query awaits the chain (thenable). Same chain object serves both.
+  chain.maybeSingle = vi.fn(() => Promise.resolve({ data: subData }));
   chain.then = (resolve: (v: unknown) => unknown) =>
     Promise.resolve({ data }).then(resolve);
   return chain;

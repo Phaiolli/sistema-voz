@@ -1,17 +1,3 @@
-/**
- * Supabase `Database` type for `createClient<Database>()`.
- *
- * GENERATED FILE — do not edit by hand. Regenerate after applying migrations:
- *
- *     npm run db:types
- *
- * (runs `supabase gen types typescript --linked`). Keeping this file generated
- * from the live database closes the schema/types drift risk noted in ADR 012.
- *
- * Notes on jsonb columns: `events.theme` / `events.config` / `event_payments.event_data`
- * are typed as `Json` here. Domain narrowing to `EventTheme` / `EventConfig`
- * happens in the mappers (`src/lib/api/mappers.ts`), not in this file.
- */
 export type Json =
   | string
   | number
@@ -344,34 +330,49 @@ export type Database = {
       }
       users: {
         Row: {
+          clerk_id: string | null
           created_at: string
+          current_period_end: string | null
           email: string
           id: string
           last_seen_at: string | null
           name: string
-          password_hash: string
+          password_hash: string | null
           plan: Database["public"]["Enums"]["user_plan"]
           role: Database["public"]["Enums"]["user_role"]
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
+          subscription_status: string | null
         }
         Insert: {
+          clerk_id?: string | null
           created_at?: string
+          current_period_end?: string | null
           email: string
           id: string
           last_seen_at?: string | null
           name: string
-          password_hash: string
+          password_hash?: string | null
           plan?: Database["public"]["Enums"]["user_plan"]
           role?: Database["public"]["Enums"]["user_role"]
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          subscription_status?: string | null
         }
         Update: {
+          clerk_id?: string | null
           created_at?: string
+          current_period_end?: string | null
           email?: string
           id?: string
           last_seen_at?: string | null
           name?: string
-          password_hash?: string
+          password_hash?: string | null
           plan?: Database["public"]["Enums"]["user_plan"]
           role?: Database["public"]["Enums"]["user_role"]
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          subscription_status?: string | null
         }
         Relationships: []
       }

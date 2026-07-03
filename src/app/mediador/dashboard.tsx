@@ -6,7 +6,7 @@ import { ExternalLink, QrCode, Download } from "lucide-react";
 import { VozWordmark } from "@/components/voz/wordmark";
 import { HeaderControls } from "@/components/voz/header-controls";
 import { createBrowserClient } from "@/lib/supabase";
-import { signOut, useSession } from "next-auth/react";
+import { useClerk } from "@clerk/nextjs";
 import type { Question, QuestionStatus } from "@/lib/types";
 import { questionBroadcastSchema, questionDeletedBroadcastSchema, type QuestionBroadcast } from "@/lib/schemas";
 import { QRModal } from "./qr-modal";
@@ -58,8 +58,7 @@ interface AssignmentsResponse {
 }
 
 export function MediatorDashboard() {
-  // Todos os hooks devem vir antes de qualquer return antecipado
-  useSession();
+  const { signOut } = useClerk();
 
   const [questions, setQuestions] = useState<Question[]>([]);
   const [loading, setLoading] = useState(true);
@@ -314,7 +313,7 @@ export function MediatorDashboard() {
         <p className="m-0 font-semibold text-xl" style={{ fontFamily: '"Archivo", sans-serif' }}>Nenhum evento atribuído.</p>
         <p className="m-0 text-[15px] text-muted-foreground">Entre em contato com o administrador.</p>
         <button
-          onClick={() => signOut()}
+          onClick={() => signOut({ redirectUrl: "/entrar" })}
           className="mt-2 h-10 px-5 rounded-lg border border-border bg-transparent text-sm cursor-pointer text-foreground"
         >
           Sair

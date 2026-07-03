@@ -19,6 +19,7 @@ import { getEventQuestionCount } from "@/lib/plan-limits";
 
 vi.mock("@/lib/plan-limits", () => ({
   getEventQuestionCount: vi.fn().mockResolvedValue(0),
+  isOwnerPro: vi.fn().mockResolvedValue(false),
   FREE_QUESTION_LIMIT: 15,
 }));
 

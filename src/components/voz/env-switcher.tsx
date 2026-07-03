@@ -9,7 +9,7 @@
 "use client";
 
 import Link from "next/link";
-import { useSession } from "next-auth/react";
+import { useAppUser } from "@/lib/use-app-user";
 
 /**
  * Props for EnvSwitcher component.
@@ -29,8 +29,7 @@ interface EnvSwitcherProps {
  * <EnvSwitcher active="admin" />  // Shows admin/mediador tabs, admin is highlighted
  */
 export function EnvSwitcher({ active }: EnvSwitcherProps) {
-  const { data: session } = useSession();
-  const role = session?.user?.role;
+  const { role } = useAppUser();
 
   if (role !== "admin" && role !== "superadmin") return null;
 

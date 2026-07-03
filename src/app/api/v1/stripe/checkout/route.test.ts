@@ -4,14 +4,18 @@ import { NextRequest } from "next/server";
 // vi.hoisted so the ref is available inside the hoisted vi.mock factory.
 // The stripe module throws at load time without STRIPE_SECRET_KEY, so we must
 // mock it before importing the route.
-const { mockCreateSession } = vi.hoisted(() => ({
+const { mockCreateSession, mockGetPrice } = vi.hoisted(() => ({
   mockCreateSession: vi.fn(),
+  mockGetPrice: vi.fn(),
 }));
 
 vi.mock("@/lib/stripe", () => ({
   stripe: { checkout: { sessions: { create: mockCreateSession } } },
   STRIPE_EVENT_PRICE_CENTS: 5990,
   STRIPE_CURRENCY: "brl",
+  STRIPE_APP: "voz",
+  LOOKUP_KEYS: { event: "voz_event", pro: "voz_pro_monthly" },
+  getPriceByLookupKey: mockGetPrice,
 }));
 
 const mockInsert = vi.fn();
@@ -43,6 +47,7 @@ beforeEach(() => {
   vi.resetAllMocks();
   mockSupabase.from.mockReturnValue({ insert: mockInsert });
   mockInsert.mockResolvedValue({ error: null });
+  mockGetPrice.mockResolvedValue({ id: "price_event_1", unit_amount: 5990 });
   mockCreateSession.mockResolvedValue({
     id: "cs_test_123",
     url: "https://checkout.stripe.com/c/pay/cs_test_123",
@@ -110,12 +115,14 @@ describe("POST /api/v1/stripe/checkout", () => {
     const json = await res.json();
     expect(json.checkoutUrl).toBe("https://checkout.stripe.com/c/pay/cs_test_123");
 
-    // Stripe session created with the right amount/currency and owner metadata.
+    // Stripe session created from the voz_event lookup-key price with voz metadata.
+    expect(mockGetPrice).toHaveBeenCalledWith("voz_event");
     expect(mockCreateSession).toHaveBeenCalledTimes(1);
     const sessionArg = mockCreateSession.mock.calls[0][0];
     expect(sessionArg.mode).toBe("payment");
-    expect(sessionArg.line_items[0].price_data.unit_amount).toBe(5990);
-    expect(sessionArg.line_items[0].price_data.currency).toBe("brl");
+    expect(sessionArg.line_items[0].price).toBe("price_event_1");
+    expect(sessionArg.metadata.app).toBe("voz");
+    expect(sessionArg.metadata.plan_slug).toBe("event");
     expect(sessionArg.metadata.ownerId).toBe("usr_owner");
 
     // event_payments insert with status pending.

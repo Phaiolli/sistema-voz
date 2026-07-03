@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase";
 import { submitQuestionSchema } from "@/lib/schemas";
-import { getEventQuestionCount, FREE_QUESTION_LIMIT } from "@/lib/plan-limits";
+import { getEventQuestionCount, isOwnerPro, FREE_QUESTION_LIMIT } from "@/lib/plan-limits";
 import { requireEventAccess } from "@/lib/api/auth-guard";
 import { mapQuestion, mapQuestionPublic } from "@/lib/api/mappers";
 import type { QuestionFullRow, QuestionPublicSource } from "@/lib/api/mappers";
@@ -57,9 +57,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   if (!event) return error("NOT_FOUND", "Evento não encontrado.", 404);
   if (event.status === "ended") return error("EVENT_ENDED", "Este evento foi encerrado.", 409);
 
-  // Billing is per-event: a paid event has unlimited questions; an unpaid one is
-  // capped at the free question limit.
-  if (!event.is_paid) {
+  // An event has unlimited questions when it was paid per-event (is_paid) or its
+  // owner holds an active `pro` subscription (ADR-018); otherwise it is capped at
+  // the free question limit.
+  if (!event.is_paid && !(await isOwnerPro(event.organizer_id))) {
     const questionCount = await getEventQuestionCount(eventId);
     if (questionCount >= FREE_QUESTION_LIMIT) {
       return error("QUESTION_LIMIT_REACHED", "Este evento atingiu o limite de perguntas do plano gratuito.", 403);

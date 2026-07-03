@@ -14,7 +14,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { useAppUser } from "@/lib/use-app-user";
 import { Calendar, LayoutDashboard, Mic, Shield, User } from "lucide-react";
 
 /**
@@ -111,8 +111,8 @@ function entriesForRole(role: string | undefined): NavEntry[] {
  */
 export function BottomNav() {
   const pathname = usePathname();
-  const { data: session } = useSession();
-  const entries = entriesForRole(session?.user?.role);
+  const { role } = useAppUser();
+  const entries = entriesForRole(role);
 
   if (entries.length === 0) return null;
 

@@ -5,10 +5,11 @@ import { GET, POST } from "./route";
 // plan-limits mock — values overridden per test via vi.mocked
 vi.mock("@/lib/plan-limits", () => ({
   getOwnerEventCount: vi.fn().mockResolvedValue(0),
+  isOwnerPro: vi.fn().mockResolvedValue(false),
   FREE_EVENT_LIMIT: 1,
 }));
 
-import { getOwnerEventCount } from "@/lib/plan-limits";
+import { getOwnerEventCount, isOwnerPro } from "@/lib/plan-limits";
 
 const mockSupabase = { from: vi.fn() };
 
@@ -213,10 +214,25 @@ describe("POST /api/v1/events — owner plan limits", () => {
       user: { role: "owner", id: "usr_owner" },
     } as never);
     vi.mocked(getOwnerEventCount).mockResolvedValue(1);
+    vi.mocked(isOwnerPro).mockResolvedValue(false);
     const res = await POST(makeOwnerRequest(ownerValidBody));
     expect(res.status).toBe(402);
     const json = await res.json();
     expect(json.error.code).toBe("PAYMENT_REQUIRED");
     expect(json.error.checkoutRequired).toBe(true);
+  });
+
+  // ADR-018: a pro subscriber bypasses the free-event limit entirely.
+  it("creates event (201) for a pro owner already over the free limit", async () => {
+    vi.mocked(auth).mockResolvedValue({
+      user: { role: "owner", id: "usr_pro" },
+    } as never);
+    vi.mocked(getOwnerEventCount).mockResolvedValue(5);
+    vi.mocked(isOwnerPro).mockResolvedValue(true);
+    const chain = makeChain(mockEventRow);
+    chain.maybeSingle.mockResolvedValue({ data: null });
+    mockSupabase.from.mockReturnValue(chain);
+    const res = await POST(makeOwnerRequest(ownerValidBody));
+    expect(res.status).toBe(201);
   });
 });

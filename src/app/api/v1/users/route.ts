@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
+import { clerkClient } from "@clerk/nextjs/server";
 import { createServerClient } from "@/lib/supabase";
 import { requireRole } from "@/lib/api/auth-guard";
 import { createUserSchema } from "@/lib/schemas";
-import bcrypt from "bcryptjs";
+import { splitName } from "@/lib/api/clerk-users";
+import { logError } from "@/lib/log";
 import type { Database } from "@/lib/db/database.types";
 
 type UserRow = Database["public"]["Tables"]["users"]["Row"];
@@ -72,12 +74,35 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const passwordHash = await bcrypt.hash(password, 12);
-  const id = crypto.randomUUID();
+  // Clerk owns the credential (ADR-017): create the identity there first, then
+  // mirror the row into Supabase. The `user.created` webhook upserts the same
+  // row (by clerk_id), so this insert uses upsert to stay race-free.
+  const { firstName, lastName } = splitName(name);
+  let clerkId: string;
+  try {
+    const client = await clerkClient();
+    const clerkUser = await client.users.createUser({
+      emailAddress: [email],
+      password,
+      firstName,
+      lastName,
+      publicMetadata: { role, plan: "free" },
+    });
+    clerkId = clerkUser.id;
+  } catch (err) {
+    logError("users.create.clerk", err);
+    return NextResponse.json(
+      { error: { code: "CONFLICT", message: "Não foi possível criar o usuário. Verifique o e-mail e a senha." } },
+      { status: 409 },
+    );
+  }
 
   const { data: row, error: insertErr } = await supabase
     .from("users")
-    .insert({ id, name, email, role, password_hash: passwordHash })
+    .upsert(
+      { id: clerkId, clerk_id: clerkId, name, email, role, plan: "free" },
+      { onConflict: "clerk_id" },
+    )
     .select("id, name, email, role, created_at, last_seen_at")
     .single();
 

@@ -1,16 +1,22 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useSession, signOut } from "next-auth/react";
+import Link from "next/link";
+import { useClerk } from "@clerk/nextjs";
+import { useAppUser } from "@/lib/use-app-user";
 import { VozWordmark } from "@/components/voz/wordmark";
 import { EnvSwitcher } from "@/components/voz/env-switcher";
 import { toast } from "sonner";
-import { LogOut, KeyRound, User, CreditCard, CheckCircle, Clock, ExternalLink } from "lucide-react";
+import { LogOut, UserCog, CreditCard, CheckCircle, Clock, ExternalLink, Sparkles } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
 interface PlanData {
   plan: string;
+  isPro: boolean;
+  subscriptionStatus: string | null;
+  currentPeriodEnd: string | null;
+  hasStripeCustomer: boolean;
   totalEvents: number;
   totalSpent: number;
   payments: {
@@ -23,19 +29,6 @@ interface PlanData {
     paidAt: string | null;
   }[];
 }
-
-const inp: React.CSSProperties = {
-  padding: "10px 12px",
-  borderRadius: 8,
-  border: "1.5px solid hsl(var(--border))",
-  background: "hsl(var(--background))",
-  color: "hsl(var(--foreground))",
-  fontSize: 14,
-  fontFamily: "inherit",
-  width: "100%",
-  boxSizing: "border-box",
-  minHeight: 44,
-};
 
 function initials(name: string | null | undefined, email: string | null | undefined) {
   if (name) return name.split(" ").map((w) => w[0]).filter(Boolean).slice(0, 2).join("").toUpperCase();
@@ -59,19 +52,14 @@ function fmtDate(iso: string) {
 }
 
 export default function ContaPage() {
-  const { data: session, update } = useSession();
-  const u = session?.user as { id?: string; name?: string | null; email?: string | null; role?: string; plan?: string } | undefined;
-
-  const [name, setName] = useState(u?.name ?? "");
-  const [savingName, setSavingName] = useState(false);
-
-  const [currentPwd, setCurrentPwd] = useState("");
-  const [newPwd, setNewPwd] = useState("");
-  const [confirmPwd, setConfirmPwd] = useState("");
-  const [savingPwd, setSavingPwd] = useState(false);
+  // Profile and password management are owned by Clerk (ADR-017); the custom
+  // name/password forms were replaced by Clerk's account modal.
+  const { openUserProfile, signOut } = useClerk();
+  const { name, email, role, plan } = useAppUser();
 
   const [planData, setPlanData] = useState<PlanData | null>(null);
   const [planLoading, setPlanLoading] = useState(true);
+  const [billingBusy, setBillingBusy] = useState(false);
 
   useEffect(() => {
     fetch("/api/v1/me/plan")
@@ -81,57 +69,26 @@ export default function ContaPage() {
       .finally(() => setPlanLoading(false));
   }, []);
 
-  async function handleSaveName(e: React.FormEvent) {
-    e.preventDefault();
-    if (!u?.id || !name.trim()) return;
-    setSavingName(true);
+  async function manageBilling() {
+    setBillingBusy(true);
     try {
-      const res = await fetch("/api/v1/me/profile", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: name.trim() }),
-      });
+      const res = await fetch("/api/v1/stripe/portal", { method: "POST" });
       if (!res.ok) {
-        const err = await res.json() as { message?: string };
-        toast.error(err.message ?? "Erro ao salvar nome.");
+        toast.error("Não foi possível abrir o portal de cobrança.");
         return;
       }
-      await update({ name: name.trim() });
-      toast.success("Nome atualizado.");
+      const { url } = (await res.json()) as { url: string };
+      window.location.href = url;
     } catch {
-      toast.error("Erro ao salvar nome.");
+      toast.error("Erro de rede. Tente novamente.");
     } finally {
-      setSavingName(false);
+      setBillingBusy(false);
     }
   }
 
-  async function handleSavePwd(e: React.FormEvent) {
-    e.preventDefault();
-    if (newPwd !== confirmPwd) { toast.error("As senhas não coincidem."); return; }
-    if (newPwd.length < 8) { toast.error("A senha deve ter pelo menos 8 caracteres."); return; }
-    setSavingPwd(true);
-    try {
-      const res = await fetch("/api/v1/me/profile", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ currentPassword: currentPwd, password: newPwd }),
-      });
-      if (!res.ok) {
-        const err = await res.json() as { message?: string };
-        toast.error(err.message ?? "Erro ao alterar senha.");
-        return;
-      }
-      toast.success("Senha alterada com sucesso.");
-      setCurrentPwd(""); setNewPwd(""); setConfirmPwd("");
-    } catch {
-      toast.error("Erro ao alterar senha.");
-    } finally {
-      setSavingPwd(false);
-    }
-  }
-
-  const abbr = initials(u?.name, u?.email);
-  const isPaid = (planData?.plan ?? u?.plan) === "paid";
+  const abbr = initials(name, email);
+  const isPaid = (planData?.plan ?? plan) === "paid";
+  const isPro = planData?.isPro ?? false;
 
   return (
     <div className="bg-background text-foreground" style={{ minHeight: "100dvh", paddingBottom: 88 }}>
@@ -141,7 +98,7 @@ export default function ContaPage() {
         <EnvSwitcher active="admin" />
         <div className="flex-1" />
         <button
-          onClick={() => signOut({ callbackUrl: "/entrar" })}
+          onClick={() => signOut({ redirectUrl: "/entrar" })}
           className="inline-flex items-center gap-1.5 px-3.5 rounded-lg border border-border bg-transparent text-[13px] cursor-pointer text-foreground"
           style={{ height: 44 }}
         >
@@ -159,20 +116,83 @@ export default function ContaPage() {
             {abbr}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="font-semibold text-base mb-1 overflow-hidden text-ellipsis whitespace-nowrap">{u?.name ?? "—"}</p>
-            <p className="text-[13px] text-muted-foreground mb-1.5 overflow-hidden text-ellipsis whitespace-nowrap">{u?.email ?? "—"}</p>
+            <p className="font-semibold text-base mb-1 overflow-hidden text-ellipsis whitespace-nowrap">{name ?? "—"}</p>
+            <p className="text-[13px] text-muted-foreground mb-1.5 overflow-hidden text-ellipsis whitespace-nowrap">{email ?? "—"}</p>
             <div className="flex gap-1.5 flex-wrap">
               <span className="py-0.5 px-2 rounded-full text-xs font-semibold text-primary" style={{ background: "hsl(var(--primary) / .12)" }}>
-                {roleLabel(u?.role)}
+                {roleLabel(role)}
               </span>
               {!planLoading && (
-                <span className="py-0.5 px-2 rounded-full text-xs font-semibold" style={{ background: isPaid ? "hsl(142 71% 45% / .12)" : "hsl(var(--muted))", color: isPaid ? "hsl(142 71% 32%)" : "hsl(var(--muted-foreground))" }}>
-                  {isPaid ? "Plano pago" : "Plano gratuito"}
-                </span>
+                isPro ? (
+                  <span className="py-0.5 px-2 rounded-full text-xs font-semibold text-primary" style={{ background: "hsl(var(--primary) / .14)" }}>
+                    Pro
+                  </span>
+                ) : (
+                  <span className="py-0.5 px-2 rounded-full text-xs font-semibold" style={{ background: isPaid ? "hsl(142 71% 45% / .12)" : "hsl(var(--muted))", color: isPaid ? "hsl(142 71% 32%)" : "hsl(var(--muted-foreground))" }}>
+                    {isPaid ? "Plano pago" : "Plano gratuito"}
+                  </span>
+                )
               )}
             </div>
           </div>
         </div>
+
+        {/* Assinatura Pro */}
+        <Section icon={<Sparkles size={16} />} title="Assinatura Pro">
+          {isPro ? (
+            <>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="py-0.5 px-2 rounded-full text-xs font-semibold" style={{ background: "hsl(142 71% 45% / .12)", color: "hsl(142 71% 32%)" }}>
+                  Ativa
+                </span>
+                {planData?.currentPeriodEnd && (
+                  <span className="text-[13px] text-muted-foreground">
+                    Renova em {fmtDate(planData.currentPeriodEnd)}
+                  </span>
+                )}
+              </div>
+              <p className="text-[13px] text-muted-foreground m-0">
+                Eventos e perguntas ilimitados. Gerencie ou cancele quando quiser.
+              </p>
+              <div>
+                <button
+                  onClick={manageBilling}
+                  disabled={billingBusy}
+                  className="inline-flex items-center gap-2 px-5 rounded-[9px] border border-border bg-transparent text-sm font-semibold text-foreground"
+                  style={{ height: 44, cursor: billingBusy ? "not-allowed" : "pointer", opacity: billingBusy ? 0.7 : 1 }}
+                >
+                  <CreditCard size={15} aria-hidden />
+                  {billingBusy ? "Abrindo…" : "Gerenciar assinatura"}
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <p className="text-[13px] text-muted-foreground m-0">
+                Assine o Pro e tenha eventos e perguntas ilimitados, sem pagamento avulso.
+              </p>
+              <div className="flex gap-2 flex-wrap">
+                <Link
+                  href="/planos"
+                  className="inline-flex items-center gap-2 px-5 rounded-[9px] border-0 bg-primary text-primary-foreground text-sm font-semibold no-underline"
+                  style={{ height: 44 }}
+                >
+                  <Sparkles size={15} aria-hidden /> Ver planos
+                </Link>
+                {planData?.hasStripeCustomer && (
+                  <button
+                    onClick={manageBilling}
+                    disabled={billingBusy}
+                    className="inline-flex items-center gap-2 px-5 rounded-[9px] border border-border bg-transparent text-sm font-semibold text-foreground"
+                    style={{ height: 44, cursor: billingBusy ? "not-allowed" : "pointer", opacity: billingBusy ? 0.7 : 1 }}
+                  >
+                    <CreditCard size={15} aria-hidden /> Faturas
+                  </button>
+                )}
+              </div>
+            </>
+          )}
+        </Section>
 
         {/* Plano e pagamentos */}
         <Section icon={<CreditCard size={16} />} title="Plano e pagamentos">
@@ -239,57 +259,27 @@ export default function ContaPage() {
           )}
         </Section>
 
-        {/* Dados pessoais */}
-        <Section icon={<User size={16} />} title="Dados pessoais">
-          <form onSubmit={handleSaveName} className="flex flex-col gap-3">
-            <FormField label="Nome" htmlFor="c-name">
-              <input id="c-name" required value={name} onChange={(e) => setName(e.target.value)} style={inp} />
-            </FormField>
-            <FormField label="E-mail" htmlFor="c-email">
-              <input id="c-email" value={u?.email ?? ""} readOnly style={{ ...inp, color: "hsl(var(--muted-foreground))" }} />
-            </FormField>
-            <div>
-              <button
-                type="submit"
-                disabled={savingName}
-                className="px-5 rounded-[9px] border-0 bg-primary text-primary-foreground text-sm font-semibold"
-                style={{ height: 44, cursor: savingName ? "not-allowed" : "pointer", opacity: savingName ? 0.7 : 1 }}
-              >
-                {savingName ? "Salvando…" : "Salvar nome"}
-              </button>
-            </div>
-          </form>
-        </Section>
-
-        {/* Alterar senha */}
-        <Section icon={<KeyRound size={16} />} title="Alterar senha">
-          <form onSubmit={handleSavePwd} className="flex flex-col gap-3">
-            <FormField label="Senha atual" htmlFor="c-curr-pwd">
-              <input id="c-curr-pwd" type="password" required value={currentPwd} onChange={(e) => setCurrentPwd(e.target.value)} style={inp} />
-            </FormField>
-            <FormField label="Nova senha" htmlFor="c-new-pwd">
-              <input id="c-new-pwd" type="password" required minLength={8} value={newPwd} onChange={(e) => setNewPwd(e.target.value)} style={inp} />
-            </FormField>
-            <FormField label="Confirmar nova senha" htmlFor="c-confirm-pwd">
-              <input id="c-confirm-pwd" type="password" required minLength={8} value={confirmPwd} onChange={(e) => setConfirmPwd(e.target.value)} style={inp} />
-            </FormField>
-            <div>
-              <button
-                type="submit"
-                disabled={savingPwd}
-                className="px-5 rounded-[9px] border-0 bg-primary text-primary-foreground text-sm font-semibold"
-                style={{ height: 44, cursor: savingPwd ? "not-allowed" : "pointer", opacity: savingPwd ? 0.7 : 1 }}
-              >
-                {savingPwd ? "Salvando…" : "Alterar senha"}
-              </button>
-            </div>
-          </form>
+        {/* Dados da conta — geridos pelo Clerk */}
+        <Section icon={<UserCog size={16} />} title="Dados pessoais e segurança">
+          <p className="text-[13px] text-muted-foreground m-0">
+            Nome, e-mail, senha e verificação em duas etapas são geridos com segurança pela sua conta.
+          </p>
+          <div>
+            <button
+              onClick={() => openUserProfile()}
+              className="inline-flex items-center gap-2 px-5 rounded-[9px] border-0 bg-primary text-primary-foreground text-sm font-semibold cursor-pointer"
+              style={{ height: 44 }}
+            >
+              <UserCog size={15} aria-hidden />
+              Gerenciar conta
+            </button>
+          </div>
         </Section>
 
         {/* Sair */}
         <div className="pt-2">
           <button
-            onClick={() => signOut({ callbackUrl: "/entrar" })}
+            onClick={() => signOut({ redirectUrl: "/entrar" })}
             className="inline-flex items-center gap-2 px-5 rounded-[9px] border bg-transparent text-sm cursor-pointer text-destructive font-medium"
             style={{ height: 44, borderColor: "hsl(var(--destructive) / .4)" }}
           >
@@ -323,15 +313,6 @@ function Section({ icon, title, children }: { icon: React.ReactNode; title: stri
         <span className="text-primary">{icon}</span>
         <h2 className="font-semibold text-[15px] m-0" style={{ fontFamily: '"Archivo", sans-serif' }}>{title}</h2>
       </div>
-      {children}
-    </div>
-  );
-}
-
-function FormField({ label, htmlFor, children }: { label: string; htmlFor: string; children: React.ReactNode }) {
-  return (
-    <div className="flex flex-col gap-1.5">
-      <label htmlFor={htmlFor} className="text-[13px] font-medium">{label}</label>
       {children}
     </div>
   );

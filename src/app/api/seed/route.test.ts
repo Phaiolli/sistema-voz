@@ -1,13 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
 
-const { mockHash } = vi.hoisted(() => ({ mockHash: vi.fn() }));
-vi.mock("bcryptjs", () => ({ default: { hash: mockHash } }));
+const mockCreateUser = vi.fn();
+vi.mock("@clerk/nextjs/server", () => ({ clerkClient: vi.fn() }));
 
 const mockSupabase = { from: vi.fn() };
 vi.mock("@/lib/supabase", () => ({ createServerClient: () => mockSupabase }));
 
 import { POST } from "./route";
+import { clerkClient } from "@clerk/nextjs/server";
 
 function makeChain(opts: { maybeSingleData?: unknown; insertError?: unknown } = {}) {
   const chain: Record<string, unknown> = {};
@@ -16,6 +17,7 @@ function makeChain(opts: { maybeSingleData?: unknown; insertError?: unknown } = 
   chain.limit = vi.fn(() => chain);
   chain.maybeSingle = vi.fn(() => Promise.resolve({ data: opts.maybeSingleData ?? null }));
   chain.insert = vi.fn(() => Promise.resolve({ error: opts.insertError ?? null }));
+  chain.upsert = vi.fn(() => Promise.resolve({ error: opts.insertError ?? null }));
   return chain;
 }
 
@@ -29,7 +31,8 @@ const ORIGINAL_SECRET = process.env.SEED_SECRET;
 
 beforeEach(() => {
   vi.resetAllMocks();
-  mockHash.mockResolvedValue("$2a$hash");
+  vi.mocked(clerkClient).mockResolvedValue({ users: { createUser: mockCreateUser } } as never);
+  mockCreateUser.mockResolvedValue({ id: "user_admin_clerk" });
   process.env.SEED_SECRET = "test-seed-secret";
 });
 
@@ -52,17 +55,20 @@ describe("POST /api/seed — guarded dev seed", () => {
     process.env.SEED_SECRET = ORIGINAL_SECRET ?? "test-seed-secret";
   });
 
-  it("seeds event + admin and returns a CSPRNG password (not Math.random)", async () => {
+  it("seeds event + admin in Clerk and returns a CSPRNG password (not Math.random)", async () => {
     mockSupabase.from.mockReturnValue(makeChain({ maybeSingleData: null }));
     const res = await POST(makeReq("test-seed-secret"));
     expect(res.status).toBe(200);
     const json = await res.json();
     expect(json.ok).toBe(true);
-    // base64url password from crypto.randomBytes(12) -> 16 chars, no +/=.
+    // base64url password from crypto.randomBytes(12) + "A1" complexity suffix.
     expect(typeof json.admin.password).toBe("string");
     expect(json.admin.password).toMatch(/^[A-Za-z0-9_-]+$/);
     expect(json.admin.password.length).toBeGreaterThanOrEqual(12);
-    expect(mockHash).toHaveBeenCalledWith(json.admin.password, 12);
+    // The credential is created in Clerk (ADR-017), not hashed locally.
+    expect(mockCreateUser).toHaveBeenCalledWith(
+      expect.objectContaining({ externalId: "usr_admin", password: json.admin.password }),
+    );
   });
 
   it("is idempotent — does not recreate an existing admin", async () => {
@@ -71,6 +77,6 @@ describe("POST /api/seed — guarded dev seed", () => {
     expect(res.status).toBe(200);
     const json = await res.json();
     expect(json.admin).toBe("already exists");
-    expect(mockHash).not.toHaveBeenCalled();
+    expect(mockCreateUser).not.toHaveBeenCalled();
   });
 });

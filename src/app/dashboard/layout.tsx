@@ -1,15 +1,12 @@
 import type { ReactNode } from "react";
-import { SessionProvider } from "next-auth/react";
 import { AdminThemeProvider } from "@/components/voz/admin-theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   return (
-    <SessionProvider>
-      <AdminThemeProvider>
-        {children}
-        <Toaster position="bottom-center" />
-      </AdminThemeProvider>
-    </SessionProvider>
+    <AdminThemeProvider>
+      {children}
+      <Toaster position="bottom-center" />
+    </AdminThemeProvider>
   );
 }

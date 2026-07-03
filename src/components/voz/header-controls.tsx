@@ -8,9 +8,10 @@
  */
 "use client"
 
-import { signOut, useSession } from "next-auth/react"
+import { useClerk } from "@clerk/nextjs"
 import { LogOut } from "lucide-react"
 import { ThemeToggle } from "@/components/voz/theme-toggle"
+import { useAppUser } from "@/lib/use-app-user"
 
 /**
  * @internal Derives user initials from name or email for avatar badge.
@@ -30,10 +31,10 @@ function initials(name: string | null | undefined, email: string | null | undefi
  * @returns Header controls component (or null if not authenticated)
  */
 export function HeaderControls() {
-  const { data: session } = useSession();
-  const u = session?.user as { name?: string | null; email?: string | null } | undefined;
-  const name = u?.name ?? null;
-  const email = u?.email ?? null;
+  const { signOut } = useClerk();
+  const { name: userName, email: userEmail } = useAppUser();
+  const name = userName ?? null;
+  const email = userEmail ?? null;
   const abbr = initials(name, email);
 
   return (
@@ -53,7 +54,7 @@ export function HeaderControls() {
         </div>
       )}
       <button
-        onClick={() => signOut({ callbackUrl: "/entrar" })}
+        onClick={() => signOut({ redirectUrl: "/entrar" })}
         aria-label="Sair da conta"
         title="Sair"
         className="inline-flex h-11 shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-border bg-transparent px-3 text-[13px] text-foreground"

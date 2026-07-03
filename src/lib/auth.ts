@@ -1,93 +1,32 @@
 /**
- * NextAuth v5 configuration with JWT strategy and Credentials provider.
+ * Clerk-backed session adapter (ADR-017).
  *
- * - Session strategy: JWT (stateless, suitable for serverless)
- * - Provider: Credentials (email/password with bcrypt verification)
- * - Rate limiting: 5 attempts per email per 15 minutes (prevents brute force)
- * - Session augmentation: `Session.user` enriched with `id`, `role`, `plan`
- *
- * See `types/next-auth.d.ts` for `Session` interface augmentation.
+ * Replaces the previous NextAuth instance. It preserves the `await auth()` →
+ * `session.user` shape the route handlers were built around, so the API routes
+ * that read `session.user.{id,role,plan}` keep working unchanged while the
+ * underlying provider is Clerk. New code should prefer `getAppUser()` from
+ * `@/lib/api/current-user` directly.
  */
-import NextAuth from "next-auth";
-import type { Session } from "next-auth";
-import Credentials from "next-auth/providers/credentials";
-import bcrypt from "bcryptjs";
-import { createServerClient } from "./supabase";
-import { rateLimit } from "./api/rate-limit";
-import type { UserRole, UserPlan } from "./types";
-import type { JWT } from "next-auth/jwt";
+import { getAppUser } from "@/lib/api/current-user";
+import type { UserRole, UserPlan } from "@/lib/types";
+
+/** Minimal session shape consumed by the API route handlers. */
+export interface AppSession {
+  user: {
+    id: string;
+    role: UserRole;
+    plan: UserPlan;
+  };
+}
 
 /**
- * NextAuth singleton instance exported for use in API routes and server actions.
+ * Resolves the current session from Clerk, or `null` when unauthenticated.
  *
  * @example
- * // In a route handler
  * const session = await auth();
- * if (!session) return res.status(401).json({ error: "Unauthorized" });
+ * if (!session?.user) return unauthorized();
  */
-export const { handlers, signIn, signOut, auth } = NextAuth({
-  session: { strategy: "jwt" },
-  providers: [
-    Credentials({
-      credentials: {
-        email: { label: "Email", type: "email" },
-        password: { label: "Senha", type: "password" },
-      },
-      async authorize(credentials, request) {
-        if (!credentials?.email || !credentials?.password) return null;
-        // Throttle login attempts. Returns null when blocked so the caller
-        // cannot distinguish "rate limited" from "wrong credentials" (no
-        // information leak). See ADR 011 for the store/fallback details.
-        //
-        // Per-email limit: stops password brute force against one account.
-        const limit = await rateLimit(`login:${credentials.email as string}`, { max: 5, windowMs: 15 * 60 * 1000 });
-        if (!limit.ok) return null;
-        // Per-IP limit: caps credential-stuffing (many emails, one source).
-        // `x-forwarded-for` is trusted behind the Vercel edge (see ADR 011);
-        // without a trusted proxy it is spoofable, so this is a complementary
-        // layer, not the primary control.
-        const ip = request?.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
-        const ipLimit = await rateLimit(`login-ip:${ip}`, { max: 20, windowMs: 15 * 60 * 1000 });
-        if (!ipLimit.ok) return null;
-        const supabase = createServerClient();
-        const { data: user } = await supabase
-          .from("users")
-          .select("id, name, email, role, plan, password_hash")
-          .eq("email", credentials.email as string)
-          .limit(1)
-          .maybeSingle();
-        if (!user) return null;
-        const ok = await bcrypt.compare(credentials.password as string, user.password_hash as string);
-        if (!ok) return null;
-        return {
-          id: user.id as string,
-          name: user.name as string,
-          email: user.email as string,
-          role: user.role as UserRole,
-          plan: (user.plan ?? "free") as UserPlan,
-        };
-      },
-    }),
-  ],
-  callbacks: {
-    jwt({ token, user }) {
-      if (user) {
-        token.role = user.role;
-        token.userId = user.id ?? "";
-        token.plan = user.plan ?? "free";
-      }
-      return token;
-    },
-    session({ session, token }: { session: Session; token: JWT }) {
-      if (session.user) {
-        session.user.role = token.role;
-        session.user.id = token.userId;
-        session.user.plan = token.plan;
-      }
-      return session;
-    },
-  },
-  pages: {
-    signIn: "/entrar",
-  },
-});
+export async function auth(): Promise<AppSession | null> {
+  const user = await getAppUser();
+  return user ? { user } : null;
+}

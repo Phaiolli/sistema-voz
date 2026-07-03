@@ -4,6 +4,7 @@ import {
   isEventOwnedBy,
   getEventQuestionCount,
   getOwnerPlan,
+  isOwnerPro,
 } from "./plan-limits";
 
 const mockSupabase = { from: vi.fn() };
@@ -28,6 +29,28 @@ function makeSingleChain(data: unknown, error: unknown = null) {
 }
 
 beforeEach(() => vi.resetAllMocks());
+
+describe("isOwnerPro", () => {
+  it("returns true for an active subscription", async () => {
+    mockSupabase.from.mockReturnValue(makeSingleChain({ subscription_status: "active" }));
+    expect(await isOwnerPro("usr_1")).toBe(true);
+  });
+
+  it("returns true while trialing", async () => {
+    mockSupabase.from.mockReturnValue(makeSingleChain({ subscription_status: "trialing" }));
+    expect(await isOwnerPro("usr_1")).toBe(true);
+  });
+
+  it("returns false for a canceled subscription", async () => {
+    mockSupabase.from.mockReturnValue(makeSingleChain({ subscription_status: "canceled" }));
+    expect(await isOwnerPro("usr_1")).toBe(false);
+  });
+
+  it("returns false when there is no subscription", async () => {
+    mockSupabase.from.mockReturnValue(makeSingleChain({ subscription_status: null }));
+    expect(await isOwnerPro("usr_1")).toBe(false);
+  });
+});
 
 describe("getOwnerEventCount", () => {
   it("returns 0 when owner has no events", async () => {

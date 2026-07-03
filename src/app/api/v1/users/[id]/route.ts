@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
+import { clerkClient } from "@clerk/nextjs/server";
 import { createServerClient } from "@/lib/supabase";
 import { requireRole } from "@/lib/api/auth-guard";
 import { patchUserSchema } from "@/lib/schemas";
-import bcrypt from "bcryptjs";
+import { splitName } from "@/lib/api/clerk-users";
+import { logError } from "@/lib/log";
 import type { Database } from "@/lib/db/database.types";
 
 type UserRow = Database["public"]["Tables"]["users"]["Row"];
@@ -79,12 +81,74 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     }
   }
 
+  // Resolve the Clerk identity so the change is mirrored there (ADR-017).
+  const { data: target } = await supabase
+    .from("users")
+    .select("clerk_id")
+    .eq("id", id)
+    .limit(1)
+    .maybeSingle();
+
+  if (!target) {
+    return NextResponse.json(
+      { error: { code: "NOT_FOUND", message: "Usuário não encontrado." } },
+      { status: 404 },
+    );
+  }
+
+  const clerkId = target.clerk_id;
+  if (clerkId) {
+    try {
+      const client = await clerkClient();
+      if (body.name !== undefined || body.password !== undefined) {
+        const params: { firstName?: string; lastName?: string; password?: string } = {};
+        if (body.name !== undefined) {
+          const { firstName, lastName } = splitName(body.name);
+          params.firstName = firstName;
+          params.lastName = lastName;
+        }
+        if (body.password !== undefined) params.password = body.password;
+        await client.users.updateUser(clerkId, params);
+      }
+      if (body.role !== undefined) {
+        await client.users.updateUserMetadata(clerkId, { publicMetadata: { role: body.role } });
+      }
+      if (body.email !== undefined) {
+        await client.emailAddresses.createEmailAddress({
+          userId: clerkId,
+          emailAddress: body.email,
+          verified: true,
+          primary: true,
+        });
+      }
+    } catch (err) {
+      logError("users.update.clerk", err);
+      return NextResponse.json(
+        { error: { code: "CONFLICT", message: "Não foi possível atualizar o usuário. Verifique o e-mail e a senha." } },
+        { status: 409 },
+      );
+    }
+  }
+
+  // Password lives in Clerk only; it is never mirrored to Supabase.
   const patch: Database["public"]["Tables"]["users"]["Update"] = {};
   if (body.name !== undefined) patch.name = body.name;
   if (body.email !== undefined) patch.email = body.email;
   if (body.role !== undefined) patch.role = body.role;
-  if (body.password !== undefined) {
-    patch.password_hash = await bcrypt.hash(body.password, 12);
+
+  if (Object.keys(patch).length === 0) {
+    const { data: row } = await supabase
+      .from("users")
+      .select("id, name, email, role, created_at, last_seen_at")
+      .eq("id", id)
+      .maybeSingle();
+    if (!row) {
+      return NextResponse.json(
+        { error: { code: "NOT_FOUND", message: "Usuário não encontrado." } },
+        { status: 404 },
+      );
+    }
+    return NextResponse.json(mapUser(row));
   }
 
   const { data: row, error: updateErr } = await supabase
@@ -113,6 +177,24 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
 
   const { id } = await params;
   const supabase = createServerClient();
+
+  // Delete the Clerk identity (also fires `user.deleted` → removes the row);
+  // best-effort, then delete the Supabase row directly for immediacy.
+  const { data: target } = await supabase
+    .from("users")
+    .select("clerk_id")
+    .eq("id", id)
+    .limit(1)
+    .maybeSingle();
+
+  if (target?.clerk_id) {
+    try {
+      const client = await clerkClient();
+      await client.users.deleteUser(target.clerk_id);
+    } catch (err) {
+      logError("users.delete.clerk", err);
+    }
+  }
 
   const { error: deleteErr } = await supabase
     .from("users")

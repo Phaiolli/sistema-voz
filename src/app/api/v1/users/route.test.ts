@@ -3,12 +3,14 @@ import { NextRequest } from "next/server";
 import { GET, POST } from "./route";
 
 const mockSupabase = { from: vi.fn() };
+const mockCreateUser = vi.fn();
 
 vi.mock("@/lib/supabase", () => ({ createServerClient: () => mockSupabase }));
 vi.mock("@/lib/auth", () => ({ auth: vi.fn() }));
-vi.mock("bcryptjs", () => ({ default: { hash: vi.fn().mockResolvedValue("hashed_pw") } }));
+vi.mock("@clerk/nextjs/server", () => ({ clerkClient: vi.fn() }));
 
 import { auth } from "@/lib/auth";
+import { clerkClient } from "@clerk/nextjs/server";
 
 const mockUserRow = {
   id: "usr_1", name: "Mediador X", email: "med@exemplo.com",
@@ -22,6 +24,7 @@ function makeChain(listData?: unknown, singleData?: unknown) {
     order: vi.fn().mockReturnThis(),
     limit: vi.fn().mockReturnThis(),
     insert: vi.fn().mockReturnThis(),
+    upsert: vi.fn().mockReturnThis(),
     maybeSingle: vi.fn().mockResolvedValue({ data: singleData ?? null }),
     single: vi.fn().mockResolvedValue({ data: singleData ?? null, error: null }),
     then: (resolve: (v: { data: unknown; error: unknown }) => unknown) =>
@@ -29,7 +32,11 @@ function makeChain(listData?: unknown, singleData?: unknown) {
   };
 }
 
-beforeEach(() => vi.resetAllMocks());
+beforeEach(() => {
+  vi.resetAllMocks();
+  vi.mocked(clerkClient).mockResolvedValue({ users: { createUser: mockCreateUser } } as never);
+  mockCreateUser.mockResolvedValue({ id: "user_clerk_1" });
+});
 
 describe("GET /api/v1/users", () => {
   it("returns 401 when not authenticated", async () => {
@@ -160,7 +167,7 @@ describe("POST /api/v1/users", () => {
     const json = await res.json();
     expect(json.error.code).toBe("VALIDATION_FAILED");
     // No user row may be inserted when validation fails.
-    expect(chain.insert).not.toHaveBeenCalled();
+    expect(chain.upsert).not.toHaveBeenCalled();
   });
 
   it("returns 422 when an admin attempts to assign role=superadmin", async () => {
@@ -169,6 +176,6 @@ describe("POST /api/v1/users", () => {
     mockSupabase.from.mockReturnValue(chain);
     const res = await POST(makeReq({ ...validBody, role: "superadmin" }));
     expect(res.status).toBe(422);
-    expect(chain.insert).not.toHaveBeenCalled();
+    expect(chain.upsert).not.toHaveBeenCalled();
   });
 });

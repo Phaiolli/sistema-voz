@@ -3,15 +3,20 @@ import { NextRequest } from "next/server";
 import { GET, PATCH, DELETE } from "./route";
 
 const mockSupabase = { from: vi.fn() };
+const mockUpdateUser = vi.fn();
+const mockUpdateUserMetadata = vi.fn();
+const mockCreateEmailAddress = vi.fn();
+const mockDeleteUser = vi.fn();
 
 vi.mock("@/lib/supabase", () => ({ createServerClient: () => mockSupabase }));
 vi.mock("@/lib/auth", () => ({ auth: vi.fn() }));
-vi.mock("bcryptjs", () => ({ default: { hash: vi.fn().mockResolvedValue("hashed_pw") } }));
+vi.mock("@clerk/nextjs/server", () => ({ clerkClient: vi.fn() }));
 
 import { auth } from "@/lib/auth";
+import { clerkClient } from "@clerk/nextjs/server";
 
 const mockRow = {
-  id: "usr_1", name: "Mediador", email: "med@exemplo.com",
+  id: "usr_1", name: "Mediador", email: "med@exemplo.com", clerk_id: "user_clerk_1",
   role: "mediador", created_at: new Date().toISOString(), last_seen_at: null,
 };
 
@@ -32,7 +37,17 @@ function makeParams(id = "usr_1") {
   return { params: Promise.resolve({ id }) };
 }
 
-beforeEach(() => vi.resetAllMocks());
+beforeEach(() => {
+  vi.resetAllMocks();
+  vi.mocked(clerkClient).mockResolvedValue({
+    users: {
+      updateUser: mockUpdateUser,
+      updateUserMetadata: mockUpdateUserMetadata,
+      deleteUser: mockDeleteUser,
+    },
+    emailAddresses: { createEmailAddress: mockCreateEmailAddress },
+  } as never);
+});
 
 describe("GET /api/v1/users/[id]", () => {
   it("returns 401 without auth", async () => {
@@ -88,20 +103,18 @@ describe("PATCH /api/v1/users/[id]", () => {
 
   it("updates user password and returns 200", async () => {
     vi.mocked(auth).mockResolvedValue({ user: { role: "admin" } } as never);
-    const updatedRow = { ...mockRow, name: "Com Senha" };
-    const chain = {
-      ...makeChain(null),
-      single: vi.fn().mockResolvedValue({ data: updatedRow, error: null }),
-    };
-    mockSupabase.from.mockReturnValue(chain);
+    // Password-only patch: no Supabase column changes, so the row is refetched
+    // via maybeSingle. Target lookup must resolve to a row carrying clerk_id.
+    mockSupabase.from.mockReturnValue(makeChain({ ...mockRow, name: "Com Senha" }));
     const res = await PATCH(makeReq({ password: "NovaSenha1" }), makeParams());
     expect(res.status).toBe(200);
+    expect(mockUpdateUser).toHaveBeenCalledWith("user_clerk_1", { password: "NovaSenha1" });
   });
 
   it("returns 404 when update fails with PGRST116", async () => {
     vi.mocked(auth).mockResolvedValue({ user: { role: "admin" } } as never);
     const chain = {
-      ...makeChain(null),
+      ...makeChain({ ...mockRow, clerk_id: "user_clerk_1" }),
       single: vi.fn().mockResolvedValue({ data: null, error: { code: "PGRST116", message: "not found" } }),
     };
     mockSupabase.from.mockReturnValue(chain);
@@ -120,7 +133,7 @@ describe("PATCH /api/v1/users/[id]", () => {
     vi.mocked(auth).mockResolvedValue({ user: { role: "admin" } } as never);
     const updatedRow = { ...mockRow, name: "Atualizado" };
     const chain = {
-      ...makeChain(null),
+      ...makeChain({ ...mockRow, clerk_id: "user_clerk_1" }),
       single: vi.fn().mockResolvedValue({ data: updatedRow, error: null }),
     };
     mockSupabase.from.mockReturnValue(chain);
@@ -136,13 +149,12 @@ describe("PATCH /api/v1/users/[id]", () => {
 describe("DELETE /api/v1/users/[id]", () => {
   it("returns 204 when user deleted", async () => {
     vi.mocked(auth).mockResolvedValue({ user: { role: "admin" } } as never);
-    const deleteChain = {
-      delete: vi.fn().mockReturnThis(),
-      eq: vi.fn().mockResolvedValue({ error: null }),
-    };
-    mockSupabase.from.mockReturnValue(deleteChain);
+    // Target lookup resolves to a row with clerk_id; delete().eq() resolves via
+    // the chain (no `error` property) → 204.
+    mockSupabase.from.mockReturnValue(makeChain({ clerk_id: "user_clerk_1" }));
     const res = await DELETE(new NextRequest("http://localhost"), makeParams());
     expect(res.status).toBe(204);
+    expect(mockDeleteUser).toHaveBeenCalledWith("user_clerk_1");
   });
 
   it("returns 401 without auth", async () => {

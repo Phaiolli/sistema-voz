@@ -43,11 +43,24 @@ export const questions = pgTable("questions", {
 
 export const users = pgTable("users", {
   id: text("id").primaryKey(),
+  // Clerk user id (e.g. "user_..."). Maps the Clerk identity back to this row in
+  // the sync webhook. Null only during the migration window, before the row has
+  // been reconciled with Clerk. See ADR-017.
+  clerkId: text("clerk_id").unique(),
   name: text("name").notNull(),
   email: text("email").notNull().unique(),
   role: userRoleEnum("role").notNull().default("mediador"),
   plan: userPlanEnum("plan").notNull().default("free"),
-  passwordHash: text("password_hash").notNull(),
+  // Nullable since ADR-017: users created via Clerk have no local hash — Clerk
+  // owns the credential. Retained for the bcrypt migration and legacy rows.
+  passwordHash: text("password_hash"),
+  // Stripe subscription (`pro` plan). Per-event billing stays on events.is_paid;
+  // these track the recurring subscription only. "É pro?" = subscriptionStatus
+  // active/trialing. See ADR-018.
+  stripeCustomerId: text("stripe_customer_id").unique(),
+  stripeSubscriptionId: text("stripe_subscription_id"),
+  subscriptionStatus: text("subscription_status"),
+  currentPeriodEnd: timestamp("current_period_end", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   lastSeenAt: timestamp("last_seen_at", { withTimezone: true }),
 });

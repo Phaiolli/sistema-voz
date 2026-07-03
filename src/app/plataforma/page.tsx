@@ -4,7 +4,8 @@ export const dynamic = "force-dynamic";
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useSession, signOut } from "next-auth/react";
+import { useClerk } from "@clerk/nextjs";
+import { useAppUser } from "@/lib/use-app-user";
 import { VozWordmark } from "@/components/voz/wordmark";
 import { Users, Calendar, TrendingUp, DollarSign, Clock, Zap, ArrowUpRight, LogOut } from "lucide-react";
 import { toast } from "sonner";
@@ -285,11 +286,11 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 export function PlataformaHeader({ active }: { active: "dashboard" | "financeiro" | "usuarios" | "configuracoes" }) {
-  const { data: session } = useSession();
-  const user = session?.user as { name?: string; email?: string } | undefined;
+  const { signOut } = useClerk();
+  const { name, email } = useAppUser();
 
-  const initials = user?.name
-    ? user.name.split(" ").filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join("")
+  const initials = name
+    ? name.split(" ").filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join("")
     : "?";
 
   const links: { href: string; label: string; key: typeof active }[] = [
@@ -332,10 +333,10 @@ export function PlataformaHeader({ active }: { active: "dashboard" | "financeiro
           </div>
           <div className="flex flex-col gap-px">
             <span className="font-semibold" style={{ fontSize: 13, lineHeight: 1 }}>
-              {user?.name ?? "—"}
+              {name ?? "—"}
             </span>
             <span className="text-muted-foreground" style={{ fontSize: 11, lineHeight: 1 }}>
-              {user?.email ?? ""}
+              {email ?? ""}
             </span>
           </div>
         </div>
@@ -343,7 +344,7 @@ export function PlataformaHeader({ active }: { active: "dashboard" | "financeiro
         <div className="bg-border" style={{ width: 1, height: 28 }} aria-hidden />
 
         <button
-          onClick={() => signOut({ callbackUrl: "/entrar" })}
+          onClick={() => signOut({ redirectUrl: "/entrar" })}
           title="Sair da plataforma"
           className="flex items-center gap-1.5 h-[34px] px-3 rounded-lg border border-border bg-transparent text-muted-foreground font-medium cursor-pointer"
           style={{ fontSize: 13, fontFamily: "inherit" }}

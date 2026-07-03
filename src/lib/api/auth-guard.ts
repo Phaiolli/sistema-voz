@@ -1,26 +1,30 @@
 import { NextResponse } from "next/server";
-import type { Session } from "next-auth";
-import { auth } from "@/lib/auth";
 import { createServerClient } from "@/lib/supabase";
 import { isEventOwnedBy } from "@/lib/plan-limits";
+import { auth } from "@/lib/auth";
+import type { UserPlan } from "@/lib/types";
 
 /** Roles recognised by the API authorization layer. */
 export type Role = "admin" | "owner" | "mediador" | "superadmin";
 
-/** Authenticated user as resolved from the NextAuth session. */
+/** Authenticated user, resolved from the Clerk session + Supabase `users` row. */
 interface GuardUser {
   id: string;
   role: Role;
 }
 
 /**
- * Reads `id` and `role` off the session user.
- *
- * The fields are provided by the NextAuth `Session.user` augmentation in
- * `types/next-auth.d.ts`.
+ * Back-compat session shape consumed by route handlers (`guard.session.user`).
+ * Mirrors the fields the old NextAuth session exposed; the API guards are the
+ * authoritative check, so the values are read straight from the `users` row
+ * (source of truth) rather than the Clerk session token. See ADR-017.
  */
-function getSessionUser(session: Session): GuardUser {
-  return { id: session.user.id, role: session.user.role };
+interface GuardSession {
+  user: {
+    id: string;
+    role: Role;
+    plan: UserPlan;
+  };
 }
 
 function unauthorized(): NextResponse {
@@ -45,6 +49,25 @@ function notFound(): NextResponse {
 }
 
 /**
+ * Resolves the app user for the current session.
+ *
+ * Delegates to the Clerk-backed `auth()` adapter (`@/lib/auth`), which maps the
+ * Clerk id to the `users` row. Returns `null` when the request is
+ * unauthenticated or the Clerk user has no corresponding row yet — both treated
+ * as unauthorized.
+ */
+async function resolveUser(): Promise<{ user: GuardUser; session: GuardSession } | null> {
+  const session = await auth();
+  if (!session?.user) return null;
+
+  const user: GuardUser = { id: session.user.id, role: session.user.role };
+  const guardSession: GuardSession = {
+    user: { id: session.user.id, role: session.user.role, plan: session.user.plan },
+  };
+  return { user, session: guardSession };
+}
+
+/**
  * Authenticates the request and checks that the user holds one of `roles`.
  *
  * @returns the session and user on success, or `{ err }` carrying the
@@ -52,12 +75,11 @@ function notFound(): NextResponse {
  */
 export async function requireRole(
   roles: Role[],
-): Promise<{ session: Session; user: GuardUser } | { err: NextResponse }> {
-  const session = await auth();
-  if (!session?.user) return { err: unauthorized() };
-  const user = getSessionUser(session);
-  if (!roles.includes(user.role)) return { err: forbidden() };
-  return { session, user };
+): Promise<{ session: GuardSession; user: GuardUser } | { err: NextResponse }> {
+  const resolved = await resolveUser();
+  if (!resolved) return { err: unauthorized() };
+  if (!roles.includes(resolved.user.role)) return { err: forbidden() };
+  return resolved;
 }
 
 /**
@@ -73,7 +95,7 @@ export async function requireRole(
 export async function requireEventAccess(
   eventId: string,
   roles: Role[],
-): Promise<{ session: Session; user: GuardUser } | { err: NextResponse }> {
+): Promise<{ session: GuardSession; user: GuardUser } | { err: NextResponse }> {
   const guard = await requireRole(roles);
   if ("err" in guard) return guard;
   const { user } = guard;

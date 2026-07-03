@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase";
 import { auth } from "@/lib/auth";
 import { createEventSchema } from "@/lib/schemas";
-import { getOwnerEventCount, FREE_EVENT_LIMIT } from "@/lib/plan-limits";
+import { getOwnerEventCount, isOwnerPro, FREE_EVENT_LIMIT } from "@/lib/plan-limits";
 import { mapEvent, toJson } from "@/lib/api/mappers";
 
 async function requireAuth(roles: string[]) {
@@ -67,8 +67,9 @@ export async function POST(req: NextRequest) {
   }
 
   if (role === "owner") {
-    const count = await getOwnerEventCount(userId);
-    if (count >= FREE_EVENT_LIMIT) {
+    // Pro subscribers get unlimited events; free owners hit the paid wall.
+    const [count, pro] = await Promise.all([getOwnerEventCount(userId), isOwnerPro(userId)]);
+    if (!pro && count >= FREE_EVENT_LIMIT) {
       return NextResponse.json(
         {
           error: {

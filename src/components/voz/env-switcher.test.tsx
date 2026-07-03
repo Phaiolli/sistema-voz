@@ -3,9 +3,9 @@
 import { render, screen } from "@testing-library/react"
 import { vi, describe, it, expect, beforeEach } from "vitest"
 
-// Mock next-auth
-vi.mock("next-auth/react", () => ({
-  useSession: vi.fn(),
+// Mock the Clerk-backed user hook
+vi.mock("@/lib/use-app-user", () => ({
+  useAppUser: vi.fn(),
 }))
 
 // Mock next/link
@@ -15,30 +15,30 @@ vi.mock("next/link", () => ({
   ),
 }))
 
-import { useSession } from "next-auth/react"
+import { useAppUser } from "@/lib/use-app-user"
 import { EnvSwitcher } from "./env-switcher"
 
-const mockUseSession = useSession as ReturnType<typeof vi.fn>
+const mockUseAppUser = useAppUser as ReturnType<typeof vi.fn>
 
 describe("EnvSwitcher", () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })
 
-  it("renders null when session has no user", () => {
-    mockUseSession.mockReturnValue({ data: null })
+  it("renders null when there is no user", () => {
+    mockUseAppUser.mockReturnValue({ role: undefined })
     const { container } = render(<EnvSwitcher active="admin" />)
     expect(container.firstChild).toBeNull()
   })
 
   it("renders null for mediador role", () => {
-    mockUseSession.mockReturnValue({ data: { user: { role: "mediador" } } })
+    mockUseAppUser.mockReturnValue({ role: "mediador" })
     const { container } = render(<EnvSwitcher active="admin" />)
     expect(container.firstChild).toBeNull()
   })
 
   it("renders for admin role", () => {
-    mockUseSession.mockReturnValue({ data: { user: { role: "admin" } } })
+    mockUseAppUser.mockReturnValue({ role: "admin" })
     render(<EnvSwitcher active="admin" />)
     expect(screen.getByRole("tablist")).toBeTruthy()
     expect(screen.getByText("Admin")).toBeTruthy()
@@ -46,13 +46,13 @@ describe("EnvSwitcher", () => {
   })
 
   it("renders for superadmin role", () => {
-    mockUseSession.mockReturnValue({ data: { user: { role: "superadmin" } } })
+    mockUseAppUser.mockReturnValue({ role: "superadmin" })
     render(<EnvSwitcher active="mediador" />)
     expect(screen.getByRole("tablist")).toBeTruthy()
   })
 
   it("marks Admin tab as selected when active=admin", () => {
-    mockUseSession.mockReturnValue({ data: { user: { role: "admin" } } })
+    mockUseAppUser.mockReturnValue({ role: "admin" })
     render(<EnvSwitcher active="admin" />)
     const adminTab = screen.getByText("Admin").closest("[role='tab']")
     expect(adminTab?.getAttribute("aria-selected")).toBe("true")
@@ -61,7 +61,7 @@ describe("EnvSwitcher", () => {
   })
 
   it("marks Moderador tab as selected when active=mediador", () => {
-    mockUseSession.mockReturnValue({ data: { user: { role: "admin" } } })
+    mockUseAppUser.mockReturnValue({ role: "admin" })
     render(<EnvSwitcher active="mediador" />)
     const modTab = screen.getByText("Moderador").closest("[role='tab']")
     expect(modTab?.getAttribute("aria-selected")).toBe("true")
@@ -70,14 +70,14 @@ describe("EnvSwitcher", () => {
   })
 
   it("Admin tab links to /admin/eventos", () => {
-    mockUseSession.mockReturnValue({ data: { user: { role: "admin" } } })
+    mockUseAppUser.mockReturnValue({ role: "admin" })
     render(<EnvSwitcher active="admin" />)
     const adminLink = screen.getByText("Admin").closest("a")
     expect(adminLink?.getAttribute("href")).toBe("/admin/eventos")
   })
 
   it("Moderador tab links to /mediador", () => {
-    mockUseSession.mockReturnValue({ data: { user: { role: "admin" } } })
+    mockUseAppUser.mockReturnValue({ role: "admin" })
     render(<EnvSwitcher active="admin" />)
     const modLink = screen.getByText("Moderador").closest("a")
     expect(modLink?.getAttribute("href")).toBe("/mediador")

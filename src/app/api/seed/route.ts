@@ -4,8 +4,8 @@
  * Requires SEED_SECRET in env to prevent accidental use in production.
  */
 import { NextRequest, NextResponse } from "next/server";
+import { clerkClient } from "@clerk/nextjs/server";
 import { createServerClient } from "@/lib/supabase";
-import bcrypt from "bcryptjs";
 import { eventIncluir } from "@/lib/fixtures";
 import { toJson } from "@/lib/api/mappers";
 import { randomBytes } from "crypto";
@@ -55,15 +55,26 @@ export async function POST(req: NextRequest) {
 
   let adminPassword = "";
   if (!existingAdmin) {
-    adminPassword = randomBytes(12).toString("base64url");
-    const hash = await bcrypt.hash(adminPassword, 12);
-    const { error: userErr } = await supabase.from("users").insert({
+    // Clerk owns the credential (ADR-017). Create the identity there with a
+    // stable external_id so `users.id` (referenced by FKs) stays "usr_admin",
+    // then mirror the row into Supabase. `A1` suffix satisfies Clerk's password
+    // complexity policy.
+    adminPassword = `${randomBytes(12).toString("base64url")}A1`;
+    const client = await clerkClient();
+    const clerkUser = await client.users.createUser({
+      externalId: "usr_admin",
+      emailAddress: [adminEmail],
+      password: adminPassword,
+      firstName: "Admin",
+      publicMetadata: { role: "admin", plan: "free" },
+    });
+    const { error: userErr } = await supabase.from("users").upsert({
       id: "usr_admin",
+      clerk_id: clerkUser.id,
       name: "Admin",
       email: adminEmail,
       role: "admin",
-      password_hash: hash,
-    });
+    }, { onConflict: "clerk_id" });
     if (userErr) throw userErr;
   }
 

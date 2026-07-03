@@ -109,6 +109,33 @@ export async function isEventPaid(eventId: string): Promise<boolean> {
   return data?.is_paid === true;
 }
 
+/** Subscription statuses that count as an active `pro` plan. See ADR-018. */
+const ACTIVE_SUBSCRIPTION_STATUSES = new Set(["active", "trialing"]);
+
+/**
+ * Whether the owner holds an active `pro` subscription.
+ *
+ * Pro owners bypass the free-plan quotas: unlimited events and unlimited
+ * questions on the events they own (independent of per-event `is_paid`).
+ *
+ * @param ownerId - id of the owner
+ * @returns true when `subscription_status` is active/trialing
+ * @throws On database error
+ */
+export async function isOwnerPro(ownerId: string): Promise<boolean> {
+  const supabase = createServerClient();
+  const { data, error } = await supabase
+    .from("users")
+    .select("subscription_status")
+    .eq("id", ownerId)
+    .maybeSingle();
+  if (error) {
+    logError("[plan-limits] isOwnerPro failed", error);
+    throw error;
+  }
+  return data?.subscription_status != null && ACTIVE_SUBSCRIPTION_STATUSES.has(data.subscription_status);
+}
+
 /**
  * Returns the plan of the given owner.
  *

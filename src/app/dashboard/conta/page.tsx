@@ -4,21 +4,23 @@ export const dynamic = "force-dynamic";
 
 import { useState } from "react";
 import Link from "next/link";
-import { useSession, signOut } from "next-auth/react";
+import { useClerk } from "@clerk/nextjs";
+import { useAppUser } from "@/lib/use-app-user";
 import { VozWordmark } from "@/components/voz/wordmark";
 import { HeaderControls } from "@/components/voz/header-controls";
 import { toast } from "sonner";
 import { Download, Trash2 } from "lucide-react";
 
 export default function ContaPage() {
-  const { data: session } = useSession();
+  const { signOut } = useClerk();
+  const { name, email, plan } = useAppUser();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [exportBusy, setExportBusy] = useState(false);
   const [deleteBusy, setDeleteBusy] = useState(false);
 
-  const userName = session?.user?.name ?? "—";
-  const userEmail = session?.user?.email ?? "—";
-  const isPaid = (session?.user as { plan?: string } | undefined)?.plan === "paid";
+  const userName = name ?? "—";
+  const userEmail = email ?? "—";
+  const isPaid = plan === "paid";
 
   async function handleExport() {
     setExportBusy(true);
@@ -45,7 +47,7 @@ export default function ContaPage() {
     try {
       const res = await fetch("/api/v1/me/data", { method: "DELETE" });
       if (!res.ok) throw new Error("Falha ao remover dados");
-      await signOut({ callbackUrl: "/" });
+      await signOut({ redirectUrl: "/" });
     } catch {
       toast.error("Erro ao remover dados. Tente novamente.");
       setDeleteBusy(false);

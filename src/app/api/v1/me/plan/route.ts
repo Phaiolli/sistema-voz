@@ -11,6 +11,12 @@ export async function GET() {
 
   const supabase = createServerClient();
 
+  const { data: sub } = await supabase
+    .from("users")
+    .select("subscription_status, current_period_end, stripe_customer_id")
+    .eq("id", user.id)
+    .maybeSingle();
+
   const { data: payments } = await supabase
     .from("event_payments")
     .select("id, amount, currency, status, created_at, paid_at, event_data, event_id")
@@ -20,9 +26,15 @@ export async function GET() {
 
   const paid = (payments ?? []).filter((p) => p.status === "paid");
   const totalSpent = paid.reduce((sum, p) => sum + (p.amount as number), 0);
+  const isPro =
+    sub?.subscription_status === "active" || sub?.subscription_status === "trialing";
 
   return NextResponse.json({
     plan: user.plan ?? "free",
+    isPro,
+    subscriptionStatus: sub?.subscription_status ?? null,
+    currentPeriodEnd: sub?.current_period_end ?? null,
+    hasStripeCustomer: Boolean(sub?.stripe_customer_id),
     totalEvents: paid.length,
     totalSpent,
     payments: (payments ?? []).map((p) => ({

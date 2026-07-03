@@ -5,6 +5,55 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- **Plano `pro` (assinatura mensal, R$ 199,90)** via Stripe (ADR-018): eventos e
+  perguntas ilimitados, coexistindo com o pagamento avulso por evento. Página
+  `/planos`, checkout de assinatura (`POST /api/v1/stripe/subscription`) e
+  Customer Portal (`POST /api/v1/stripe/portal`) para gerenciar/cancelar.
+- Webhook Stripe consolidado em `POST /api/stripe/webhook` (5 eventos:
+  checkout, subscription updated/deleted, invoice paid/payment_failed).
+
+### Changed
+- Preços do Stripe referenciados por `lookup_key` (`voz_event`,
+  `voz_pro_monthly`) em vez de IDs hardcodados; todo objeto criado leva
+  `metadata.app = "voz"` (conta Stripe compartilhada). O checkout de evento
+  passou a usar o lookup key `voz_event`.
+- Assinantes `pro` ignoram os limites do plano gratuito (eventos e perguntas).
+
+### Removed
+- Webhook antigo `POST /api/webhooks/stripe` (consolidado em `/api/stripe/webhook`).
+
+### Schema
+- Colunas de assinatura em `users`: `stripe_customer_id` (unique),
+  `stripe_subscription_id`, `subscription_status`, `current_period_end`
+  (migration `20260703000002_users_stripe_subscription`).
+
+### Changed (auth)
+- **Autenticação migrada de NextAuth para Clerk** (ADR-017). Clerk passa a ser o
+  provedor de identidade; login/cadastro usam os componentes `<SignIn>`/`<SignUp>`
+  localizados em PT-BR em `/entrar` e `/cadastro`. Nome, e-mail e senha são
+  geridos pelo Clerk (com MFA, login social e reset). O Supabase segue como fonte
+  da verdade de `role`/`plan`, espelhados no session token do Clerk.
+- Landing pós-login por role preservada via dispatcher `/pos-login`.
+- Gestão de usuários por admin (`POST/PATCH/DELETE /api/v1/users`) e a seed
+  (`/api/seed`) agora criam/atualizam a identidade no Clerk e espelham no Supabase.
+
+### Added
+- Webhook de sincronização Clerk → Supabase (`POST /api/webhooks/clerk`):
+  `user.created/updated/deleted` mantêm a tabela `users` em dia.
+- Script de migração de usuários existentes para o Clerk preservando o hash
+  bcrypt (`pnpm migrate:clerk`).
+
+### Removed
+- `next-auth`, `bcryptjs` e as rotas `/api/auth/[...nextauth]`,
+  `/api/auth/register` e `/api/v1/me/profile` (obsoletas com o Clerk).
+
+### Schema
+- Adicionada coluna `users.clerk_id` (unique); `users.password_hash` tornou-se
+  nullable (migration `20260703000001_users_clerk_id`).
+
 ## [2.0.0] — 2026-05-25
 
 ### Added

@@ -2,14 +2,13 @@
 
 export const dynamic = "force-dynamic";
 
-import { useSession } from "next-auth/react";
+import { useAppUser } from "@/lib/use-app-user";
 import { PlataformaHeader } from "../page";
 import { FREE_EVENT_LIMIT, FREE_QUESTION_LIMIT, EVENT_PRICE_CENTS } from "@/lib/plan-limits";
 import { Shield, Zap, DollarSign, Settings } from "lucide-react";
 
 export default function ConfiguracoesPage() {
-  const { data: session } = useSession();
-  const user = session?.user as { name?: string; email?: string } | undefined;
+  const { name, email } = useAppUser();
 
   const brl = (cents: number) => (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -29,8 +28,8 @@ export default function ConfiguracoesPage() {
 
         {/* Platform owner */}
         <ConfigSection icon={<Shield size={18} />} title="Conta do super-admin">
-          <ConfigRow label="Nome" value={user?.name ?? "—"} />
-          <ConfigRow label="E-mail" value={user?.email ?? "—"} />
+          <ConfigRow label="Nome" value={name ?? "—"} />
+          <ConfigRow label="E-mail" value={email ?? "—"} />
           <ConfigRow label="Papel" value="Super-admin (proprietário da plataforma)" highlight />
         </ConfigSection>
 
@@ -52,8 +51,9 @@ export default function ConfiguracoesPage() {
         {/* Platform info */}
         <ConfigSection icon={<Settings size={18} />} title="Informações da plataforma">
           <ConfigRow label="Nome" value="voz." />
-          <ConfigRow label="URL de produção" value="https://sistema-voz-beta.vercel.app" isUrl />
-          <ConfigRow label="Webhook Stripe" value="https://sistema-voz-beta.vercel.app/api/webhooks/stripe" isUrl />
+          <ConfigRow label="URL de produção" value="https://useavoz.app" isUrl />
+          <ConfigRow label="Webhook Stripe" value="https://useavoz.app/api/stripe/webhook" isUrl />
+          <ConfigRow label="Webhook Clerk" value="https://useavoz.app/api/webhooks/clerk" isUrl />
           <ConfigRow label="Contato de privacidade (LGPD)" value="privacidade@voz.app" isEmail />
           <ConfigRow label="Versão" value="1.0" />
         </ConfigSection>

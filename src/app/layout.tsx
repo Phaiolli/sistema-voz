@@ -2,14 +2,38 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { ClerkProvider } from "@clerk/nextjs";
 import { ptBR } from "@clerk/localizations";
+import { SITE_URL, SITE_NAME, SITE_DESCRIPTION } from "@/lib/site";
+import { ConsentBanner } from "@/components/voz/consent-banner";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "voz. — Perguntas ao vivo",
-  description: "Sistema de perguntas ao vivo para eventos presenciais.",
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: "voz. — Perguntas ao vivo",
+    template: "%s · voz.",
+  },
+  description: SITE_DESCRIPTION,
+  applicationName: SITE_NAME,
+  openGraph: {
+    type: "website",
+    locale: "pt_BR",
+    url: SITE_URL,
+    siteName: SITE_NAME,
+    title: "voz. — Perguntas ao vivo",
+    description: SITE_DESCRIPTION,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "voz. — Perguntas ao vivo",
+    description: SITE_DESCRIPTION,
+  },
 };
 
-export default async function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   // Reading the per-request `x-nonce` header (set by the nonce-based CSP in
   // `src/proxy.ts`) opts the whole app into dynamic rendering. This is required
   // so Next injects the request's nonce into its framework scripts on every
@@ -34,7 +58,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <html lang="pt-BR" className="h-full">
         <head>
           <link rel="preconnect" href="https://fonts.googleapis.com" />
-          <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+          <link
+            rel="preconnect"
+            href="https://fonts.gstatic.com"
+            crossOrigin="anonymous"
+          />
           <link
             href="https://fonts.googleapis.com/css2?family=Archivo:ital,wght@0,500;0,600;0,700;1,500&family=Archivo+Black&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
             rel="stylesheet"
@@ -42,6 +70,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         </head>
         <body className="min-h-full flex flex-col">
           {children}
+          <ConsentBanner />
         </body>
       </html>
     </ClerkProvider>

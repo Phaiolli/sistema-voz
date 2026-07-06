@@ -1,7 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
 
-const { mockConstructEvent } = vi.hoisted(() => ({ mockConstructEvent: vi.fn() }));
+const { mockConstructEvent } = vi.hoisted(() => ({
+  mockConstructEvent: vi.fn(),
+}));
 
 vi.mock("@/lib/stripe", () => ({
   stripe: { webhooks: { constructEvent: mockConstructEvent } },
@@ -10,6 +12,11 @@ vi.mock("@/lib/stripe", () => ({
 
 const mockSupabase = { from: vi.fn() };
 vi.mock("@/lib/supabase", () => ({ createServerClient: () => mockSupabase }));
+
+const { mockSendReceipt } = vi.hoisted(() => ({ mockSendReceipt: vi.fn() }));
+vi.mock("@/lib/email", () => ({
+  sendSubscriptionReceiptEmail: mockSendReceipt,
+}));
 
 import { POST } from "./route";
 
@@ -21,10 +28,23 @@ function makeReq(body = "{}"): NextRequest {
   });
 }
 
-/** users.update(...).eq(...) → resolves { error }; captures the update payload. */
-function usersUpdateChain(error: unknown = null) {
-  const update = vi.fn().mockReturnValue({ eq: vi.fn().mockResolvedValue({ error }) });
-  return { chain: { update }, update };
+/**
+ * users.update(...).eq(...) → resolves { error }; captures the update payload.
+ * Also supports the invoice.paid receipt lookup:
+ * users.select(...).eq(...).maybeSingle() → resolves { data: owner }.
+ */
+function usersUpdateChain(error: unknown = null, owner: unknown = null) {
+  const update = vi
+    .fn()
+    .mockReturnValue({ eq: vi.fn().mockResolvedValue({ error }) });
+  const select = vi.fn().mockReturnValue({
+    eq: vi
+      .fn()
+      .mockReturnValue({
+        maybeSingle: vi.fn().mockResolvedValue({ data: owner }),
+      }),
+  });
+  return { chain: { update, select }, update };
 }
 
 const validEventData = {
@@ -41,13 +61,18 @@ beforeEach(() => {
 
 describe("POST /api/stripe/webhook — signature & app guard", () => {
   it("returns 400 when the signature header is missing", async () => {
-    const req = new NextRequest("http://localhost/api/stripe/webhook", { method: "POST", body: "{}" });
+    const req = new NextRequest("http://localhost/api/stripe/webhook", {
+      method: "POST",
+      body: "{}",
+    });
     const res = await POST(req);
     expect(res.status).toBe(400);
   });
 
   it("returns 400 on invalid signature", async () => {
-    mockConstructEvent.mockImplementation(() => { throw new Error("bad sig"); });
+    mockConstructEvent.mockImplementation(() => {
+      throw new Error("bad sig");
+    });
     const res = await POST(makeReq());
     expect(res.status).toBe(400);
   });
@@ -83,7 +108,10 @@ describe("POST /api/stripe/webhook — subscription lifecycle", () => {
     expect(res.status).toBe(200);
     expect(mockSupabase.from).toHaveBeenCalledWith("users");
     expect(update).toHaveBeenCalledWith(
-      expect.objectContaining({ subscription_status: "active", stripe_subscription_id: "sub_1" }),
+      expect.objectContaining({
+        subscription_status: "active",
+        stripe_subscription_id: "sub_1",
+      }),
     );
   });
 
@@ -104,19 +132,34 @@ describe("POST /api/stripe/webhook — subscription lifecycle", () => {
     });
     const res = await POST(makeReq());
     expect(res.status).toBe(200);
-    expect(update).toHaveBeenCalledWith(expect.objectContaining({ subscription_status: "canceled" }));
+    expect(update).toHaveBeenCalledWith(
+      expect.objectContaining({ subscription_status: "canceled" }),
+    );
   });
 
-  it("invoice.paid marks the subscription active", async () => {
-    const { chain, update } = usersUpdateChain();
+  it("invoice.paid marks the subscription active and sends a receipt", async () => {
+    const { chain, update } = usersUpdateChain(null, {
+      email: "ana@example.com",
+      name: "Ana",
+    });
     mockSupabase.from.mockReturnValue(chain);
     mockConstructEvent.mockReturnValue({
       type: "invoice.paid",
-      data: { object: { id: "in_1", customer: "cus_1", lines: { data: [{ period: { end: 1893456000 } }] }, metadata: {} } },
+      data: {
+        object: {
+          id: "in_1",
+          customer: "cus_1",
+          lines: { data: [{ period: { end: 1893456000 } }] },
+          metadata: {},
+        },
+      },
     });
     const res = await POST(makeReq());
     expect(res.status).toBe(200);
-    expect(update).toHaveBeenCalledWith(expect.objectContaining({ subscription_status: "active" }));
+    expect(update).toHaveBeenCalledWith(
+      expect.objectContaining({ subscription_status: "active" }),
+    );
+    expect(mockSendReceipt).toHaveBeenCalledWith("ana@example.com", "Ana");
   });
 
   it("invoice.payment_failed marks the subscription past_due", async () => {
@@ -124,11 +167,21 @@ describe("POST /api/stripe/webhook — subscription lifecycle", () => {
     mockSupabase.from.mockReturnValue(chain);
     mockConstructEvent.mockReturnValue({
       type: "invoice.payment_failed",
-      data: { object: { id: "in_2", customer: "cus_1", lines: { data: [] }, metadata: {} } },
+      data: {
+        object: {
+          id: "in_2",
+          customer: "cus_1",
+          lines: { data: [] },
+          metadata: {},
+        },
+      },
     });
     const res = await POST(makeReq());
     expect(res.status).toBe(200);
-    expect(update).toHaveBeenCalledWith(expect.objectContaining({ subscription_status: "past_due" }));
+    expect(update).toHaveBeenCalledWith(
+      expect.objectContaining({ subscription_status: "past_due" }),
+    );
+    expect(mockSendReceipt).not.toHaveBeenCalled();
   });
 });
 
@@ -136,7 +189,13 @@ describe("POST /api/stripe/webhook — checkout completed", () => {
   it("skips the per-event flow for a subscription-mode checkout", async () => {
     mockConstructEvent.mockReturnValue({
       type: "checkout.session.completed",
-      data: { object: { id: "cs_2", mode: "subscription", metadata: { app: "voz", plan_slug: "pro", user_id: "usr_1" } } },
+      data: {
+        object: {
+          id: "cs_2",
+          mode: "subscription",
+          metadata: { app: "voz", plan_slug: "pro", user_id: "usr_1" },
+        },
+      },
     });
     const res = await POST(makeReq());
     expect(res.status).toBe(200);
@@ -148,7 +207,13 @@ describe("POST /api/stripe/webhook — checkout completed", () => {
     // Shared account: another project's payment event, no voz metadata.
     mockConstructEvent.mockReturnValue({
       type: "checkout.session.completed",
-      data: { object: { id: "cs_other", mode: "payment", metadata: { plan_slug: "something" } } },
+      data: {
+        object: {
+          id: "cs_other",
+          mode: "payment",
+          metadata: { plan_slug: "something" },
+        },
+      },
     });
     const res = await POST(makeReq());
     expect(res.status).toBe(200);
@@ -163,7 +228,11 @@ describe("POST /api/stripe/webhook — checkout completed", () => {
       maybeSingle: vi.fn().mockResolvedValue({ data: null }),
     };
     const eventsUpsert = { upsert: vi.fn().mockResolvedValue({ error: null }) };
-    const paymentsUpdate = { update: vi.fn().mockReturnValue({ eq: vi.fn().mockResolvedValue({ error: null }) }) };
+    const paymentsUpdate = {
+      update: vi
+        .fn()
+        .mockReturnValue({ eq: vi.fn().mockResolvedValue({ error: null }) }),
+    };
     const usersUpdate = usersUpdateChain();
     mockSupabase.from
       .mockReturnValueOnce(paymentsSelect) // event_payments select
@@ -178,7 +247,12 @@ describe("POST /api/stripe/webhook — checkout completed", () => {
           id: "cs_1",
           mode: "payment",
           payment_intent: "pi_1",
-          metadata: { app: "voz", plan_slug: "event", ownerId: "usr_1", eventData: JSON.stringify(validEventData) },
+          metadata: {
+            app: "voz",
+            plan_slug: "event",
+            ownerId: "usr_1",
+            eventData: JSON.stringify(validEventData),
+          },
         },
       },
     });
@@ -196,7 +270,11 @@ describe("POST /api/stripe/webhook — checkout completed", () => {
     const paymentsSelect = {
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
-      maybeSingle: vi.fn().mockResolvedValue({ data: { id: "pay_1", status: "paid", event_id: "evt_1" } }),
+      maybeSingle: vi
+        .fn()
+        .mockResolvedValue({
+          data: { id: "pay_1", status: "paid", event_id: "evt_1" },
+        }),
     };
     const usersUpdate = usersUpdateChain();
     mockSupabase.from
@@ -209,7 +287,12 @@ describe("POST /api/stripe/webhook — checkout completed", () => {
         object: {
           id: "cs_1",
           mode: "payment",
-          metadata: { app: "voz", plan_slug: "event", ownerId: "usr_1", eventData: JSON.stringify(validEventData) },
+          metadata: {
+            app: "voz",
+            plan_slug: "event",
+            ownerId: "usr_1",
+            eventData: JSON.stringify(validEventData),
+          },
         },
       },
     });

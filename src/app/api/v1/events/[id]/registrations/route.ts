@@ -3,14 +3,23 @@ import { createServerClient } from "@/lib/supabase";
 import { requireEventAccess } from "@/lib/api/auth-guard";
 import { createRegistrationSchema } from "@/lib/schemas";
 import { mapRegistration, asEventConfig } from "@/lib/api/mappers";
+import { sendRegistrationConfirmationEmail } from "@/lib/email";
 
 const RATE_LIMIT_MAX = 5;
 const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000; // 1 hour
 
-export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
   const { id: eventId } = await params;
 
-  const guard = await requireEventAccess(eventId, ["admin", "mediador", "owner", "superadmin"]);
+  const guard = await requireEventAccess(eventId, [
+    "admin",
+    "mediador",
+    "owner",
+    "superadmin",
+  ]);
   if ("err" in guard) return guard.err;
 
   const supabase = createServerClient();
@@ -23,39 +32,72 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 
   if (error) throw error;
 
-  return NextResponse.json({ registrations: (rows ?? []).map(mapRegistration) });
+  return NextResponse.json({
+    registrations: (rows ?? []).map(mapRegistration),
+  });
 }
 
-export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function POST(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
   const { id: eventId } = await params;
   const supabase = createServerClient();
 
   const { data: event } = await supabase
     .from("events")
-    .select("id, config")
+    .select("id, name, config")
     .eq("id", eventId)
     .limit(1)
     .maybeSingle();
 
   if (!event) {
-    return NextResponse.json({ error: { code: "NOT_FOUND", message: "Evento não encontrado." } }, { status: 404 });
+    return NextResponse.json(
+      { error: { code: "NOT_FOUND", message: "Evento não encontrado." } },
+      { status: 404 },
+    );
   }
 
   const regConfig = asEventConfig(event.config).registration ?? {};
 
   if (!regConfig.enabled) {
-    return NextResponse.json({ error: { code: "REGISTRATION_CLOSED", message: "Inscrições não estão abertas." } }, { status: 422 });
+    return NextResponse.json(
+      {
+        error: {
+          code: "REGISTRATION_CLOSED",
+          message: "Inscrições não estão abertas.",
+        },
+      },
+      { status: 422 },
+    );
   }
 
   const now = new Date();
   if (regConfig.opensAt && new Date(regConfig.opensAt) > now) {
-    return NextResponse.json({ error: { code: "REGISTRATION_NOT_OPEN", message: "As inscrições ainda não começaram." } }, { status: 422 });
+    return NextResponse.json(
+      {
+        error: {
+          code: "REGISTRATION_NOT_OPEN",
+          message: "As inscrições ainda não começaram.",
+        },
+      },
+      { status: 422 },
+    );
   }
   if (regConfig.closesAt && new Date(regConfig.closesAt) < now) {
-    return NextResponse.json({ error: { code: "REGISTRATION_ENDED", message: "As inscrições foram encerradas." } }, { status: 422 });
+    return NextResponse.json(
+      {
+        error: {
+          code: "REGISTRATION_ENDED",
+          message: "As inscrições foram encerradas.",
+        },
+      },
+      { status: 422 },
+    );
   }
 
-  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+  const ip =
+    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
   const windowStart = new Date(Date.now() - RATE_LIMIT_WINDOW_MS).toISOString();
   const { count: recentCount } = await supabase
     .from("registrations")
@@ -65,15 +107,28 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   if ((recentCount ?? 0) >= RATE_LIMIT_MAX) {
     return NextResponse.json(
-      { error: { code: "RATE_LIMITED", message: "Muitas tentativas. Tente novamente em 1 hora." } },
+      {
+        error: {
+          code: "RATE_LIMITED",
+          message: "Muitas tentativas. Tente novamente em 1 hora.",
+        },
+      },
       { status: 429 },
     );
   }
 
-  const parsed = createRegistrationSchema.safeParse(await req.json().catch(() => null));
+  const parsed = createRegistrationSchema.safeParse(
+    await req.json().catch(() => null),
+  );
   if (!parsed.success) {
     return NextResponse.json(
-      { error: { code: "VALIDATION_FAILED", message: "Dados inválidos.", details: parsed.error.flatten() } },
+      {
+        error: {
+          code: "VALIDATION_FAILED",
+          message: "Dados inválidos.",
+          details: parsed.error.flatten(),
+        },
+      },
       { status: 422 },
     );
   }
@@ -90,16 +145,40 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     .maybeSingle();
 
   if (existing) {
-    return NextResponse.json({ error: { code: "CONFLICT", message: "Este e-mail já está inscrito neste evento." } }, { status: 409 });
+    return NextResponse.json(
+      {
+        error: {
+          code: "CONFLICT",
+          message: "Este e-mail já está inscrito neste evento.",
+        },
+      },
+      { status: 409 },
+    );
   }
 
   const { data: row, error: insertErr } = await supabase
     .from("registrations")
-    .insert({ id, event_id: eventId, name, email, phone: phone ?? null, document: document ?? null, author_ip: ip, lgpd_accepted: lgpdAccepted })
+    .insert({
+      id,
+      event_id: eventId,
+      name,
+      email,
+      phone: phone ?? null,
+      document: document ?? null,
+      author_ip: ip,
+      lgpd_accepted: lgpdAccepted,
+    })
     .select("*")
     .single();
 
   if (insertErr) throw insertErr;
+
+  // Best-effort confirmation e-mail (no-op unless Resend is configured).
+  await sendRegistrationConfirmationEmail(
+    email,
+    name,
+    event.name ?? "seu evento",
+  );
 
   return NextResponse.json(mapRegistration(row), { status: 201 });
 }

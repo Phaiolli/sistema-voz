@@ -4,6 +4,7 @@ import { createServerClient } from "@/lib/supabase";
 import { createEventSchema } from "@/lib/schemas";
 import { toJson } from "@/lib/api/mappers";
 import { logError } from "@/lib/log";
+import { sendSubscriptionReceiptEmail } from "@/lib/email";
 import { createHash } from "node:crypto";
 import type Stripe from "stripe";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -65,7 +66,10 @@ async function applySubscription(
 
   if (error) {
     logError("stripe.webhook.subscription", error);
-    return NextResponse.json({ error: "Falha ao atualizar assinatura." }, { status: 500 });
+    return NextResponse.json(
+      { error: "Falha ao atualizar assinatura." },
+      { status: 500 },
+    );
   }
   return NextResponse.json({ received: true });
 }
@@ -78,8 +82,14 @@ async function handleEventCheckout(
 ): Promise<NextResponse> {
   const { metadata } = session;
   if (!metadata?.ownerId || !metadata?.eventData) {
-    logError(`stripe.webhook.metadata session=${session.id}`, "metadata incompleta");
-    return NextResponse.json({ error: "Metadata incompleta." }, { status: 400 });
+    logError(
+      `stripe.webhook.metadata session=${session.id}`,
+      "metadata incompleta",
+    );
+    return NextResponse.json(
+      { error: "Metadata incompleta." },
+      { status: 400 },
+    );
   }
 
   const { data: existingPayment } = await supabase
@@ -97,7 +107,10 @@ async function handleEventCheckout(
       .eq("id", metadata.ownerId);
     if (planErr) {
       logError("stripe.webhook: reaplicar plano do owner", planErr);
-      return NextResponse.json({ error: "Falha ao atualizar plano do owner." }, { status: 500 });
+      return NextResponse.json(
+        { error: "Falha ao atualizar plano do owner." },
+        { status: 500 },
+      );
     }
     return NextResponse.json({ received: true });
   }
@@ -108,12 +121,18 @@ async function handleEventCheckout(
     const result = createEventSchema.safeParse(raw);
     if (!result.success) {
       logError("stripe.webhook: eventData inválido", result.error);
-      return NextResponse.json({ error: "Dados do evento inválidos." }, { status: 422 });
+      return NextResponse.json(
+        { error: "Dados do evento inválidos." },
+        { status: 422 },
+      );
     }
     parsedEventData = result.data;
   } catch (err) {
     logError(`stripe.webhook.parse session=${session.id}`, err);
-    return NextResponse.json({ error: "Falha ao processar dados do evento." }, { status: 400 });
+    return NextResponse.json(
+      { error: "Falha ao processar dados do evento." },
+      { status: 400 },
+    );
   }
 
   // Reuse the event id from a prior (interrupted) attempt; otherwise derive it
@@ -141,7 +160,10 @@ async function handleEventCheckout(
     );
     if (insertErr) {
       logError("stripe.webhook: falha ao criar evento", insertErr);
-      return NextResponse.json({ error: "Falha ao criar evento." }, { status: 500 });
+      return NextResponse.json(
+        { error: "Falha ao criar evento." },
+        { status: 500 },
+      );
     }
   }
 
@@ -160,7 +182,10 @@ async function handleEventCheckout(
 
   if (updateErr) {
     logError("stripe.webhook: falha ao atualizar event_payments", updateErr);
-    return NextResponse.json({ error: "Falha ao atualizar pagamento." }, { status: 500 });
+    return NextResponse.json(
+      { error: "Falha ao atualizar pagamento." },
+      { status: 500 },
+    );
   }
 
   const { error: planErr } = await supabase
@@ -169,7 +194,10 @@ async function handleEventCheckout(
     .eq("id", metadata.ownerId);
   if (planErr) {
     logError("stripe.webhook: falha ao atualizar plano do owner", planErr);
-    return NextResponse.json({ error: "Falha ao atualizar plano do owner." }, { status: 500 });
+    return NextResponse.json(
+      { error: "Falha ao atualizar plano do owner." },
+      { status: 500 },
+    );
   }
 
   return NextResponse.json({ received: true });
@@ -179,12 +207,19 @@ export async function POST(req: NextRequest) {
   const body = await req.text();
   const sig = req.headers.get("stripe-signature");
   if (!sig) {
-    return NextResponse.json({ error: "Missing stripe-signature header." }, { status: 400 });
+    return NextResponse.json(
+      { error: "Missing stripe-signature header." },
+      { status: 400 },
+    );
   }
 
   let event: Stripe.Event;
   try {
-    event = stripe.webhooks.constructEvent(body, sig, process.env.STRIPE_WEBHOOK_SECRET!);
+    event = stripe.webhooks.constructEvent(
+      body,
+      sig,
+      process.env.STRIPE_WEBHOOK_SECRET!,
+    );
   } catch {
     return NextResponse.json({ error: "Invalid signature." }, { status: 400 });
   }
@@ -213,13 +248,20 @@ export async function POST(req: NextRequest) {
       ) {
         return NextResponse.json({ received: true });
       }
-      return handleEventCheckout(supabase, session, deterministicEventId(session.id));
+      return handleEventCheckout(
+        supabase,
+        session,
+        deterministicEventId(session.id),
+      );
     }
 
     case "customer.subscription.updated":
     case "customer.subscription.deleted": {
       // `deleted` carries status "canceled", which downgrades the owner to free.
-      return applySubscription(supabase, event.data.object as Stripe.Subscription);
+      return applySubscription(
+        supabase,
+        event.data.object as Stripe.Subscription,
+      );
     }
 
     case "invoice.paid":
@@ -240,7 +282,20 @@ export async function POST(req: NextRequest) {
         .eq("stripe_customer_id", cust);
       if (error) {
         logError("stripe.webhook.invoice", error);
-        return NextResponse.json({ error: "Falha ao atualizar assinatura." }, { status: 500 });
+        return NextResponse.json(
+          { error: "Falha ao atualizar assinatura." },
+          { status: 500 },
+        );
+      }
+      // Best-effort receipt on a successful charge (never blocks the webhook).
+      if (event.type === "invoice.paid") {
+        const { data: owner } = await supabase
+          .from("users")
+          .select("email, name")
+          .eq("stripe_customer_id", cust)
+          .maybeSingle();
+        if (owner?.email)
+          await sendSubscriptionReceiptEmail(owner.email, owner.name);
       }
       return NextResponse.json({ received: true });
     }

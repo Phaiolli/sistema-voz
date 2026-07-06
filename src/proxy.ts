@@ -35,7 +35,7 @@ function buildCsp(nonce: string): string {
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' https://fonts.gstatic.com",
     "img-src 'self' data: blob: https://*.supabase.co https://img.clerk.com",
-    "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.clerk.accounts.dev https://clerk.useavoz.app https://clerk-telemetry.com",
+    "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.clerk.accounts.dev https://clerk.useavoz.app https://clerk-telemetry.com https://*.sentry.io",
     "worker-src 'self' blob:",
     "frame-src 'self' https://challenges.cloudflare.com https://clerk.useavoz.app",
     "base-uri 'self'",
@@ -82,7 +82,8 @@ export default clerkMiddleware(async (auth, req) => {
     return res;
   };
 
-  const redirectTo = (path: string) => withCsp(NextResponse.redirect(new URL(path, req.url)));
+  const redirectTo = (path: string) =>
+    withCsp(NextResponse.redirect(new URL(path, req.url)));
   // `redirect_url` is Clerk's return-path convention; <SignIn> reads it to send
   // the user back to the page they were gated from after authenticating.
   const loginRedirect = () =>

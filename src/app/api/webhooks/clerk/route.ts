@@ -3,6 +3,7 @@ import { verifyWebhook } from "@clerk/nextjs/webhooks";
 import { clerkClient } from "@clerk/nextjs/server";
 import { createServerClient } from "@/lib/supabase";
 import { logError } from "@/lib/log";
+import { sendWelcomeEmail } from "@/lib/email";
 import type { UserRole, UserPlan } from "@/lib/types";
 
 /**
@@ -43,7 +44,8 @@ export async function POST(req: NextRequest) {
 
         const emails = data.email_addresses ?? [];
         const primary =
-          emails.find((e) => e.id === data.primary_email_address_id) ?? emails[0];
+          emails.find((e) => e.id === data.primary_email_address_id) ??
+          emails[0];
         const email = primary?.email_address ?? "";
 
         const name =
@@ -51,7 +53,10 @@ export async function POST(req: NextRequest) {
           data.username ||
           email;
 
-        const meta = data.public_metadata as { role?: UserRole; plan?: UserPlan };
+        const meta = data.public_metadata as {
+          role?: UserRole;
+          plan?: UserPlan;
+        };
         const role: UserRole = meta?.role ?? "mediador";
         const plan: UserPlan = meta?.plan ?? "free";
 
@@ -72,13 +77,21 @@ export async function POST(req: NextRequest) {
             publicMetadata: { role, plan },
           });
         }
+
+        // Best-effort welcome e-mail, only for genuine new sign-ups.
+        if (evt.type === "user.created" && email) {
+          await sendWelcomeEmail(email, name);
+        }
         break;
       }
 
       case "user.deleted": {
         const clerkId = evt.data.id;
         if (clerkId) {
-          const { error } = await supabase.from("users").delete().eq("clerk_id", clerkId);
+          const { error } = await supabase
+            .from("users")
+            .delete()
+            .eq("clerk_id", clerkId);
           if (error) throw error;
         }
         break;

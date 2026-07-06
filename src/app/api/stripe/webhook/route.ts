@@ -4,7 +4,12 @@ import { createServerClient } from "@/lib/supabase";
 import { createEventSchema } from "@/lib/schemas";
 import { toJson } from "@/lib/api/mappers";
 import { logError } from "@/lib/log";
-import { sendSubscriptionReceiptEmail } from "@/lib/email";
+import {
+  sendSubscriptionReceiptEmail,
+  sendSubscriptionCanceledEmail,
+  sendPaymentFailedEmail,
+  sendEventPurchaseReceiptEmail,
+} from "@/lib/email";
 import { createHash } from "node:crypto";
 import type Stripe from "stripe";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -44,6 +49,23 @@ function periodEndISO(sub: Stripe.Subscription): string | null {
 }
 
 /**
+ * Best-effort lookup of an owner's contact for transactional e-mail, by user id
+ * or Stripe customer id. Returns null when no e-mail is on file.
+ */
+async function fetchOwnerContact(
+  supabase: ServerClient,
+  column: "id" | "stripe_customer_id",
+  value: string,
+): Promise<{ email: string; name: string | null } | null> {
+  const { data } = await supabase
+    .from("users")
+    .select("email, name")
+    .eq(column, value)
+    .maybeSingle();
+  return data?.email ? { email: data.email, name: data.name } : null;
+}
+
+/**
  * Mirrors a subscription's state onto the owning user, matched by Stripe customer
  * id (persisted on `users.stripe_customer_id`). `subscription_status` in
  * `active`/`trialing` is what `isOwnerPro` treats as an active `pro` plan.
@@ -70,6 +92,11 @@ async function applySubscription(
       { error: "Falha ao atualizar assinatura." },
       { status: 500 },
     );
+  }
+  // Best-effort cancellation notice (customer.subscription.deleted → "canceled").
+  if (sub.status === "canceled") {
+    const owner = await fetchOwnerContact(supabase, "stripe_customer_id", cust);
+    if (owner) await sendSubscriptionCanceledEmail(owner.email, owner.name);
   }
   return NextResponse.json({ received: true });
 }
@@ -200,6 +227,15 @@ async function handleEventCheckout(
     );
   }
 
+  // Best-effort receipt for the one-time event purchase.
+  const owner = await fetchOwnerContact(supabase, "id", metadata.ownerId);
+  if (owner)
+    await sendEventPurchaseReceiptEmail(
+      owner.email,
+      owner.name,
+      parsedEventData.name,
+    );
+
   return NextResponse.json({ received: true });
 }
 
@@ -287,15 +323,19 @@ export async function POST(req: NextRequest) {
           { status: 500 },
         );
       }
-      // Best-effort receipt on a successful charge (never blocks the webhook).
-      if (event.type === "invoice.paid") {
-        const { data: owner } = await supabase
-          .from("users")
-          .select("email, name")
-          .eq("stripe_customer_id", cust)
-          .maybeSingle();
-        if (owner?.email)
+      // Best-effort transactional e-mail (never blocks the webhook): a receipt
+      // on a successful charge, a dunning notice on a failed one.
+      const owner = await fetchOwnerContact(
+        supabase,
+        "stripe_customer_id",
+        cust,
+      );
+      if (owner) {
+        if (event.type === "invoice.paid") {
           await sendSubscriptionReceiptEmail(owner.email, owner.name);
+        } else {
+          await sendPaymentFailedEmail(owner.email, owner.name);
+        }
       }
       return NextResponse.json({ received: true });
     }

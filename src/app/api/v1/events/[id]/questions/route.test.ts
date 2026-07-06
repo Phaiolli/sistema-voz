@@ -15,7 +15,7 @@ vi.mock("@/lib/supabase", () => ({
 vi.mock("@/lib/auth", () => ({ auth: vi.fn().mockResolvedValue(null) }));
 
 // Bypass plan-limits checks — tested separately in plan-limits.test.ts
-import { getEventQuestionCount } from "@/lib/plan-limits";
+import { getEventQuestionCount, isOwnerPro } from "@/lib/plan-limits";
 
 vi.mock("@/lib/plan-limits", () => ({
   getEventQuestionCount: vi.fn().mockResolvedValue(0),
@@ -77,17 +77,26 @@ describe("POST /api/v1/events/[eventId]/questions", () => {
   });
 
   it("returns 422 when lgpdAccepted is false", async () => {
-    const res = await POST(makePostRequest({ ...validBody, lgpdAccepted: false }), makeParams());
+    const res = await POST(
+      makePostRequest({ ...validBody, lgpdAccepted: false }),
+      makeParams(),
+    );
     expect(res.status).toBe(422);
   });
 
   it("returns 422 when text is too short", async () => {
-    const res = await POST(makePostRequest({ ...validBody, text: "curto" }), makeParams());
+    const res = await POST(
+      makePostRequest({ ...validBody, text: "curto" }),
+      makeParams(),
+    );
     expect(res.status).toBe(422);
   });
 
   it("returns 422 when text is too long", async () => {
-    const res = await POST(makePostRequest({ ...validBody, text: "a".repeat(501) }), makeParams());
+    const res = await POST(
+      makePostRequest({ ...validBody, text: "a".repeat(501) }),
+      makeParams(),
+    );
     expect(res.status).toBe(422);
   });
 
@@ -111,7 +120,9 @@ describe("POST /api/v1/events/[eventId]/questions", () => {
       eq: vi.fn().mockReturnThis(),
       limit: vi.fn().mockReturnThis(),
       gte: vi.fn().mockReturnThis(),
-      maybeSingle: vi.fn().mockResolvedValue({ data: { ...mockEvent, status: "ended" } }),
+      maybeSingle: vi
+        .fn()
+        .mockResolvedValue({ data: { ...mockEvent, status: "ended" } }),
     };
     mockSupabase.from.mockReturnValue(chain);
 
@@ -131,17 +142,17 @@ describe("POST /api/v1/events/[eventId]/questions", () => {
       maybeSingle: vi.fn().mockResolvedValue({ data: mockEvent }),
     };
     // First call returns event, second returns count
-    mockSupabase.from
-      .mockReturnValueOnce(eventChain)
-      .mockReturnValue({
-        select: vi.fn().mockReturnValue({
+    mockSupabase.from.mockReturnValueOnce(eventChain).mockReturnValue({
+      select: vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
           eq: vi.fn().mockReturnValue({
-            eq: vi.fn().mockReturnValue({
-              gte: vi.fn().mockResolvedValue({ count: 10, data: [], error: null }),
-            }),
+            gte: vi
+              .fn()
+              .mockResolvedValue({ count: 10, data: [], error: null }),
           }),
         }),
-      });
+      }),
+    });
 
     const res = await POST(makePostRequest(validBody), makeParams());
     expect(res.status).toBe(429);
@@ -161,7 +172,9 @@ describe("POST /api/v1/events/[eventId]/questions", () => {
         select: vi.fn().mockReturnValue({
           eq: vi.fn().mockReturnValue({
             eq: vi.fn().mockReturnValue({
-              gte: vi.fn().mockResolvedValue({ count: 0, data: [], error: null }),
+              gte: vi
+                .fn()
+                .mockResolvedValue({ count: 0, data: [], error: null }),
             }),
           }),
         }),
@@ -169,11 +182,15 @@ describe("POST /api/v1/events/[eventId]/questions", () => {
       .mockReturnValueOnce({
         insert: vi.fn().mockReturnValue({
           select: vi.fn().mockReturnValue({
-            single: vi.fn().mockResolvedValue({ data: mockQuestion, error: null }),
+            single: vi
+              .fn()
+              .mockResolvedValue({ data: mockQuestion, error: null }),
           }),
         }),
       });
-    mockSupabase.channel.mockReturnValue({ send: vi.fn().mockResolvedValue({}) });
+    mockSupabase.channel.mockReturnValue({
+      send: vi.fn().mockResolvedValue({}),
+    });
 
     const res = await POST(makePostRequest(validBody), makeParams());
     expect(res.status).toBe(201);
@@ -189,13 +206,58 @@ describe("POST /api/v1/events/[eventId]/questions", () => {
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
       limit: vi.fn().mockReturnThis(),
-      maybeSingle: vi.fn().mockResolvedValue({ data: { ...mockEvent, is_paid: false } }),
+      maybeSingle: vi
+        .fn()
+        .mockResolvedValue({ data: { ...mockEvent, is_paid: false } }),
     });
 
     const res = await POST(makePostRequest(validBody), makeParams());
     expect(res.status).toBe(403);
     const json = await res.json();
     expect(json.error.code).toBe("QUESTION_LIMIT_REACHED");
+  });
+
+  // ADR-018: a pro owner bypasses the free-question limit even on an UNPAID event.
+  it("allows unlimited questions when the owner is pro (unpaid event)", async () => {
+    vi.mocked(getEventQuestionCount).mockResolvedValue(9999);
+    vi.mocked(isOwnerPro).mockResolvedValue(true);
+    mockSupabase.from
+      .mockReturnValueOnce({
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockReturnThis(),
+        maybeSingle: vi
+          .fn()
+          .mockResolvedValue({
+            data: { ...mockEvent, is_paid: false, organizer_id: "usr_pro" },
+          }),
+      })
+      .mockReturnValueOnce({
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              gte: vi
+                .fn()
+                .mockResolvedValue({ count: 0, data: [], error: null }),
+            }),
+          }),
+        }),
+      })
+      .mockReturnValueOnce({
+        insert: vi.fn().mockReturnValue({
+          select: vi.fn().mockReturnValue({
+            single: vi
+              .fn()
+              .mockResolvedValue({ data: mockQuestion, error: null }),
+          }),
+        }),
+      });
+    mockSupabase.channel.mockReturnValue({
+      send: vi.fn().mockResolvedValue({}),
+    });
+
+    const res = await POST(makePostRequest(validBody), makeParams());
+    expect(res.status).toBe(201);
   });
 
   it("allows unlimited questions for a paid event (no limit check)", async () => {
@@ -205,13 +267,17 @@ describe("POST /api/v1/events/[eventId]/questions", () => {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
         limit: vi.fn().mockReturnThis(),
-        maybeSingle: vi.fn().mockResolvedValue({ data: { ...mockEvent, is_paid: true } }),
+        maybeSingle: vi
+          .fn()
+          .mockResolvedValue({ data: { ...mockEvent, is_paid: true } }),
       })
       .mockReturnValueOnce({
         select: vi.fn().mockReturnValue({
           eq: vi.fn().mockReturnValue({
             eq: vi.fn().mockReturnValue({
-              gte: vi.fn().mockResolvedValue({ count: 0, data: [], error: null }),
+              gte: vi
+                .fn()
+                .mockResolvedValue({ count: 0, data: [], error: null }),
             }),
           }),
         }),
@@ -219,11 +285,15 @@ describe("POST /api/v1/events/[eventId]/questions", () => {
       .mockReturnValueOnce({
         insert: vi.fn().mockReturnValue({
           select: vi.fn().mockReturnValue({
-            single: vi.fn().mockResolvedValue({ data: mockQuestion, error: null }),
+            single: vi
+              .fn()
+              .mockResolvedValue({ data: mockQuestion, error: null }),
           }),
         }),
       });
-    mockSupabase.channel.mockReturnValue({ send: vi.fn().mockResolvedValue({}) });
+    mockSupabase.channel.mockReturnValue({
+      send: vi.fn().mockResolvedValue({}),
+    });
 
     const res = await POST(makePostRequest(validBody), makeParams());
     expect(res.status).toBe(201);
@@ -276,12 +346,24 @@ describe("GET /api/v1/events/[eventId]/questions", () => {
     expect(q).not.toHaveProperty("author_ip");
     // It exposes only the safe minimal projection.
     expect(Object.keys(q).sort()).toEqual(
-      ["authorName", "createdAt", "eventId", "id", "isAnonymous", "status", "text"].sort(),
+      [
+        "authorName",
+        "createdAt",
+        "eventId",
+        "id",
+        "isAnonymous",
+        "status",
+        "text",
+      ].sort(),
     );
   });
 
   it("public response shows 'Anônimo' instead of the real name for anonymous questions", async () => {
-    const anonRow = { ...mockQuestion, author_name: "Maria Silva", is_anonymous: true };
+    const anonRow = {
+      ...mockQuestion,
+      author_name: "Maria Silva",
+      is_anonymous: true,
+    };
     mockSupabase.from.mockReturnValue(makeQueryChain([anonRow]));
     const res = await GET(makeGetRequest(), makeParams());
     const json = (await res.json()) as { questions: { authorName: string }[] };

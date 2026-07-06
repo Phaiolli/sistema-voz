@@ -13,9 +13,22 @@ vi.mock("@/lib/stripe", () => ({
 const mockSupabase = { from: vi.fn() };
 vi.mock("@/lib/supabase", () => ({ createServerClient: () => mockSupabase }));
 
-const { mockSendReceipt } = vi.hoisted(() => ({ mockSendReceipt: vi.fn() }));
+const {
+  mockSendReceipt,
+  mockSendCanceled,
+  mockSendFailed,
+  mockSendEventReceipt,
+} = vi.hoisted(() => ({
+  mockSendReceipt: vi.fn(),
+  mockSendCanceled: vi.fn(),
+  mockSendFailed: vi.fn(),
+  mockSendEventReceipt: vi.fn(),
+}));
 vi.mock("@/lib/email", () => ({
   sendSubscriptionReceiptEmail: mockSendReceipt,
+  sendSubscriptionCanceledEmail: mockSendCanceled,
+  sendPaymentFailedEmail: mockSendFailed,
+  sendEventPurchaseReceiptEmail: mockSendEventReceipt,
 }));
 
 import { POST } from "./route";
@@ -38,11 +51,9 @@ function usersUpdateChain(error: unknown = null, owner: unknown = null) {
     .fn()
     .mockReturnValue({ eq: vi.fn().mockResolvedValue({ error }) });
   const select = vi.fn().mockReturnValue({
-    eq: vi
-      .fn()
-      .mockReturnValue({
-        maybeSingle: vi.fn().mockResolvedValue({ data: owner }),
-      }),
+    eq: vi.fn().mockReturnValue({
+      maybeSingle: vi.fn().mockResolvedValue({ data: owner }),
+    }),
   });
   return { chain: { update, select }, update };
 }
@@ -115,8 +126,11 @@ describe("POST /api/stripe/webhook — subscription lifecycle", () => {
     );
   });
 
-  it("customer.subscription.deleted downgrades (status canceled)", async () => {
-    const { chain, update } = usersUpdateChain();
+  it("customer.subscription.deleted downgrades and sends a cancellation notice", async () => {
+    const { chain, update } = usersUpdateChain(null, {
+      email: "ana@example.com",
+      name: "Ana",
+    });
     mockSupabase.from.mockReturnValue(chain);
     mockConstructEvent.mockReturnValue({
       type: "customer.subscription.deleted",
@@ -135,6 +149,7 @@ describe("POST /api/stripe/webhook — subscription lifecycle", () => {
     expect(update).toHaveBeenCalledWith(
       expect.objectContaining({ subscription_status: "canceled" }),
     );
+    expect(mockSendCanceled).toHaveBeenCalledWith("ana@example.com", "Ana");
   });
 
   it("invoice.paid marks the subscription active and sends a receipt", async () => {
@@ -162,8 +177,11 @@ describe("POST /api/stripe/webhook — subscription lifecycle", () => {
     expect(mockSendReceipt).toHaveBeenCalledWith("ana@example.com", "Ana");
   });
 
-  it("invoice.payment_failed marks the subscription past_due", async () => {
-    const { chain, update } = usersUpdateChain();
+  it("invoice.payment_failed marks past_due and sends a dunning notice", async () => {
+    const { chain, update } = usersUpdateChain(null, {
+      email: "ana@example.com",
+      name: "Ana",
+    });
     mockSupabase.from.mockReturnValue(chain);
     mockConstructEvent.mockReturnValue({
       type: "invoice.payment_failed",
@@ -181,6 +199,7 @@ describe("POST /api/stripe/webhook — subscription lifecycle", () => {
     expect(update).toHaveBeenCalledWith(
       expect.objectContaining({ subscription_status: "past_due" }),
     );
+    expect(mockSendFailed).toHaveBeenCalledWith("ana@example.com", "Ana");
     expect(mockSendReceipt).not.toHaveBeenCalled();
   });
 });
@@ -233,12 +252,16 @@ describe("POST /api/stripe/webhook — checkout completed", () => {
         .fn()
         .mockReturnValue({ eq: vi.fn().mockResolvedValue({ error: null }) }),
     };
-    const usersUpdate = usersUpdateChain();
+    const usersUpdate = usersUpdateChain(null, {
+      email: "ana@example.com",
+      name: "Ana",
+    });
     mockSupabase.from
       .mockReturnValueOnce(paymentsSelect) // event_payments select
       .mockReturnValueOnce(eventsUpsert) // events upsert
       .mockReturnValueOnce(paymentsUpdate) // event_payments update
-      .mockReturnValueOnce(usersUpdate.chain); // users update plan=paid
+      .mockReturnValueOnce(usersUpdate.chain) // users update plan=paid
+      .mockReturnValue(usersUpdate.chain); // fetchOwnerContact → owner for receipt
 
     mockConstructEvent.mockReturnValue({
       type: "checkout.session.completed",
@@ -264,17 +287,20 @@ describe("POST /api/stripe/webhook — checkout completed", () => {
       { onConflict: "id" },
     );
     expect(usersUpdate.update).toHaveBeenCalledWith({ plan: "paid" });
+    expect(mockSendEventReceipt).toHaveBeenCalledWith(
+      "ana@example.com",
+      "Ana",
+      validEventData.name,
+    );
   });
 
   it("is idempotent: a redelivery for an already-paid session only reapplies plan", async () => {
     const paymentsSelect = {
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
-      maybeSingle: vi
-        .fn()
-        .mockResolvedValue({
-          data: { id: "pay_1", status: "paid", event_id: "evt_1" },
-        }),
+      maybeSingle: vi.fn().mockResolvedValue({
+        data: { id: "pay_1", status: "paid", event_id: "evt_1" },
+      }),
     };
     const usersUpdate = usersUpdateChain();
     mockSupabase.from

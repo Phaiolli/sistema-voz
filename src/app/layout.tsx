@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import { ClerkProvider } from "@clerk/nextjs";
 import { ptBR } from "@clerk/localizations";
 import { SITE_URL, SITE_NAME, SITE_DESCRIPTION } from "@/lib/site";
+import { ConsentBanner } from "@/components/voz/consent-banner";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -67,7 +68,10 @@ export default async function RootLayout({
             rel="stylesheet"
           />
         </head>
-        <body className="min-h-full flex flex-col">{children}</body>
+        <body className="min-h-full flex flex-col">
+          {children}
+          <ConsentBanner />
+        </body>
       </html>
     </ClerkProvider>
   );
